@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Frost Herald · Animation sheet</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; background: #080f1b; color: #e4f3ff; font: 15px system-ui; }
+    header { display: flex; justify-content: space-between; align-items: end; max-width: 1320px; margin: 0 auto 16px; }
+    h1 { margin: 2px 0 0; font-size: 31px; font-weight: 600; }
+    p { margin: 0; color: #9cb6cc; }
+    small { color: #79d9f4; font-weight: 600; letter-spacing: .21em; text-transform: uppercase; }
+    button { padding: 7px 15px; border: 1px solid #45627c; border-radius: 4px; background: #11243a; color: inherit; font: inherit; }
+    #sheet { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; max-width: 1320px; margin: auto; }
+    figure { margin: 0; overflow: hidden; border: 1px solid #263d54; border-radius: 5px; background: #101c2e; }
+    canvas { display: block; width: 100%; aspect-ratio: 300 / 219; }
+    figcaption { display: flex; justify-content: space-between; padding: 7px 12px; }
+    time { color: #99acc2; font-variant-numeric: tabular-nums; }
+    @media (max-width: 720px) {
+      body { padding: 14px; }
+      #sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}
+  </script>
+</head>
+<body>
+  <header>
+    <div><small>Rime Spire · Demon 04</small><h1>Frost Herald</h1><p id="status" role="status">Loading model…</p></div>
+    <button id="play" type="button" disabled>Pause</button>
+  </header>
+  <main id="sheet" aria-label="Animation contact sheet"></main>
+  <script type="module">
+    import * as T from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/loaders/GLTFLoader.js';
+    import { clone } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/utils/SkeletonUtils.js';
+
+    const width = 360, height = 263;
+    const moments = new Map(Object.entries({
+      Idle: .27, Walk: .49, Alert: .44, Strike: .46, Heavy: .45, Block: .38,
+      Parry: .44, Dodge: .47, HitReact: .20, Death: .996, Victory: .69,
+    }));
+    const sheet = document.querySelector('#sheet'), status = document.querySelector('#status');
+    const button = document.querySelector('#play');
+    let playing = !new URLSearchParams(location.search).has('still');
+    let time = 0, previous = null, request = null;
+
+    function makeStage(model, clip, cameraPosition, rear = false) {
+      const scene = new T.Scene();
+      scene.background = new T.Color(0x152237);
+      scene.fog = new T.FogExp2(0x152237, .071);
+      scene.add(new T.HemisphereLight(0xd2eaff, 0x758aa8, 2.1));
+      for (const [color, intensity, position] of [
+        [0xf3f7ff, 3.3, [4, 5, 4]], [0x4cc7ff, 3.4, [-3, 3, -4]], [0x9eb7ff, 1.6, [-4, 2, 3]],
+      ]) {
+        const light = new T.DirectionalLight(color, intensity);
+        light.position.set(...position);
+        scene.add(light);
+      }
+      const floor = new T.Mesh(new T.CircleGeometry(1.64, 64),
+        new T.MeshStandardMaterial({ color: 0x273e5d, roughness: .89 }));
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -.09;
+      scene.add(floor);
+      const outline = new T.Mesh(new T.RingGeometry(1.615, 1.64, 64),
+        new T.MeshBasicMaterial({ color: 0x4f799b }));
+      outline.rotation.x = -Math.PI / 2;
+      outline.position.y = -.089;
+      scene.add(outline);
+      const shade = new T.Mesh(new T.CircleGeometry(.73, 40),
+        new T.MeshBasicMaterial({ color: 0x233650, transparent: true, opacity: .57 }));
+      shade.rotation.x = -Math.PI / 2;
+      shade.position.y = -.088;
+      shade.scale.y = .73;
+      scene.add(shade);
+      const wide = clip.name === 'Heavy' || clip.name === 'Victory' || clip.name === 'Death';
+      const span = wide ? 2.25 : 1.90;
+      const camera = new T.OrthographicCamera(-span * width / height, span * width / height, span, -span, .1, 30);
+      camera.position.set(...cameraPosition);
+      camera.lookAt(.05, clip.name === 'Death' ? 1 : wide ? 1.96 : 1.48, 0);
+      scene.add(model);
+      model.traverse((object) => {
+        if (object.isSkinnedMesh) object.frustumCulled = false;
+      });
+      const mixer = new T.AnimationMixer(model);
+      mixer.clipAction(clip).play();
+      const figure = document.createElement('figure');
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const caption = document.createElement('figcaption');
+      caption.textContent = rear ? 'Rear view' : clip.name;
+      const duration = document.createElement('time');
+      duration.textContent = rear ? 'Design' : `${clip.duration.toFixed(2)} s`;
+      caption.append(duration);
+      figure.append(canvas, caption);
+      sheet.append(figure);
+      return { scene, camera, mixer, context: canvas.getContext('2d'),
+        duration: clip.duration, moment: moments.get(clip.name) };
+    }
+
+    try {
+      const { scene, animations } = await new GLTFLoader().loadAsync('../models/frost-herald.glb');
+      const clips = new Map(animations.map((clip) => [clip.name, clip]));
+      if (clips.size !== moments.size || [...moments.keys()].some((name) => !clips.has(name))) {
+        throw new Error('Unexpected Frost Herald clip set');
+      }
+      const renderer = new T.WebGLRenderer({ antialias: true });
+      renderer.setSize(width, height);
+      renderer.toneMapping = T.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.18;
+      const cells = [...moments.keys()].map((name) => makeStage(clone(scene), clips.get(name),
+        name === 'Death' ? [4.8, 4.3, 4.7] : [2.8, 2.55, 6.6]));
+      cells.push(makeStage(clone(scene), clips.get('Idle'), [3.6, 2.4, -6.4], true));
+
+      function render(animationTime) {
+        for (const { scene, camera, mixer, context, duration, moment } of cells) {
+          mixer.setTime((animationTime + duration * moment) % duration);
+          renderer.render(scene, camera);
+          context.drawImage(renderer.domElement, 0, 0);
+        }
+      }
+      function tick(now) {
+        if (previous !== null) time += Math.min(.12, (now - previous) / 1000);
+        previous = now;
+        render(time);
+        request = requestAnimationFrame(tick);
+      }
+      function syncPlayback() {
+        button.textContent = playing ? 'Pause' : 'Play all';
+        if (playing) {
+          previous = null;
+          request = requestAnimationFrame(tick);
+        } else if (request !== null) {
+          cancelAnimationFrame(request);
+        }
+      }
+      button.addEventListener('click', () => {
+        playing = !playing;
+        syncPlayback();
+      });
+      button.disabled = false;
+      render(0);
+      status.textContent = '11 clips · Three.js · +Z forward';
+      document.body.dataset.ready = 'true';
+      syncPlayback();
+    } catch (error) {
+      status.textContent = error.message;
+      console.error(error);
+    }
+  </script>
+</body>
+</html>
