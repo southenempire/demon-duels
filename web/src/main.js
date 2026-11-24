@@ -164,7 +164,6 @@ function battlefield() {
     winner: taking && result.winner === side,
   }));
   return `<section class="duel-scene" aria-label="3D melee arena" data-phase="${phase}" data-beat="${frame?.stage || 'guard'}">
-    <p class="duel-no-webgl" hidden>3D combat is unavailable. You can still play and see the duel result.</p>
     <div class="duel-viewport" data-duel-viewport></div>
     <div class="duel-overlay">
       ${duelHud({ player, opponent, phase })}
@@ -197,7 +196,7 @@ function syncDuelView() {
     duel3DUnavailable = true;
     duelView = null;
     const fallback = app.querySelector('.duel-no-webgl');
-    if (fallback) { fallback.hidden = false; fallback.closest('.duel-scene').classList.add('duel-text-only'); }
+    if (fallback) { fallback.hidden = false; fallback.closest('.duel-screen').classList.add('duel-text-only'); }
   };
   const roundData = { fighters, result, frame: result ? s.frame : null, onUnavailable };
   if (duelView) { duelView.attach(host); duelView.update(roundData); }
@@ -374,13 +373,15 @@ function duelScreen() {
       icon(s.sound ? 'volume' : 'mute', 16) + '</button>' +
       button('rules', 'Rules', 'secondary') +
       (safeMode() ? button('wallet', 'Wallet', 'secondary', 'wallet') : '') +
-    '</nav><div class="duel-panels' + (vault ? ' is-result' : '') + '">' + feedback() + stakePicker() + controls() +
+    '</nav><p class="duel-no-webgl" hidden>3D combat is unavailable. You can still play and see the duel result.</p>' +
+    '<div class="duel-panels' + (vault ? ' is-result' : '') + '">' + feedback() + stakePicker() + controls() +
       networkProgress() + vault + '</div></main>';
 }
 
 let dialogReturnAction;
 function draw() {
   const page = campaignPage();
+  const fallbackScroll = app.querySelector('.duel-text-only')?.scrollTop;
   const focus = document.activeElement?.dataset?.action;
   const hadDialog = Boolean(app.querySelector('[role=dialog]'));
   const kind = s.mode === 'practice' ? 'PRACTICE MODE' : 'SOLANA DEVNET';
@@ -406,6 +407,10 @@ function draw() {
     (previous || (s.modal ? app.querySelector('.modal .close') : null))?.focus({ preventScroll: true });
   }
   syncDuelView();
+  if (fallbackScroll) {
+    const fallback = app.querySelector('.duel-text-only');
+    if (fallback) fallback.scrollTop = fallbackScroll;
+  }
   const sceneOpen = Boolean(app.querySelector('.duel-screen'));
   if (sceneOpen !== duelSceneOpen) {
     duelSceneOpen = sceneOpen;
