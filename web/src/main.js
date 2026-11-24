@@ -8,7 +8,7 @@ import { icon } from './icons.js';
 import { botGeneration, ensurePack, prepareGuest, recoverGuestPack, stockBossCard } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
 import { characters } from './characters.js';
-import { arenaCardSide, confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
+import { arenaCardSide, confirmedFight, confirmedSettlement, defaultStake, fightReason, privateMoveRetryMessage } from './fight.js';
 import { mount as mountDuel } from './duel3d/index.js';
 import { bossHeight } from './duel3d/fighter.js';
 import { meleeTimeline } from './duel3d/timeline.js';
@@ -74,8 +74,10 @@ const MOVE_WAITING = 'Your move is sealed. Waiting for your opponent.';
 function clearSavedRoom(room) {
   if (localStorage.getItem(activeRoomKey) === room?.toString()) localStorage.removeItem(activeRoomKey);
 }
-const anyCard = () => s.owned.find((card) => keyed(card.key, s.selected) && keyed(card.lock, ZERO)) ??
-  s.owned.find((card) => keyed(card.lock, ZERO));
+const anyCard = (opponentKind = s.requestedOpponent) => {
+  const available = s.owned.filter((card) => keyed(card.lock, ZERO));
+  return available.find((card) => keyed(card.key, s.selected)) ?? defaultStake(available, opponentKind);
+};
 const audio = (name) => sound.play(name);
 const button = (action, label, cls = 'secondary', glyph = '') =>
   '<button type="button" data-action="' + action + '" class="button ' + cls + '"' + (s.busy || s.playing ? ' disabled' : '') + '>' + (glyph ? icon(glyph) : '') + label + '</button>';
@@ -135,7 +137,7 @@ const guardianFinisher = bossFinisher(window, finishers, (campaign, duel) => {
 const presentFinisher = () => guardianFinisher.play(guardianFinisher.pending?.duel ?? fightId());
 const fighterKinds = () => [
   s.mode === 'practice' ? s.practiceStake : s.mode === 'landing' ? 0 : s.staked?.kind ?? anyCard()?.kind,
-  s.mode === 'practice' ? s.practiceRival : s.mode === 'landing' ? 1 : s.opposing?.kind,
+  s.mode === 'practice' ? s.practiceRival : s.mode === 'landing' ? 1 : s.opposing?.kind ?? s.requestedOpponent ?? undefined,
 ];
 
 const arenaPhase = (frame) => frame?.stage === 'decision' ? 'crit' :
@@ -701,11 +703,7 @@ async function readyBot(prepared) {
 }
 
 export async function startDuel(solo, demonId) {
-  const selected = anyCard();
-  const card = solo && ashEncounter?.opponentKind === demonId && selected?.kind === demonId
-    ? s.owned.find((item) => item.kind !== demonId && keyed(item.lock, ZERO))
-    : selected;
-  if (selected && !card) throw new Error('Stake a demon other than the guardian. This guest vault has no other unstaked demon.');
+  const card = anyCard(demonId);
   if (!card) throw new Error('Choose an unstaked demon first.');
   if (await client.balance() < (solo && demonId === undefined ? 0.037 : 0.006)) {
     s.modal = 'wallet';
@@ -960,7 +958,9 @@ async function action(name) {
     audio('seal'); draw(); return;
   }
   if (name === 'practice-pack') {
-    s.practiceCards = practicePack(); s.practiceStake = s.practiceCards[0]; s.practiceRival = s.requestedOpponent ?? (s.practiceStake + 1) % demons.length;
+    s.practiceCards = practicePack();
+    s.practiceStake = defaultStake(s.practiceCards, s.requestedOpponent, (kind) => kind);
+    s.practiceRival = s.requestedOpponent ?? (s.practiceStake + 1) % demons.length;
     audio('seal'); draw(); return;
   }
   if (name === 'enter') {
@@ -1114,7 +1114,8 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
   if (mode === 'practice') {
     s.mode = 'practice';
     if (!s.practiceCards.length) s.practiceCards = practicePack();
-    s.practiceStake = s.practiceCards[0]; s.practiceRival = opponentKind;
+    s.practiceStake = defaultStake(s.practiceCards, opponentKind, (kind) => kind);
+    s.practiceRival = opponentKind;
     draw();
   } else if (hunt) startQuickDuel().catch(() => {});
   else {
