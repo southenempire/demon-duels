@@ -466,6 +466,7 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
     boss.suspicion = T.MathUtils.clamp(boss.suspicion + dt * (wardenSees ? .94 : -.8), 0, 1);
     const bossYaw = wardenSees ? bossBearing : Math.PI + Math.sin(sceneTime * .78) * .81;
     if (!attack) boss.yaw += angleDelta(boss.yaw, bossYaw) * (1 - Math.exp(-dt * (wardenSees ? 3.6 : 1.8)));
+    const glance = T.MathUtils.clamp(angleDelta(boss.yaw, bossYaw), -.48, .48);
     warden.root.rotation.y = boss.yaw;
     drawBossCone(boss, outcome !== 'won');
     warden.pose(sceneTime * 2.3);
@@ -475,7 +476,7 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
       wardenRig.model?.update('Death', dt);
       warden.root.visible = victoryTime < 3.5 && Boolean(wardenRig.model);
     } else {
-      wardenRig.model?.update(wardenSees || boss.suspicion > 0 ? 'Alert' : 'Idle', dt);
+      wardenRig.model?.update(wardenSees || boss.suspicion > 0 ? 'Alert' : 'Idle', dt, undefined, glance);
     }
     let suspicion = boss.suspicion, clearTrail = true;
     for (const guard of guards) {

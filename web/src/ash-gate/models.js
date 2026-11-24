@@ -16,6 +16,8 @@ export async function installModel(actor, file) {
       if (node.isSkinnedMesh) node.frustumCulled = false;
     });
     const mixer = new T.AnimationMixer(scene);
+    const skull = file === 'ash-warden.glb' ? scene.getObjectByName('Skull') : null;
+    const skullPose = skull?.quaternion.clone();
     const actions = new Map(animations.map((clip) => [clip.name.toLowerCase(), mixer.clipAction(clip)]));
     for (const name of ['strike', 'block', 'death']) {
       const action = actions.get(name);
@@ -27,7 +29,8 @@ export async function installModel(actor, file) {
     actor.root.add(scene);
     actor.body.visible = false;
     actor.model = {
-      update(name, dt, duration) {
+      update(name, dt, duration, glance = 0) {
+        if (skull) skull.quaternion.copy(skullPose);
         const exact = actions.get(name.toLowerCase());
         const next = exact || actions.get('idle');
         if (active !== next) {
@@ -37,6 +40,10 @@ export async function installModel(actor, file) {
           active = next;
         }
         mixer.update(dt);
+        if (skull) {
+          skullPose.copy(skull.quaternion);
+          skull.rotateY(glance);
+        }
       },
     };
   } catch (error) {

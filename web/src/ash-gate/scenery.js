@@ -115,6 +115,11 @@ export function buildGate(scene) {
       box(scene, brass, x + offset, h * .50, z + d / 2 + .092, .044, .66, .04);
     }
   }
+  const exitLight = new T.MeshBasicMaterial({ color: 0xffbc74 });
+  for (const x of [7.9, 9.74]) {
+    box(scene, iron, x, 3.21, -2.25, .18, .54, .18);
+    box(scene, exitLight, x, 3.44, -2.25, .12, .22, .12);
+  }
   for (const { x, z, w, d } of shade) {
     const patch = mesh(scene, new T.CircleGeometry(1, 22), ashMark, x, .024, z);
     patch.rotation.x = -Math.PI / 2;
