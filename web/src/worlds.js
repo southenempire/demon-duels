@@ -5,6 +5,7 @@ export const worlds = Object.freeze({
   1: () => import('./hollow-rift/index.js').then(m => m.VOID_WRAITH),
   2: () => import('./marrow-crypt/index.js').then((module) => module.MARROW_KING),
   3: () => import('./drowned-mire/index.js').then((module) => module.DROWNED_MIRE),
+  4: () => import('./world/rime-spire/index.js').then((module) => module.FROST_HERALD),
   5: () => import('./gloam-shade/index.js').then((module) => module.GLOAM_SHADE),
 });
 
