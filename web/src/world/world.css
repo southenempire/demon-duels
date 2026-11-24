@@ -67,7 +67,7 @@
   .hunt-touch { position: absolute; bottom: 55px; inset-inline: 12px; display: flex; align-items: end; justify-content: space-between; pointer-events: none; z-index: 3; }
   .hunt-touch > * { pointer-events: auto; }
   .hunt-refuge .hunt-touch { bottom: 10px; inset-inline: 10px; justify-content: start; }
-  .hunt-touch > div:last-child { display: flex; flex-direction: column; align-items: end; gap: 5px; }
+  .hunt-touch > div:not(.hunt-stick) { display: flex; flex-direction: column; align-items: end; gap: 5px; }
   .hunt-touch .button { min-height: 35px; background: #241724df; }
   .hunt-touch .button[aria-pressed=true] { border-color: #ffb592; }
   .hunt-stick { width: 81px; height: 81px; border: 1px solid #d6aaa780; border-radius: 50%; background: #170e19a3; display: grid; place-items: center; touch-action: none; }
