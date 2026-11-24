@@ -191,7 +191,7 @@ footer { border-top: 1px solid #30382b; color: #929b86; font-size: 8px; min-heig
 
 /* The campaign prologue keeps its words and actions, but reads as an in-game
    chapter rather than a sales page. No card grid, orange CTA, or badge row. */
-.story-opening { position: relative; isolation: isolate; min-height: min(760px, calc(100svh - 67px)); display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: 0; padding: 55px 0 65px; margin: 0; }
+.story-opening { position: relative; isolation: isolate; overflow: clip; min-height: min(760px, calc(100svh - 67px)); display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; gap: 0; padding: 55px 0 65px; margin: 0; }
 .story-opening .story-copy { position: relative; z-index: 2; padding: 0; max-width: 610px; }
 .story-opening h1 { font: 400 clamp(34px, 3.5vw, 57px)/1.25 var(--display); letter-spacing: .01em; margin: 22px 0; color: #e3e0d1; }
 .story-opening h1 em { color: #c8b681; font-style: normal; text-shadow: none; }
@@ -199,7 +199,7 @@ footer { border-top: 1px solid #30382b; color: #929b86; font-size: 8px; min-heig
 .story-opening .story-copy > p:not(.story-lead) { font: 11px/1.9 var(--mono); color: #a7b09d; max-width: 460px; }
 .story-opening .actions { margin-top: 26px; }
 .story-opening .story-footnote { color: #8e9c82; font: 8px/1.9 var(--mono); margin-top: 23px; letter-spacing: .035em; }
-.story-opening .story-art { position: relative; width: 120%; margin-left: -10%; height: 580px; max-height: 75svh; border: 0; border-radius: 0; background: none; overflow: visible; }
+.story-opening .story-art { position: relative; width: 100%; margin-left: 0; height: 580px; max-height: 75svh; border: 0; border-radius: 0; background: none; overflow: hidden; }
 .story-opening .story-art::before { content: ''; position: absolute; inset: 10%; background: radial-gradient(ellipse, #9f9e6f12, transparent 70%); }
 .story-opening .story-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, #0b0d0e, transparent 35%); pointer-events: none; }
 .story-opening .story-art img { image-rendering: pixelated; filter: saturate(.55); }
