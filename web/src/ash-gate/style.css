@@ -1,0 +1,31 @@
+.ash-gate {
+  position: fixed;
+  inset: 0;
+  isolation: isolate;
+  overflow: hidden;
+  background: #222932;
+  color: #f0e8df;
+  font: 500 14px/1.4 "Segoe UI", system-ui, sans-serif;
+}
+
+body:has(.ash-gate:not([hidden]))::after { display: none; }
+.ash-gate[hidden], .ash-gate [hidden] { display: none; }
+.ash-gate canvas { display: block; cursor: grab; touch-action: none; }
+.ash-gate canvas:active { cursor: grabbing; }
+.ash-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 53% 43%, transparent 48%, #090a11a1 100%),
+    linear-gradient(0deg, #090a10c7, transparent 16%),
+    linear-gradient(125deg, #090a11a8 0%, transparent 32%);
+}
+.ash-shade::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse, transparent 57%, #d44223 100%);
+  opacity: var(--ash-alert, 0);
+}
+.ash-overlay { position: absolute; inset: 0; pointer-events: none; }
+.ash-controls { background: #071010a8; pointer-events: auto; }

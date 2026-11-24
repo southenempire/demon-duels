@@ -80,3 +80,15 @@ test('overlay text cannot inject markup or attributes, and title leaves art to t
   }
   assert.doesNotMatch(titleScreen(), /title-hunter|title-landscape|<img|<canvas/);
 });
+
+test('Ash Gate HUD exposes delegated actions and escapes the live hunter name', () => {
+  const hunt = (prompt) => worldHud({ objective: 'Find the Warden', awareness: 'suspicious', hunters: 2, prompt });
+  const strike = hunt({ key: 'E', label: 'Strike Ash Warden' });
+  assert.match(strike, /data-hunt="strike"/);
+  assert.match(strike, /data-hunt="pause".*data-hunt="exit"/s);
+  assert.match(strike, /data-objective>Find the Warden/);
+  assert.match(strike, /data-state="suspicious"/);
+  assert.match(strike, /2 HUNTERS NEARBY/);
+  assert.match(hunt({ key: 'Space', label: 'Climb' }), /<div class="dd-context-prompt"><kbd>Space/);
+  assert.match(hunt({ key: 'F', label: 'Challenge <hunter>', action: 'challenge' }), /data-hunt="challenge"><kbd>F<\/kbd> Challenge &lt;hunter&gt;/);
+});

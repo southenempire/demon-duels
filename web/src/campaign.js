@@ -57,6 +57,12 @@ export function persistBossWin(storage, player, result) {
   return next;
 }
 
+export function prepareBossWin(storage, player, result) {
+  const current = readCampaign(storage, player);
+  if (recordBossWin(current, result) === current) return null;
+  return () => persistBossWin(storage, player, result);
+}
+
 export function carryCampaign(storage, player, replacement) {
   const previous = readCampaign(storage, player);
   const existing = readCampaign(storage, replacement);
