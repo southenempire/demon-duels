@@ -2,7 +2,7 @@ import { duelHud } from '../game-ui.js';
 import { mount } from './index.js';
 import { tutorialBeats, tutorialRules } from './tutorial.js';
 
-export function showTutorial(resume) {
+export function showTutorial(resume, cancel) {
   const dialog = document.createElement('dialog');
   dialog.className = 'duel-screen duel-tutorial';
   dialog.setAttribute('aria-labelledby', 'duel-tutorial-title');
@@ -26,12 +26,11 @@ export function showTutorial(resume) {
   const caption = dialog.querySelector('.duel-tutorial-caption');
   const text = dialog.querySelector('.duel-tutorial-text');
   let view, timer, index = 0;
-  const finish = () => {
+  const close = () => {
     clearTimeout(timer);
     view?.dispose();
     dialog.close();
     dialog.remove();
-    resume();
   };
   const ready = () => { next.disabled = false; };
   const onUnavailable = () => {
@@ -55,8 +54,8 @@ export function showTutorial(resume) {
     view.update({ fighters, frame: beat.frame, onUnavailable });
     timer = setTimeout(play, beat.frame.duration + 500);
   };
-  skip.onclick = next.onclick = finish;
-  dialog.addEventListener('cancel', (event) => { event.preventDefault(); finish(); });
+  skip.onclick = next.onclick = () => { close(); resume(); };
+  dialog.addEventListener('cancel', (event) => { event.preventDefault(); close(); cancel(); });
   dialog.addEventListener('keydown', (event) => event.stopPropagation());
   document.body.append(dialog);
   dialog.showModal();

@@ -14,27 +14,29 @@ export const tutorialBeats = [
 
 export function createTutorialGate(storage, show) {
   let seen = false, active = false;
-  const open = (resume) => {
+  const open = (resume, cancel) => {
     if (active) return false;
     active = true;
     let finished = false;
-    show(() => {
+    const finish = (completed) => {
       if (finished) return;
       finished = true;
       active = false;
+      if (!completed) { cancel?.(); return; }
       seen = true;
       try { storage.setItem(tutorialKey, '1'); } catch {}
       resume();
-    });
+    };
+    show(() => finish(true), () => finish(false));
     return true;
   };
   return {
     get active() { return active; },
-    defer(mode, resume) {
+    defer(mode, resume, cancel) {
       if (mode !== 'chain' && mode !== 'pvp') return false;
       if (active) return true;
       try { seen ||= storage.getItem(tutorialKey) === '1'; } catch {}
-      return !seen && open(resume);
+      return !seen && open(resume, cancel);
     },
     replay: open,
   };

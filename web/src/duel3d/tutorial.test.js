@@ -47,3 +47,25 @@ test('skipping still suppresses the automatic tutorial for the session when the 
   skip();
   assert.equal(gate.defer('pvp', () => {}), false);
 });
+
+test('Escape cancels a pending PvP stake without marking the tutorial seen', () => {
+  let next, escape, cancelled = 0;
+  const writes = [];
+  const gate = createTutorialGate({
+    getItem: () => null,
+    setItem: (...entry) => writes.push(entry),
+  }, (resume, cancel) => { next = resume; escape = cancel; });
+  const callbacks = [() => assert.fail('cancelled stake resumed'), () => cancelled++];
+  assert.equal(gate.defer('pvp', ...callbacks), true);
+  const staleContinue = next;
+  escape();
+  assert.equal(gate.active, false);
+  assert.equal(cancelled, 1);
+  assert.deepEqual(writes, []);
+  assert.equal(gate.defer('pvp', ...callbacks), true);
+  staleContinue();
+  assert.equal(gate.active, true);
+  assert.deepEqual(writes, []);
+  escape();
+  assert.equal(cancelled, 2);
+});

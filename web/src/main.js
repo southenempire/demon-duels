@@ -1089,6 +1089,12 @@ async function action(name) {
     (error) => privateMoveRetryMessage(error, { online: navigator.onLine, sealed: true }));
 }
 
+function cancelTutorialLaunch(mode, returnToMap, opponentKind) {
+  if (returnToMap) window.dispatchEvent(new CustomEvent('demon-duels:return', {
+    detail: { mode, opponentKind, tutorialCancelled: true },
+  }));
+}
+
 // Campaign integration: launch a selected boss without coupling the arena to a map.
 export function launchFight(options = {}) {
   const { opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade, tells } = options;
@@ -1096,8 +1102,11 @@ export function launchFight(options = {}) {
   if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
   const hunt = ashGate ? profileFor({ mode, opponentKind, grade, tells }) : null;
+  const deferLaunch = () => combatTutorial.defer(mode, () => launchFight(options),
+    () => cancelTutorialLaunch(mode, returnToMap, opponentKind));
   if (activeDuel()) {
     if (mode === 'chain' && roomBoss(s.room) === String(opponentKind)) {
+      if (hunt && deferLaunch()) return true;
       s.journey = 'arena'; s.mode = 'chain';
       if (hunt) startQuickDuel().catch(() => {});
       else draw();
@@ -1110,7 +1119,7 @@ export function launchFight(options = {}) {
     s.notice = 'Resume or finish your saved duel before challenging this guardian.'; draw(); return false;
   }
   if (mode === 'chain' && circleState(s.campaign, opponentKind) === 'locked') return false;
-  if (combatTutorial.defer(mode, () => launchFight(options))) return true;
+  if (deferLaunch()) return true;
   s.journey = 'arena';
   setRoom(null);
   ashEncounter = hunt;
@@ -1137,7 +1146,9 @@ export function launchFight(options = {}) {
 window.addEventListener('demon-duels:launch', (event) => {
   if (!launchFight(event.detail)) event.preventDefault();
 });
-window.addEventListener('demon-duels:return', showMap);
+window.addEventListener('demon-duels:return', ({ detail }) => {
+  if (!detail?.tutorialCancelled) showMap();
+});
 window.addEventListener('storage', (event) => {
   if (event.key !== campaignKey(client.key)) return;
   s.campaign = readCampaign(localStorage, client.key);
@@ -1152,7 +1163,8 @@ function launchRivalDuel(room, join, returnToMap) {
     s.notice = 'Resume or finish your saved duel before opening another hunter duel.';
     draw(); return false;
   }
-  if (combatTutorial.defer('pvp', () => launchRivalDuel(room, join, returnToMap))) return true;
+  if (combatTutorial.defer('pvp', () => launchRivalDuel(room, join, returnToMap),
+    () => cancelTutorialLaunch('pvp', returnToMap))) return true;
   ashEncounter = null;
   setRoom(room);
   s.journey = 'arena';
@@ -1201,7 +1213,10 @@ async function hostRivalDuel(stillWanted) {
   assertCurrentGuest();
   hostingRival = true;
   try {
-    await new Promise((resume) => { if (!combatTutorial.defer('pvp', resume)) resume(); });
+    const proceed = await new Promise((resolve) => {
+      if (!combatTutorial.defer('pvp', () => resolve(true), () => resolve(false))) resolve(true);
+    });
+    if (!proceed) throw new Error('Challenge cancelled. Your card was not staked.');
     if (!stillWanted()) throw new Error('The other hunter backed out before you staked.');
     assertCurrentGuest();
     const { duel } = await client.openDuel(anyCard().key);
