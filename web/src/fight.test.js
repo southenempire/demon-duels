@@ -1,13 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason, privateMoveRetryMessage } from './fight.js';
+import { arenaCardSide, confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
+import { bossHeight, bossModel } from './duel3d/fighter.js';
+import { meleeActions, meleeTimeline } from './duel3d/timeline.js';
 import { characters, characterArt } from './characters.js';
 import { demons, resolve } from './rules.js';
 
 const p1 = { equals: (other) => other === p1 };
 const p2 = { equals: (other) => other === p2 };
 const duel = { key: 'confirmed-room', phase: 3, p1, p2, winner: p2, moves: [0, 1], crits: [false, true], scores: [3, 4] };
+
+test('open invites put the host stake on the opposing side until the invitee joins', () => {
+  const empty = { equals: (other) => other === empty };
+  const open = { ...duel, p2: empty, phase: 0 };
+  assert.equal(arenaCardSide(open, p1), 0);
+  assert.equal(arenaCardSide(open, p2), 1);
+  assert.equal(arenaCardSide(duel, p2), 1);
+  assert.equal(arenaCardSide(duel, {}), 0);
+});
+
+test('3D boss models map to their demon IDs and leave other bosses procedural', () => {
+  assert.deepEqual(demons.map((_, id) => bossModel(id)), [
+    'ash-warden.glb', undefined, 'marrow-king.glb', 'mire-phantom.glb', 'frost-herald.glb', 'gloam-shade.glb',
+  ]);
+  assert.deepEqual(demons.map((_, id) => bossHeight(id)), [3, 2.4, 2.744, 3.08, 3, 3]);
+});
 
 test('private move errors distinguish offline, RPC loss and pending chain confirmation', () => {
   const rpc = new Error('failed to get info about account: TypeError: Failed to fetch');
@@ -40,16 +58,28 @@ test('campaign credit requires confirmed settlement and actual participation', (
   assert.equal(confirmedSettlement(duel, p1, 5).won, false);
 });
 
-test('the fight reveals, lands both confirmed hits, decides, then captures', () => {
+test('the fight reveals, parries and hand blocks, then depicts the confirmed crit upset and capture', () => {
   const result = confirmedFight(duel);
-  const timeline = fightTimeline(result);
-  assert.equal(timeline[0].stage, 'reveal');
-  const hits = timeline.filter((frame) => frame.stage === 'strike');
-  assert.deepEqual(hits.map((frame) => [frame.attacker, frame.sound]), [[0, 'strike'], [1, 'crit']]);
-  assert.equal(fighterPose(hits[1], 0, result), 'hit');
-  assert.equal(fighterPose(hits[1], 1, result), 'crit');
-  assert.ok(timeline.findIndex((frame) => frame.stage === 'spoils') > timeline.findIndex((frame) => frame.stage === 'decision'));
-  assert.equal(fighterPose(timeline.at(-1), 0, result), 'defeat');
+  const timeline = meleeTimeline(result);
+  assert.deepEqual(timeline.map((frame) => frame.stage), ['reveal', 'exchange', 'exchange', 'decision', 'counter', 'spoils', 'finish']);
+  assert.deepEqual(timeline[1].actions, ['strike', 'parry']);
+  assert.deepEqual(timeline[2].actions, ['strike', 'block']);
+  assert.equal(timeline[3].sound, 'crit');
+  assert.deepEqual(timeline[4].actions, ['death', 'counter']);
+  assert.deepEqual(meleeActions(timeline.at(-1), result), ['fallen', 'victory']);
+});
+
+test('a Hex duel uses dodge choreography and equal scores do not override either recorded winner', () => {
+  for (const winner of [0, 1]) {
+    const result = { moves: [2, 2], crits: [false, false], score: [2, 2], winner };
+    const timeline = meleeTimeline(result);
+    assert.deepEqual(timeline[1].actions, ['feint', 'dodge']);
+    assert.deepEqual(timeline[2].actions, ['dodge', 'feint']);
+    assert.equal(timeline[3].tied, true);
+    assert.equal(timeline[4].attacker, winner);
+    assert.equal(timeline[4].actions[winner], 'counter');
+    assert.equal(meleeActions(timeline.at(-1), result)[1 - winner], 'fallen');
+  }
 });
 
 test('ties and crit comebacks explain the actual source of the result', () => {

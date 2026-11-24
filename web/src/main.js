@@ -7,18 +7,22 @@ import { ArenaClient, PROGRAM, ZERO, addressExplorer, cardKey, explorer, localKe
 import { icon } from './icons.js';
 import { botGeneration, ensurePack, prepareGuest, recoverGuestPack, stockBossCard } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
-import { characters, characterArt } from './characters.js';
-import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason, privateMoveRetryMessage } from './fight.js';
-import { PitEffects } from './effects.js';
+import { characters } from './characters.js';
+import { arenaCardSide, confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
+import { mount as mountDuel } from './duel3d/index.js';
+import { bossHeight } from './duel3d/fighter.js';
+import { meleeTimeline } from './duel3d/timeline.js';
+import './duel3d/style.css';
 import { PitSound } from './sound.js';
 import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, prepareBossWin, carryCampaign } from './campaign.js';
-import { storyView, mapView, codexView, journeyNav, encounterHeading, campaignResult } from './campaign-view.js';
+import { storyView, mapView, codexView, campaignResult } from './campaign-view.js';
 import { startPresence } from './presence-live.js';
 import { initialJourney, isAshGate } from './route.js';
 import { profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
 import { bossMove } from './world/bot-profile.js';
-import { installDialogKeys } from './game-ui.js';
+import { duelHud, installDialogKeys, movePicker } from './game-ui.js';
 import './game-ui.css';
+import './game-overlays.css';
 
 const app = document.getElementById('app');
 installDialogKeys(app);
@@ -45,20 +49,9 @@ const botFor = (generation) => new ArenaClient(localKey(generation ? 'rival-' + 
 const bossFor = (generation) => new ArenaClient(localKey('boss-' + generation));
 const roomBotKey = (room) => 'demon-duels:room-bot:' + room;
 const ASSET = import.meta.env.BASE_URL + 'art/';
-const effects = new PitEffects();
 const sound = new PitSound(import.meta.env.BASE_URL + 'audio/');
 export const setExploring = (active) => sound.unlock(!active && s.sound);
-const loadedArt = new Map();
 const emittedSettlements = new Set();
-function preloadFighters() {
-  return Promise.all(fighterKinds().filter((kind) => characters[kind]).flatMap((kind) => Object.values(characters[kind].poses)).map((path) => {
-    if (!loadedArt.has(path)) {
-      const image = new Image(); image.src = ASSET + path;
-      loadedArt.set(path, image.decode().catch(() => {}));
-    }
-    return loadedArt.get(path);
-  }));
-}
 const s = {
   mode: params.has('room') ? 'chain' : 'landing',
   journey: initialJourney(params, localStorage.getItem('demon-duels:story-seen')),
@@ -110,13 +103,6 @@ function campaignPage() {
   return null;
 }
 
-function arenaHeading() {
-  const boss = campaignBoss();
-  if (boss !== null) return encounterHeading(boss, button);
-  return journeyNav(s.mode === 'practice' ? 'practice' : 'pit', s.campaign) +
-    '<div class="hero"><div class="superline"><span></span> ' + (s.mode === 'practice' ? 'OFFCHAIN TUTORIAL' : 'THE OPEN PIT') + ' <span></span></div><h1>NO MERCY. <em>JUST DEMONS.</em></h1><p>Stake a demon. Seal a move. <strong>Fight for both.</strong></p></div>';
-}
-
 function bossOutcome() {
   const boss = campaignBoss();
   if (ashGate || boss === null || s.duel?.phase !== 3 || !emittedSettlements.has(fightId()) || !participant() || s.playing || guardianFinisher.pending) return '';
@@ -149,53 +135,73 @@ const fighterKinds = () => [
   s.mode === 'practice' ? s.practiceRival : s.mode === 'landing' ? 1 : s.opposing?.kind,
 ];
 
+const arenaPhase = (frame) => frame?.stage === 'decision' ? 'crit' :
+  frame?.stage === 'finish' && !s.playing ? 'return' :
+    ['spoils', 'finish'].includes(frame?.stage) ? 'take' : frame ? 'clash' :
+      s.duel?.phase === 2 ? 'crit' : moveLocked() || s.duel?.phase === 1 || (s.mode === 'practice' && s.practiceCards.length) ? 'seal' :
+        s.duel ? 'faceoff' : 'stake';
+
 function battlefield() {
   const result = roundResult();
   const frame = result ? s.frame : null;
-  const finished = frame?.stage === 'finish' || frame?.stage === 'spoils';
-  const reveal = Boolean(result && frame);
-  const kinds = fighterKinds();
-  const rival = s.mode === 'practice' || s.solo ? 'PIT BOT' : 'CHALLENGER';
-  const title = finished ? (result.winner === 0 ? 'VICTORY' : 'DEFEAT') : frame?.stage === 'reveal' ? 'MOVES REVEALED' :
-    frame?.stage === 'windup' ? moves[result.moves[frame.attacker]].name.toUpperCase() :
-    frame?.stage === 'strike' ? (result.crits[frame.attacker] ? 'CRITICAL HIT' : 'DIRECT HIT') :
-    frame?.stage === 'decision' ? result.score[0] === result.score[1] ? s.result ? 'TIE-BREAK' : 'VRF TIE-BREAK' : result.score[result.winner] + ' > ' + result.score[1 - result.winner] : '';
-  const cue = s.mode === 'landing' ? 'THE PIT IS CALLING' : s.playing ? 'A DUEL. TWO DEMONS. ONE SURVIVOR.' : result ? 'THE DUST HAS SETTLED' :
-    s.busy || (moveLocked() ? 'MOVE SEALED · AWAITING REVEAL' : s.duel?.phase === 2 ? 'AWAITING THE ORACLE' : 'CHOOSE YOUR MOVE');
-  return `<section class="battlefield stage-${frame?.stage || 'idle'} ${s.playing ? 'is-playing' : ''} ${frame?.stage === 'strike' && result?.crits[frame.attacker] ? 'critical' : ''}" aria-label="Animated duel arena">
-    <div class="arena-sky"></div><div class="arena-moon"></div><div class="arena-runes" aria-hidden="true">ᛟ ⟐ ᚷ ⟐ ᛟ ⟐ ᚷ ⟐</div>
-    <div class="arena-hud">${kinds.map((kind, side) => {
-      const d = demons[kind];
-      const score = reveal && frame.attacks > side ? result.score[side] : null;
-      return `<div class="fighter-hud hud-${side}" style="--fighter-color:${d?.glow || '#bba7cd'}"><span class="hud-role">${side ? rival : s.duel && !participant() ? 'PLAYER ONE' : 'YOU / PLAYER 01'}</span><strong>${d?.name || 'Empty stake'}</strong><div class="power-meter" aria-label="${score === null ? 'Clash power hidden' : 'Clash power ' + score + ' of 5'}">${Array.from({length: 5}, (_, i) => `<i class="${score !== null && i < score ? 'filled' : ''}"></i>`).join('')}</div><small>CLASH POWER <b>${score === null ? '—' : score + ' / 5'}</b></small></div>`;
-    }).join('')}<div class="round-counter"><span>THE PIT</span><b>01</b><small>ROUND</small></div></div>
-    <div class="arena-floor"></div><div class="arena-grid"></div>
-    ${!result && moveLocked() ? '<div class="sealed-suspense"><span>' + icon('lock', 20) + '</span><b>MOVE SEALED</b><small>NO ONE SEES IT COMING</small></div>' : ''}
-    <div class="combat-space">${kinds.map((kind, side) => {
-      const d = demons[kind];
-      const character = characters[kind];
-      const pose = fighterPose(frame, side, result);
-      const active = frame?.attacker === side;
-      const move = reveal ? moves[result.moves[side]] : null;
-      return `<div class="combatant side-${side} pose-${pose} ${active ? 'attacking' : ''} ${finished && result.winner === side ? 'champion' : ''}" style="--fighter-color:${d?.glow || '#bba7cd'};--sprite-hue:${character?.hue || 0}deg;--facing:${(side === 0 ? 1 : -1) * (character?.facing === 'left' ? -1 : 1)}">
-        <div class="summon-circle"></div><div class="fighter-shadow"></div>
-        ${d ? `<div class="fighter-motion"><div class="fighter-facing"><img class="fighter-sprite" draggable="false" src="${ASSET + characterArt(kind, pose)}" alt="${d.name} · ${pose}" width="320" height="320"></div></div>` : `<div class="awaiting-fighter">${icon('people', 48)}<span>AWAITING DEMON</span></div>`}
-        <div class="move-seal ${move ? 'revealed' : ''}">${move ? icon(move.icon, 16) + move.name : side === 0 && moveLocked() ? icon('lock', 13) + moves[s.move].name + ' / SEALED' : s.duel?.phase === 2 ? icon('lock', 13) + 'SEALED' : s.duel?.phase === 1 ? icon('lock', 13) + 'HIDDEN' : d ? d.type : 'EMPTY STAKE'}</div>
-        ${frame?.stage === 'strike' && !active ? `<div class="hit-number ${result.crits[frame.attacker] ? 'crit-number' : ''}"><small>${result.crits[frame.attacker] ? 'CRITICAL' : 'IMPACT'}</small>−${result.score[frame.attacker]}</div><div class="hit-flare"></div>` : ''}
-      </div>`;
-    }).join('')}</div>
-    <canvas class="pit-particles" aria-hidden="true"></canvas>
-    <div class="clash-fx ${reveal && frame?.stage === 'strike' ? 'move-' + result.moves[frame.attacker] : ''}" aria-hidden="true"></div>
-    ${title ? `<div class="fight-callout ${finished ? 'final-callout ' + (result.winner === 0 ? 'win' : 'loss') : ''}" role="status"><small>${finished ? s.result ? 'OFFCHAIN PRACTICE' : 'CONFIRMED ON SOLANA' : 'ROUND 01'}</small><strong>${title}</strong>${finished ? '<span>WINNER TAKES BOTH</span>' : ''}</div>` : !moveLocked() ? '<div class="idle-versus" aria-hidden="true">VS</div>' : ''}
-    <div class="arena-bottom"><span><i></i>${s.mode === 'practice' ? 'OFFCHAIN PRACTICE' : s.mode === 'landing' ? 'DUST DEMONS / ARENA' : 'SOLANA DEVNET'}</span><span class="arena-cue">${esc(cue)}</span><span>WINNER TAKES BOTH</span></div>
+  const taking = ['spoils', 'finish'].includes(frame?.stage);
+  const phase = arenaPhase(frame);
+  const title = taking ? (result.winner === 0 ? 'VICTORY' : 'DEFEAT') : frame?.label ||
+    (frame?.stage === 'reveal' ? 'MOVES REVEALED' : frame?.stage === 'decision' ?
+      (frame.tied ? s.result ? 'PRACTICE TIE-BREAK' : 'VRF TIE-BREAK' :
+        s.result ? 'PRACTICE CRIT ROLL' : 'MAGICBLOCK VRF') : moveLocked() ? 'MOVE SEALED' : '');
+  const [player, opponent] = fighterKinds().map((kind, side) => ({
+    label: side ? (s.mode === 'practice' || s.solo || Number.isInteger(s.requestedOpponent) ? 'GUARDIAN' : 'CHALLENGER') :
+      s.duel && s.duel.phase !== 0 && !participant() ? 'PLAYER ONE' : 'HUNTER',
+    name: demons[kind]?.name || 'Awaiting stake',
+    card: demons[kind]?.type,
+    detail: frame ? moves[result.moves[side]].name + (frame.attacks > side ? ' / ' + result.score[side] + ' POWER' : '') :
+      side === 0 && moveLocked() ? moves[s.move].name + ' / SEALED' : (phase === 'seal' || phase === 'crit') && s.mode !== 'practice' ? 'HIDDEN' : '',
+    crit: ['decision', 'counter', 'spoils', 'finish'].includes(frame?.stage) && result.crits[side],
+    winner: taking && result.winner === side,
+  }));
+  return `<section class="duel-scene" aria-label="3D melee arena" data-phase="${phase}" data-beat="${frame?.stage || 'guard'}">
+    <div class="duel-viewport" data-duel-viewport></div>
+    <div class="duel-overlay">
+      ${duelHud({ player, opponent, phase })}
+      <div class="duel-banner" role="status">${title ? `<strong>${title}</strong>` : ''}
+        ${taking ? `<small>${s.result ? 'SIMULATED CAPTURE' : 'SETTLED ON SOLANA / WINNER TAKES BOTH'}</small>` :
+          frame?.stage === 'decision' ? `<small>${result.score.join(' / ')} · ${result.crits.some(Boolean) ? 'CRITICAL HIT' : 'NO CRITICAL HITS'}</small>` : ''}
+      </div>
+      <span class="duel-mode">${s.mode === 'practice' ? 'OFFCHAIN PRACTICE' : 'SOLANA DEVNET'}</span>
+    </div>
   </section>`;
 }
 
+let duelView, duel3DUnavailable = false, duelSceneOpen = false;
+function syncDuelView() {
+  const host = app.querySelector('[data-duel-viewport]');
+  if (!host) {
+    duelView?.dispose();
+    duelView = null;
+    return;
+  }
+  const result = roundResult();
+  const fighters = fighterKinds().map((kind, side) => {
+    if (kind === undefined && (side === 0 || !Number.isInteger(s.requestedOpponent))) return null;
+    const id = kind ?? s.requestedOpponent;
+    const guardian = side === 1 && (s.mode !== 'chain' || s.solo || Number.isInteger(s.requestedOpponent));
+    return { role: guardian ? id : 'hunter', color: side === 0 ? '#d9b382' : demons[id]?.glow || '#bc99ff',
+      size: guardian ? bossHeight(id) : 1.85 };
+  });
+  const onUnavailable = () => {
+    duel3DUnavailable = true;
+    duelView = null;
+    const fallback = app.querySelector('.duel-no-webgl');
+    if (fallback) { fallback.hidden = false; fallback.closest('.duel-screen').classList.add('duel-text-only'); }
+  };
+  const roundData = { fighters, result, frame: result ? s.frame : null, onUnavailable };
+  if (duelView) { duelView.attach(host); duelView.update(roundData); }
+  else if (duel3DUnavailable || !(duelView = mountDuel(host, roundData))) onUnavailable();
+}
+
 function moveSelector() {
-  const disabled = Boolean(s.busy || s.playing || moveLocked());
-  return '<div class="move-grid">' + moves.map((move, i) =>
-    '<button type="button" class="move ' + (s.move === i ? 'chosen' : '') + '" data-action="move:' + i + '"' + (disabled ? ' disabled' : '') + '><span class="move-icon">' + icon(move.icon, 23) +
-    '</span><span><b>' + move.name + '</b><small>Beats ' + move.beats + '</small></span><kbd>' + (i + 1) + '</kbd></button>').join('') + '</div>';
+  return movePicker({ selected: s.move, locked: moveLocked(), busy: Boolean(s.busy || s.playing) });
 }
 
 function resultPanel() {
@@ -206,22 +212,29 @@ function resultPanel() {
     both.winner === 0 ? 'The pit is yours.' : 'The pit takes its due.';
   const line = both.moves.map((id, index) => '<span><b>' + moves[id].name + '</b> · ' + both.score[index] + ' DMG' +
     (both.crits[index] ? ' <em>CRIT</em>' : '') + '</span>').join('<small>VS</small>');
+  return '<div class="control has-result"><div class="result-copy"><span class="eyebrow">' + (s.result ? 'PRACTICE COMPLETE' : 'SETTLED ON SOLANA DEVNET') +
+    '</span><h2>' + title + '</h2><div class="damage">' + line + '</div></div><div class="actions">' +
+    (s.result && !s.returnToMap ? button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') : '') +
+    button('replay', 'Replay fight', 'text') + button('duel-receipt', 'Details', 'text') +
+    button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow') + '</div></div>';
+}
+
+function resultReceipt(both) {
+  const lostCard = both.winner === 0 ? s.opposing : s.staked;
   const breakdown = both.moves.map((move, side) => '<div><b>' + (side ? 'OPPONENT' : 'PLAYER 01') + ' / ' + moves[move].name + '</b><span>2 base + ' +
     Number((move + 1) % 3 === both.moves[1 - side]) + ' advantage + ' + (both.crits[side] ? '2' : '0') + ' crit = <strong>' + both.score[side] + '</strong></span></div>').join('');
-  const receipt = '<div class="proof-receipt"><div class="score-breakdown">' + breakdown + '</div><p>Each demon has a 25% crit chance: +2 clash power on a critical hit. Equal scores use ' + (s.result ? 'local randomness' : 'MagicBlock VRF') + ' to break the tie.</p>' + (s.result ? '<p>Practice uses local randomness. No blockchain transaction or card transfer.</p>' :
+  return '<div class="proof-receipt"><div class="score-breakdown">' + breakdown + '</div><p>' +
+    fightReason(both, Boolean(s.result)) + '</p><p>Each demon has a 25% crit chance: +2 clash power on a critical hit. Equal scores use ' +
+    (s.result ? 'local randomness' : 'MagicBlock VRF') + ' to break the tie.</p>' + (s.result ? '<p>Practice uses local randomness. No blockchain transaction or card transfer.</p>' :
     '<div class="proof-explanation"><span><b>Settlement receipt</b><small>MagicBlock VRF chose crits and ties; the same transaction assigned both cards to the winner.</small></span>' +
-    (proofLink(s.proof, 'View settlement proof') || '<span class="muted">Indexing Explorer proof…</span>') + '</div><a class="proof-link" href="' + addressExplorer(s.duel.key) + '" target="_blank" rel="noreferrer">Duel account: cards, winner & scores ' + icon('outside', 14) + '</a>') + '</div>';
-  return '<div class="control has-result"><div class="result-copy"><span class="eyebrow">' + (s.result ? 'PRACTICE COMPLETE' : 'SETTLED ON SOLANA DEVNET') +
-    '</span><h2>' + title + '</h2><div class="damage">' + line + '</div><p class="outcome-reason">' + fightReason(both, Boolean(s.result)) + '</p><p class="capture-receipt">' +
-    (s.result ? 'Simulated capture: ' : spectating ? (both.winner === 0 ? 'Player one captured ' : 'Player two captured ') : both.winner === 0 ? 'You captured ' : 'You lost ') +
-    '<b>' + (demons[fighterKinds()[1 - both.winner]]?.name || 'the opposing demon') + '</b>' + (s.result ? ' · no cards changed ownership.' : ' · ownership settled on devnet.') + '</p></div><div class="actions">' +
-    (s.result && !s.returnToMap ? button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') : '') +
-    button('replay', 'Replay fight', 'text') + button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow') + '</div>' + receipt + '</div>';
+    (proofLink(s.proof, 'View settlement proof') || '<span class="muted">Indexing Explorer proof…</span>') + '</div><a class="proof-link" href="' + addressExplorer(s.duel.key) + '" target="_blank" rel="noreferrer">Duel account: cards, winner & scores ' + icon('outside', 14) + '</a>' +
+    (lostCard ? '<br><a class="proof-link" href="' + addressExplorer(lostCard.key) + '" target="_blank" rel="noreferrer">Captured card account ' + icon('outside', 14) + '</a>' : '')) + '</div>' + bossOutcome();
 }
 
 function controls() {
   if (s.playing) return '<div class="control cinematic-control"><div><span class="eyebrow">' + (s.result ? 'OFFCHAIN PRACTICE' : 'CONFIRMED RESULT · COMBAT REPLAY') + '</span><h2>The demons have spoken.</h2></div><button type="button" class="button secondary" data-action="skip">Skip animation ' + icon('arrow') + '</button></div>';
-  if (s.result || s.duel?.phase === 3) return resultPanel();
+  if (roundResult()) return resultPanel();
+  if (s.duel?.phase === 3) return '<div class="control"><h2>Reading the settlement…</h2></div>';
   if (s.mode === 'landing') return '<div class="control intro"><div><span class="eyebrow">THE STAKES ARE REAL. THE SOL IS NOT.</span><h2>One demon in. Two demons out.</h2><p>Get a free starter pack and stake one demon against the bot. No wallet extension or real SOL.</p></div><div class="actions">' +
     button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') + button('practice', 'Offchain tutorial', 'secondary', 'spark') +
     '<a class="button secondary" href="?world=3d">Enter Ash Gate (3D)</a>' +
@@ -269,39 +282,34 @@ function controls() {
         button('bot', 'Duel the bot', 'primary', 'blade') + button('create', 'Invite a friend', 'secondary', 'people'))) + '</div></div>';
 }
 
-function inventory() {
+function stakePicker() {
+  if (s.playing || roundResult() || s.duel?.phase > 0 || s.staked) return '';
   const practice = s.mode === 'practice';
-  const cards = practice ? s.practiceCards.map((kind, index) => ({ kind, key: index, lock: ZERO })) : s.owned;
+  const cards = practice ? s.practiceCards.map((kind) => ({ kind, key: kind })) :
+    s.owned.filter((card) => keyed(card.lock, ZERO));
+  const selected = practice ? s.practiceStake : anyCard()?.key?.toString();
   if (!cards.length) return '';
-  return '<section class="inventory"><div class="vault-title"><span class="eyebrow">COLLECTION</span><h2>' + (practice ? 'Practice vault' : 'Your vault') +
-    ' <span>' + cards.length + '</span></h2>' + proofLink(s.packProof, 'Starter pack proof') + '</div><div class="inventory-grid">' +
-    cards.map((card) => {
-      const d = demons[card.kind];
-      const selected = practice ? s.practiceStake === card.kind : keyed(s.staked?.key || anyCard()?.key, card.key);
-      return '<button type="button" class="vault-card' + (selected ? ' selected' : '') + '" data-action="select:' + (practice ? card.kind : card.key) + '"' +
-        (s.busy || s.playing || s.result || !keyed(card.lock, ZERO) || s.duel?.phase === 1 || s.duel?.phase === 2 || s.duel?.phase === 3 ? ' disabled' : '') + ' aria-pressed="' + selected + '">' +
-        '<div class="vault-art" style="--card-glow:' + d.glow + ';--card-hue:' + characters[card.kind].hue + 'deg"><img src="' + ASSET + characters[card.kind].portrait + '" alt=""></div><span><b>' +
-        d.name + '</b><small>' + (keyed(card.lock, ZERO) ? d.type : 'STAKED') + '</small></span>' + (selected ? '<span class="picked">' + icon('hex', 13) + '</span>' : '') + '</button>';
-    }).join('') + '</div></section>';
+  return '<div class="duel-stakes" role="group" aria-label="Choose a demon card">' +
+    (practice ? '' : proofLink(s.packProof, 'Starter pack proof')) + cards.map(({ key, kind }) =>
+    '<button type="button" data-action="select:' + key + '" aria-pressed="' + (selected === (practice ? key : key.toString())) +
+    '"' + (s.busy ? ' disabled' : '') + '>' + demons[kind].name + '</button>').join('') + '</div>';
 }
 
 function capturedVault() {
   const result = roundResult();
   if (!result || !['spoils', 'finish'].includes(s.frame?.stage)) return '';
   const loser = 1 - result.winner;
-  const card = loser ? s.opposing : s.staked;
   const kind = fighterKinds()[loser];
   const demon = demons[kind];
   const spectator = s.duel && !participant();
   const owner = spectator ? (result.winner ? 'PLAYER TWO' : 'PLAYER ONE') : result.winner ? 'PIT RIVAL' : 'YOUR';
-  return `<section class="spoils-vault ${s.frame.stage === 'finish' ? 'landed' : ''}" aria-label="Winner's captured card"><div><span class="eyebrow">${s.result ? 'SIMULATED CAPTURE' : 'OWNED ON SOLANA DEVNET'}</span><h2>${owner} VAULT</h2><p>${demon?.name || 'Demon'} · ${s.result ? 'Practice only · no ownership change' : 'Confirmed winner takes both cards'}</p></div><div class="captured-slot" data-capture-target>${demon ? `<img src="${ASSET + characters[kind].portrait}" alt="${demon.name}">` : ''}${icon('box', 24)}</div>${s.result ? '' : '<div class="capture-links">' + (proofLink(s.proof, 'Ownership receipt') || '<span class="muted">Indexing proof…</span>') + (card ? '<a class="proof-link" href="' + addressExplorer(card.key) + '" target="_blank" rel="noreferrer">Captured card account ' + icon('outside', 14) + '</a>' : '') + '</div>'}</section>`;
+  return `<section class="spoils-vault ${s.frame.stage === 'finish' ? 'landed' : ''}" aria-label="Winner's captured card"><div><span class="eyebrow">${s.result ? 'SIMULATED CAPTURE' : 'OWNED ON SOLANA DEVNET'}</span><h2>${owner} VAULT</h2><p>${demon?.name || 'Demon'} · ${s.result ? 'Practice only · no ownership change' : 'Confirmed winner takes both cards'}</p></div><div class="captured-slot" data-capture-target>${demon ? `<img src="${ASSET + characters[kind].portrait}" alt="${demon.name}">` : ''}${icon('box', 24)}</div></section>`;
 }
 
 function animateCapture() {
   const result = roundResult();
   const loser = 1 - result.winner;
-  app.querySelector('.spoils-vault')?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
-  const origin = app.querySelector('.combatant.side-' + loser)?.getBoundingClientRect();
+  const origin = duelView?.fighterPoint(loser);
   const target = app.querySelector('[data-capture-target]')?.getBoundingClientRect();
   const kind = fighterKinds()[loser];
   if (!origin || !target || !demons[kind]) return;
@@ -312,10 +320,10 @@ function animateCapture() {
   document.body.append(card);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const duration = reduced ? 1 : 1500;
-  const from = `translate(${origin.x + origin.width / 2 - 50}px, ${origin.y + origin.height / 2 - 65}px) scale(.8)`;
-  const center = `translate(${innerWidth / 2 - 50}px, ${Math.min(innerHeight - 180, origin.y + origin.height / 2 - 65)}px) scale(1.15)`;
+  const from = `translate(${origin.x - 50}px, ${origin.y - 65}px) scale(.8)`;
+  const center = `translate(${innerWidth / 2 - 50}px, ${Math.min(innerHeight - 180, origin.y - 65)}px) scale(1.15)`;
   const to = `translate(${target.x + target.width / 2 - 50}px, ${target.y + target.height / 2 - 65}px) scale(.4)`;
-  card.animate([{ transform: from, opacity: 0 }, { transform: center, opacity: 1, offset: .32 }, { transform: center, opacity: 1, offset: .6 }, { transform: to, opacity: 0 }], { duration, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' }).finished.finally(() => card.remove());
+  card.animate([{ transform: from, opacity: 0 }, { transform: center, opacity: 1, offset: .32 }, { transform: center, opacity: 1, offset: .6 }, { transform: to, opacity: 0 }], { duration, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' }).finished.then(() => card.remove(), () => card.remove());
 }
 
 function networkProgress() {
@@ -329,6 +337,11 @@ function networkProgress() {
 
 function modal() {
   if (!s.modal) return '';
+  if (s.modal === 'duel-receipt') {
+    const result = roundResult();
+    return result ? '<div class="overlay" data-dismiss><section class="modal duel-receipt" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><button type="button" class="square close" data-action="close" aria-label="Close dialog">' +
+      icon('cross') + '</button><h2 id="dialog-title">Duel details</h2>' + resultReceipt(result) + '</section></div>' : '';
+  }
   const fund = s.modal === 'wallet';
   return '<div class="overlay" data-dismiss><section class="modal" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><button type="button" class="square close" data-action="close" aria-label="Close dialog">' +
     icon('cross') + '</button><span class="eyebrow">' + (fund ? 'ISOLATED DEVNET ACCOUNT' : 'THE PIT / FIELD GUIDE') + '</span><h2 id="dialog-title">' +
@@ -344,28 +357,48 @@ function modal() {
       '<p>Devnet cards have no monetary value. The practice mode uses no blockchain.</p>') + '</section></div>';
 }
 
+function feedback() {
+  return '<div class="feedback" role="status" aria-live="polite">' +
+    (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice)) + '</div>';
+}
+
+function duelScreen() {
+  const vault = capturedVault();
+  const intel = s.returnToMap && ashEncounter?.tells.length ?
+    '<section class="control"><div><span class="eyebrow">' + esc(ashEncounter.grade.toUpperCase()) +
+    ' / ASH GATE INTEL</span><ul>' + ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '';
+  return '<main class="duel-screen">' + battlefield() +
+    '<nav class="duel-tools" aria-label="Duel options">' +
+      (ashGate && s.returnToMap ? button('return-map', 'Return to Ash Gate', 'secondary', 'arrow') :
+        button('map', 'Map', 'secondary', 'arrow')) +
+      '<button type="button" class="button secondary" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
+      icon(s.sound ? 'volume' : 'mute', 16) + '</button>' +
+      button('rules', 'Rules', 'secondary') +
+      (safeMode() ? button('wallet', 'Wallet', 'secondary', 'wallet') : '') +
+    '</nav><p class="duel-no-webgl" hidden>3D combat is unavailable. You can still play and see the duel result.</p>' +
+    '<div class="duel-panels' + (vault ? ' is-result' : '') + '">' + feedback() + stakePicker() + controls() +
+      (vault ? '' : intel) + networkProgress() + vault + '</div></main>';
+}
+
 let dialogReturnAction;
 function draw() {
-  if (s.journey === 'arena' && s.mode !== 'landing') preloadFighters();
   const page = campaignPage();
+  const fallbackScroll = app.querySelector('.duel-text-only')?.scrollTop;
   const focus = document.activeElement?.dataset?.action;
   const hadDialog = Boolean(app.querySelector('[role=dialog]'));
   const kind = s.mode === 'practice' ? 'PRACTICE MODE' : 'SOLANA DEVNET';
   app.dataset.screen = s.journey === 'story' ? 'prologue' : s.journey === 'arena' ? 'arena' : 'campaign';
-  app.innerHTML = '<header><div class="nav"><button type="button" class="wordmark" data-action="home"><img src="' + ASSET + 'sigil.svg" alt=""><span>DEMON<span>DUELS</span></span></button><div class="nav-right">' +
-    statusText(kind) + (ashGate && s.returnToMap ? button('return-map', 'Return to Ash Gate', 'secondary') : '') +
-    '<button type="button" class="square sound" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
+  app.innerHTML = (page === null ? duelScreen() :
+    '<header><div class="nav"><button type="button" class="wordmark" data-action="home"><img src="' + ASSET + 'sigil.svg" alt=""><span>DEMON<span>DUELS</span></span></button><div class="nav-right">' +
+    statusText(kind) + '<button type="button" class="square sound" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
     icon(s.sound ? 'volume' : 'mute') + '</button><button type="button" class="square help" data-action="rules" aria-label="Duel rules">' + icon('info') + '</button><button type="button" class="button wallet secondary" data-action="wallet" aria-label="Guest wallet and devnet funding">' +
     icon('wallet', 16) + '<span>' + (safeMode() ? short(client.key) : 'Guest wallet') + '</span></button></div></div></header>' +
-    '<main>' + (page ?? (arenaHeading() + battlefield() + controls() + (s.returnToMap && ashEncounter?.tells.length
-      ? '<section class="control"><div><span class="eyebrow">' + esc(ashEncounter.grade.toUpperCase()) +
-        ' / ASH GATE INTEL</span><ul>' + ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '') +
-    bossOutcome() + networkProgress() + capturedVault())) + '<div class="feedback" role="status" aria-live="polite">' + (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice)) + '</div>' + (page === null ? inventory() : '') +
+    '<main>' + page + feedback() +
     '<div class="mechanics"><div>' + icon('lock') + '<span><b>PRIVATE MOVES</b><small>MagicBlock Private ER</small></span></div><div>' + icon('spark') +
     '<span><b>VERIFIABLE CRITS</b><small>MagicBlock VRF</small></span></div><div>' + icon('coin') +
     '<span><b>WINNER TAKES BOTH</b><small>Solana card ownership</small></span></div></div></main>' +
     '<footer><div><span>DEMON DUELS</span> <span>·</span> <span>MAGICBLOCK BLITZ V10</span></div><a href="' + addressExplorer(PROGRAM) +
-    '" target="_blank" rel="noreferrer">Devnet program ' + icon('outside', 13) + '</a></footer>' + modal();
+    '" target="_blank" rel="noreferrer">Devnet program ' + icon('outside', 13) + '</a></footer>') + modal();
   if (s.modal && !hadDialog) {
     dialogReturnAction = focus;
     app.querySelector('.modal .close')?.focus({ preventScroll: true });
@@ -373,9 +406,18 @@ function draw() {
     [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === dialogReturnAction)?.focus({ preventScroll: true });
   } else if (focus) {
     const previous = [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === focus && !element.disabled);
-    (previous || (s.modal && app.querySelector('.modal .close')))?.focus({ preventScroll: true });
+    (previous || (s.modal ? app.querySelector('.modal .close') : null))?.focus({ preventScroll: true });
   }
-  effects.mount(app.querySelector('.pit-particles'));
+  syncDuelView();
+  if (fallbackScroll) {
+    const fallback = app.querySelector('.duel-text-only');
+    if (fallback) fallback.scrollTop = fallbackScroll;
+  }
+  const sceneOpen = Boolean(app.querySelector('.duel-screen'));
+  if (sceneOpen !== duelSceneOpen) {
+    duelSceneOpen = sceneOpen;
+    window.dispatchEvent(new CustomEvent(sceneOpen ? 'demon-duels:duel3d-open' : 'demon-duels:duel3d-close'));
+  }
   sound.setScene(s.playing || s.mode === 'practice' || s.duel?.phase === 1 || s.duel?.phase === 2 ? 'fight' : 'menu');
   if (s.journey === 'arena' && roundResult() && !s.busy && s.playedId !== fightId()) {
     s.playedId = fightId();
@@ -391,22 +433,23 @@ async function playFight() {
   s.playing = true;
   s.frame = { stage: 'reveal', attacks: 0 };
   draw();
-  await preloadFighters();
-  for (const frame of fightTimeline(result)) {
+  if (!duelView) {
+    await guardianFinisher.play(fightId());
     if (sequence !== s.sequence) return;
-    if (frame.stage === 'spoils') {
-      await presentFinisher();
-      if (sequence !== s.sequence) return;
-    }
+    s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); return;
+  }
+  for (const frame of meleeTimeline(result)) {
+    if (sequence !== s.sequence) return;
     s.frame = frame;
     if (frame.sound && !(s.duel && !participant() && (frame.sound === 'victory' || frame.sound === 'defeat'))) audio(frame.sound);
-    if (frame.stage === 'windup') audio(moves[result.moves[frame.attacker]].name.toLowerCase());
     if (frame.stage === 'finish' && !s.result && participant() && result.winner === 0) audio('transfer');
     draw();
-    if (frame.stage === 'strike') effects.burst(frame.attacker, result.crits[frame.attacker], demons[fighterKinds()[frame.attacker]]?.glow || '#ffbd5c');
+    if (frame.stage === 'counter') audio('strike');
     if (frame.stage === 'spoils') animateCapture();
-    await sleep(reduced ? Math.max(frame.duration, 1000) : frame.duration);
+    await sleep(reduced ? Math.min(frame.duration, 1150) : frame.duration);
   }
+  if (sequence !== s.sequence) return;
+  await guardianFinisher.play(fightId());
   if (sequence !== s.sequence) return;
   s.playing = false;
   draw();
@@ -435,7 +478,7 @@ async function refreshRoom() {
   if (room !== s.room || owner !== client) return;
   if (!d) throw new Error('This duel link does not point to a live room.');
   s.duel = d;
-  const side = mySide();
+  const side = arenaCardSide(d, client.key);
   if (!s.staked || !s.opposing) {
     const cards = await Promise.all([side ? d.card2 : d.card1, side ? d.card1 : d.card2]
       .map((key) => keyed(key, ZERO) ? null : readCard(key)));
@@ -505,6 +548,7 @@ function setRoom(key) {
   s.frame = null;
   s.playedId = null;
   s.room = key;
+  s.duel = null;
   s.staked = null;
   s.opposing = null;
   s.proof = null;
@@ -525,7 +569,6 @@ function setRoom(key) {
     s.move = saved === null ? null : Number(saved);
   } else {
     url.searchParams.delete('room');
-    s.duel = null;
     s.move = null;
   }
   history.replaceState(null, '', url);
@@ -808,7 +851,7 @@ async function action(name) {
     window.dispatchEvent(new CustomEvent('demon-duels:mute', { detail: { enabled: s.sound } }));
     audio('seal'); draw(); return;
   }
-  if (name === 'rules' || name === 'wallet' || name === 'close') {
+  if (name === 'rules' || name === 'wallet' || name === 'close' || (name === 'duel-receipt' && !s.playing && roundResult())) {
     s.modal = name === 'close' ? null : name; draw();
     if (name === 'wallet') refreshWallet().then(draw).catch(() => {});
     return;
@@ -822,7 +865,7 @@ async function action(name) {
   if (name === 'skip' && s.playing) {
     document.querySelectorAll('.capture-card').forEach((card) => card.remove());
     const sequence = ++s.sequence;
-    await presentFinisher();
+    await guardianFinisher.play(fightId());
     if (sequence !== s.sequence) return;
     s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); return;
   }
@@ -846,6 +889,7 @@ async function action(name) {
     }); return;
   }
   if (name === 'pit') {
+    s.modal = null;
     if (!pitUnlocked(s.campaign)) { showMap(); s.notice = 'Defeat all six guardians to unlock the open pit.'; draw(); return; }
     if (activeDuel()) { s.journey = 'arena'; s.mode = 'chain'; draw(); return; }
     setRoom(null); s.requestedOpponent = null; s.returnToMap = false; s.journey = 'arena';
@@ -858,6 +902,7 @@ async function action(name) {
     return;
   }
   if (name === 'campaign-return') {
+    s.modal = null;
     if (guardianFinisher.pending) await presentFinisher();
     if (activeDuel() || checkingBossSettlement()) { showMap(); return; }
     setRoom(null); s.requestedOpponent = null; s.returnToMap = false;
@@ -1066,6 +1111,7 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
 window.addEventListener('demon-duels:launch', (event) => {
   if (!launchFight(event.detail)) event.preventDefault();
 });
+window.addEventListener('demon-duels:return', showMap);
 window.addEventListener('storage', (event) => {
   if (event.key !== campaignKey(client.key)) return;
   s.campaign = readCampaign(localStorage, client.key);
