@@ -25,6 +25,7 @@ const ROLLING: u8 = 2;
 const SETTLED: u8 = 3;
 const REFUNDED: u8 = 4;
 const DUEL_TIMEOUT: i64 = 30 * 60;
+const PACK_RETRY_COOLDOWN: i64 = 5 * 60;
 const PROGRAM_IDENTITY: Pubkey = program_identity_pubkey(&ID);
 const VRF_CALLBACK_IDENTITY: Pubkey = Pubkey::new_from_array(scoped_vrf_identity_const(&ID).0);
 
@@ -51,7 +52,9 @@ pub mod demon_duels {
     }
 
     pub fn fulfill_pack(ctx: Context<FulfillPack>, randomness: [u8; 32]) -> Result<()> {
-        require!(!ctx.accounts.pack.opened, ArenaError::WrongPhase);
+        if ctx.accounts.pack.opened {
+            return Ok(());
+        }
         let shift = randomness[0] % 6;
         let other = (shift + 1 + randomness[1] % 5) % 6;
         let mut third = randomness[2] % 4;
@@ -69,6 +72,26 @@ pub mod demon_duels {
         ctx.accounts.card2.kind = third;
         ctx.accounts.pack.opened = true;
         msg!("Starter pack opened: {}, {}, {}", shift, other, third);
+        Ok(())
+    }
+
+    pub fn retry_pack(ctx: Context<RetryPack>) -> Result<()> {
+        let now = Clock::get()?.unix_timestamp;
+        let retry = &mut ctx.accounts.retry;
+        require!(
+            pack_retry_allowed(ctx.accounts.pack.opened, now, retry.next_retry),
+            ArenaError::PackRetryUnavailable
+        );
+        retry.next_retry = now + PACK_RETRY_COOLDOWN;
+        let owner = ctx.accounts.payer.key();
+        let pack = ctx.accounts.pack.key();
+        let seed = Pubkey::find_program_address(&[b"pack-attempt", pack.as_ref(), &now.to_le_bytes()], &ID).0;
+        let cards = [0, 1, 2].map(|i| Pubkey::find_program_address(&[b"card", owner.as_ref(), &[i]], &ID).0);
+        let ix = request_ix(
+            owner, ctx.accounts.oracle_queue.key(), seed, instruction::FulfillPack::DISCRIMINATOR,
+            [pack, cards[0], cards[1], cards[2]],
+        );
+        ctx.accounts.invoke_signed_vrf(&ctx.accounts.payer.to_account_info(), &ix)?;
         Ok(())
     }
 
@@ -240,6 +263,10 @@ pub mod demon_duels {
     }
 }
 
+fn pack_retry_allowed(opened: bool, now: i64, next_retry: i64) -> bool {
+    !opened && now >= next_retry
+}
+
 fn require_available(card: &Card, owner: Pubkey) -> Result<()> {
     require_keys_eq!(card.owner, owner, ArenaError::NotPlayer);
     require!(card.lock == Pubkey::default() && card.kind < 6, ArenaError::CardUnavailable);
@@ -307,6 +334,21 @@ pub struct FulfillPack<'info> {
     pub card1: Account<'info, Card>,
     #[account(mut, seeds = [b"card", pack.owner.as_ref(), &[2]], bump)]
     pub card2: Account<'info, Card>,
+}
+
+#[vrf]
+#[derive(Accounts)]
+pub struct RetryPack<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(seeds = [b"pack", payer.key().as_ref()], bump, constraint = pack.owner == payer.key() @ ArenaError::NotPlayer)]
+    pub pack: Account<'info, Pack>,
+    #[account(init_if_needed, payer = payer, space = 8 + PackRetry::INIT_SPACE, seeds = [b"pack-retry", pack.key().as_ref()], bump)]
+    pub retry: Account<'info, PackRetry>,
+    /// CHECK: MagicBlock's canonical devnet queue.
+    #[account(mut, address = DEFAULT_QUEUE)]
+    pub oracle_queue: UncheckedAccount<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -458,6 +500,12 @@ pub struct Pack {
 
 #[account]
 #[derive(InitSpace)]
+pub struct PackRetry {
+    pub next_retry: i64,
+}
+
+#[account]
+#[derive(InitSpace)]
 pub struct Duel {
     pub nonce: u64,
     pub p1: Pubkey,
@@ -515,11 +563,21 @@ pub enum ArenaError {
     MoveMissing,
     #[msg("The move must have a private ACL before submission.")]
     MissingPrivacy,
+    #[msg("The pack is already open or a retry was recently requested.")]
+    PackRetryUnavailable,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pack_retry_is_only_available_for_unopened_packs_outside_the_cooldown() {
+        assert!(pack_retry_allowed(false, 10, 0));
+        assert!(!pack_retry_allowed(false, 10, 11));
+        assert!(pack_retry_allowed(false, 11, 11));
+        assert!(!pack_retry_allowed(true, 11, 11));
+    }
 
     #[test]
     fn tactical_advantage_beats_an_equal_crit_roll() {
