@@ -1,6 +1,6 @@
 import './style.css';
 import './finishers/style.css';
-import { matchesBossStake, previewFinisher, settlementCinematics } from './finishers/index.js';
+import { bossFinisher, matchesBossStake, previewFinisher, settlementCinematics } from './finishers/index.js';
 import './arena.css';
 import { PublicKey } from '@solana/web3.js';
 import { ArenaClient, PROGRAM, ZERO, addressExplorer, cardKey, explorer, localKey, packKey, proof, readCard, readCards, readDuel, readRound, until, sleep } from './chain.js';
@@ -76,7 +76,7 @@ s.circle = Math.min(s.campaign.wins.length, circles.length - 1);
 const short = (key) => key?.toString().slice(0, 4) + '…' + key?.toString().slice(-4);
 const keyed = (value, key) => Boolean(value && key && value.equals(key));
 function clearSavedRoom(room) {
-  if (localStorage.getItem(activeRoomKey) === room?.toBase58()) localStorage.removeItem(activeRoomKey);
+  if (localStorage.getItem(activeRoomKey) === room?.toString()) localStorage.removeItem(activeRoomKey);
 }
 const anyCard = () => s.owned.find((card) => keyed(card.key, s.selected) && keyed(card.lock, ZERO)) ??
   s.owned.find((card) => keyed(card.lock, ZERO));
@@ -119,13 +119,14 @@ function arenaHeading() {
 
 function bossOutcome() {
   const boss = campaignBoss();
-  if (ashGate || boss === null || s.duel?.phase !== 3 || !emittedSettlements.has(fightId()) || !participant() || s.playing || pendingAshSeal) return '';
+  if (ashGate || boss === null || s.duel?.phase !== 3 || !emittedSettlements.has(fightId()) || !participant() || s.playing || guardianFinisher.pending) return '';
   return campaignResult(boss, keyed(s.duel.winner, client.key), s.campaign, button);
 }
 
 const roundResult = () => s.result || (bossEncounter() && !emittedSettlements.has(fightId()) ? null : confirmedFight(s.duel, mySide()));
 const fightId = () => s.result ? 'practice:' + s.resultId : s.duel?.key?.toString();
 const bossEncounter = () => s.mode === 'chain' && s.solo && Number.isInteger(s.requestedOpponent) && participant();
+const checkingBossSettlement = () => bossEncounter() && s.duel?.phase === 3 && !emittedSettlements.has(fightId());
 function isBoundBossSettlement(detail, duel) {
   if (!bossEncounter() || !keyed(duel.p1, client.key)) return false;
   try {
@@ -136,33 +137,13 @@ function isBoundBossSettlement(detail, duel) {
 }
 let liveSettlement;
 let ashEncounter = null;
-let pendingAshSeal = null;
 let hostingRival = false;
 const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
-async function presentFinisher() {
-  const duel = fightId();
-  const seal = pendingAshSeal;
-  if (seal?.detail.duel === duel && !seal.started) {
-    seal.started = true;
-    const { opponentKind } = seal.detail;
-    const fallback = window.dispatchEvent(new CustomEvent('demon-duels:finisher', {
-      detail: { opponentKind, grade: seal.grade, duel }, cancelable: true,
-    }));
-    if (!fallback) { await seal.done; return; }
-    await Promise.resolve();
-  }
-  if (seal?.detail.duel === duel && seal.started && !finishers.has(duel)) { await seal.done; return; }
-  await finishers.play(duel).catch(() => {});
-}
-
-window.addEventListener('demon-duels:finisher-done', ({ detail }) => {
-  const seal = pendingAshSeal;
-  if (!seal?.started || detail?.duel !== seal.detail.duel || detail.opponentKind !== seal.detail.opponentKind || fightId() !== detail.duel) return;
-  s.campaign = seal.commit();
-  pendingAshSeal = null;
-  clearSavedRoom(s.room);
-  seal.resolve();
+const guardianFinisher = bossFinisher(window, finishers, (campaign, duel) => {
+  s.campaign = campaign;
+  clearSavedRoom(duel);
 });
+const presentFinisher = () => guardianFinisher.play(guardianFinisher.pending?.duel ?? fightId());
 const fighterKinds = () => [
   s.mode === 'practice' ? s.practiceStake : s.mode === 'landing' ? 0 : s.staked?.kind ?? anyCard()?.kind,
   s.mode === 'practice' ? s.practiceRival : s.mode === 'landing' ? 1 : s.opposing?.kind,
@@ -483,22 +464,19 @@ async function refreshRoom() {
           opponent: d.p2.toString(), bot: loadRoomBot(room).bot.key.toString(), opposingKind: detail.opponentKind,
           duel: detail.duel, mode: detail.mode,
         });
-        if (commit) {
-          let resolve;
-          const done = new Promise((finish) => { resolve = finish; });
-          pendingAshSeal = { detail, commit, grade: profile?.grade ?? 'shadow', done, resolve, started: false };
-        }
+        if (commit) guardianFinisher.queue(detail, profile?.grade ?? 'shadow', commit);
       }
-      if (boundBoss && (pendingAshSeal?.detail === detail || !detail.won && previous !== undefined)) {
+      if (boundBoss && (guardianFinisher.pending === detail || !detail.won && previous !== undefined)) {
         liveSettlement = detail;
       }
       try { window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail })); }
       finally { liveSettlement = undefined; }
-      if (previous === undefined && finishers.has(detail.duel)) {
+      if (guardianFinisher.pending === detail && s.journey !== 'arena') await presentFinisher();
+      else if (previous === undefined && finishers.has(detail.duel)) {
         s.playedId = null; s.frame = null;
       }
     }
-    if (pendingAshSeal?.detail.duel !== room.toString()) clearSavedRoom(room);
+    if (guardianFinisher.pending?.duel !== room.toString()) clearSavedRoom(room);
   }
   if (d.phase === 4) clearSavedRoom(room);
 }
@@ -520,9 +498,7 @@ async function run(label, action, recoveryMessage) {
 }
 
 function setRoom(key) {
-  finishers.clear();
-  pendingAshSeal?.resolve();
-  pendingAshSeal = null;
+  guardianFinisher.roomChanged();
   document.querySelectorAll('.capture-card').forEach((card) => card.remove());
   s.sequence++;
   s.playing = false;
@@ -788,7 +764,7 @@ async function startQuickDuel() {
         if (s.solo && s.duel.phase === 0) await readyBot();
         return;
       }
-      if (pendingAshSeal?.detail.duel === s.room.toString()) return;
+      if (guardianFinisher.pending?.duel === s.room.toString()) return;
       setRoom(null);
     }
     await prepareGuest(client, progress);
@@ -882,16 +858,16 @@ async function action(name) {
     return;
   }
   if (name === 'campaign-return') {
-    if (pendingAshSeal) await presentFinisher();
-    if (activeDuel()) { showMap(); return; }
+    if (guardianFinisher.pending) await presentFinisher();
+    if (activeDuel() || checkingBossSettlement()) { showMap(); return; }
     setRoom(null); s.requestedOpponent = null; s.returnToMap = false;
     showMap(); return;
   }
   if (name === 'return-map') {
-    if (pendingAshSeal) await presentFinisher();
+    if (guardianFinisher.pending) await presentFinisher();
     const savedAsh = s.room && savedProfile(localStorage, s.room);
     const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof };
-    if (activeDuel()) {
+    if (activeDuel() || checkingBossSettlement()) {
       showMap();
       if (!ashGate) return;
     } else {
@@ -1047,7 +1023,7 @@ async function action(name) {
 
 // Campaign integration: launch a selected boss without coupling the arena to a map.
 export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade, tells } = {}) {
-  if (s.busy || s.playing || hostingRival) return false;
+  if (s.busy || s.playing || hostingRival || guardianFinisher.pending) return false;
   if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
   const hunt = ashGate ? profileFor({ mode, opponentKind, grade, tells }) : null;
@@ -1098,7 +1074,7 @@ window.addEventListener('storage', (event) => {
 
 // Live hunters: a challenge accepted in the world becomes an ordinary open/join PvP duel.
 function launchRivalDuel(room, join, returnToMap) {
-  if (!room || pendingAshSeal) return false;
+  if (!room) return false;
   const saved = readKey(localStorage.getItem(activeRoomKey));
   if ((activeDuel() && !keyed(s.room, room)) || (saved && !keyed(saved, room))) {
     s.notice = 'Resume or finish your saved duel before opening another hunter duel.';
@@ -1123,7 +1099,7 @@ function launchRivalDuel(room, join, returnToMap) {
 }
 
 async function rivalReady() {
-  if (pendingAshSeal) return { ok: false, reason: 'Claim your Ash Gate seal before challenging a hunter.' };
+  if (guardianFinisher.pending) return { ok: false, reason: 'Claim your Ash Gate seal before challenging a hunter.' };
   assertCurrentGuest();
   if (client !== presenceGuest) return { ok: false, reason: 'Reload to challenge hunters with your recovered guest.' };
   if (s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
@@ -1147,7 +1123,7 @@ async function rivalReady() {
 async function hostRivalDuel(stillWanted) {
   const ready = await rivalReady();
   if (!ready.ok) throw new Error(ready.reason);
-  if (s.busy || s.playing || hostingRival || pendingAshSeal) throw new Error('Finish your current duel first.');
+  if (s.busy || s.playing || hostingRival || guardianFinisher.pending) throw new Error('Finish your current duel first.');
   if (!stillWanted()) throw new Error('The other hunter backed out before you staked.');
   assertCurrentGuest();
   hostingRival = true;

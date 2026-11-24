@@ -228,6 +228,13 @@ export function mountAshGate({ hasAshSeal, setExploring }) {
     setExploring(true);
     document.title = gateTitle;
   }
+  function showVictory() {
+    if (seal || !hasAshSeal()) return;
+    outcome = 'won';
+    seal = true;
+    cue('gate-open');
+    show('One rune returns. It remembers you.');
+  }
   function challenge() {
     if (active && menu === 'play' && nearbyPeer) emit('challenge-hunter', { id: nearbyPeer.id });
   }
@@ -421,6 +428,9 @@ export function mountAshGate({ hasAshSeal, setExploring }) {
   window.addEventListener('demon-duels:settled', ({ detail }) => {
     if (pending === 'boss' && detail?.bossBound && detail.opponentKind === ASH_WARDEN.opponentKind) settlement = detail;
   });
+  window.addEventListener('demon-duels:finisher-done', ({ detail }) => {
+    if (active && detail?.opponentKind === ASH_WARDEN.opponentKind && detail.duel) showVictory();
+  });
   window.addEventListener('demon-duels:return', ({ detail }) => {
     if (!pending) return;
     const encounter = pending;
@@ -430,10 +440,7 @@ export function mountAshGate({ hasAshSeal, setExploring }) {
     if (encounter !== 'boss') return;
     watched = spotted = false;
     if (result === 'won') {
-      outcome = 'won';
-      seal = hasAshSeal();
-      cue('gate-open');
-      show('One rune returns. It remembers you.');
+      showVictory();
     } else if (result === 'lost') {
       outcome = 'lost';
       show('Defeat confirmed. Approach again to challenge the Warden.');
