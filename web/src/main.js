@@ -6,7 +6,7 @@ import { icon } from './icons.js';
 import { botGeneration, ensurePack, prepareGuest, recoverGuestPack, stockBossCard } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
 import { characters, characterArt } from './characters.js';
-import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason } from './fight.js';
+import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason, privateMoveRetryMessage } from './fight.js';
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
 
@@ -53,6 +53,7 @@ const s = {
   room: readKey(params.get('room')), solo: false, opposing: null, proof: null, packProof: null, packPending: false, packOpened: false,
   playing: false, frame: null, playedId: null, sequence: 0, resultId: 0,
   waitSince: null,
+  retrySeal: null,
   requestedOpponent: null, returnToMap: false,
 };
 const short = (key) => key?.toString().slice(0, 4) + '…' + key?.toString().slice(-4);
@@ -168,7 +169,8 @@ function controls() {
     if (!participant()) return '<div class="control"><h2>Duel in progress</h2><p>Both players staked. Their moves stay hidden until reveal.</p></div>';
     return '<div class="control"><div class="control-title"><div><span class="eyebrow">02 / MAGICBLOCK PRIVATE ER</span><h2>' + (moveLocked() ? 'Your move is sealed.' : 'Seal your move') + '</h2></div>' +
       (moveLocked() ? button('resolve', 'Check for reveal', 'secondary', 'lock') : '') + '</div>' +
-      (moveLocked() ? '<p>Only your wallet can read your move until both are locked.</p>' : moveSelector()) +
+      (moveLocked() ? '<p>Only your wallet can read your move until both are locked.</p>' : (s.retrySeal !== null
+        ? button('move:' + s.retrySeal, 'Retry ' + moves[s.retrySeal].name, 'primary', 'lock') : moveSelector())) +
       (Date.now() >= s.duel.deadline ? button('refund', 'Release both stakes', 'secondary') : '') + '</div>';
   }
   if (s.busy && !s.duel && s.room) return '<div class="control"><h2>Finding the arena…</h2></div>';
@@ -372,7 +374,7 @@ async function refreshRoom() {
   if (d.phase === 4) clearSavedRoom(room);
 }
 
-async function run(label, action) {
+async function run(label, action, recoveryMessage) {
   if (s.busy) return;
   s.busy = label;
   s.waitSince = Date.now();
@@ -381,10 +383,10 @@ async function run(label, action) {
   try { assertCurrentGuest(); await action(); }
   catch (error) {
     const message = String(error?.message || error);
-    s.notice = /insufficient|insufficientfunds|no record of a prior credit/i.test(message) ?
+    s.notice = recoveryMessage?.(error) ?? (/insufficient|insufficientfunds|no record of a prior credit/i.test(message) ?
       'Not enough devnet SOL. Fund the guest wallet and retry.' :
       /program is not deployed|program account does not exist/i.test(message) ? 'The devnet program is not responding. Try again later.' :
-      message.split('\n')[0].slice(0, 180);
+      message.split('\n')[0].slice(0, 180));
   } finally { s.busy = null; s.waitSince = null; draw(); }
 }
 
@@ -399,6 +401,7 @@ function setRoom(key) {
   s.opposing = null;
   s.proof = null;
   s.result = null;
+  s.retrySeal = null;
   const url = new URL(location.href);
   if (key) {
     url.searchParams.set('room', key.toBase58());
@@ -733,7 +736,7 @@ async function action(name) {
   }
   if (name.startsWith('move:')) {
     const move = Number(name.slice(5));
-    if (!moves[move] || moveLocked()) return;
+    if (!moves[move] || moveLocked() || (s.retrySeal !== null && s.retrySeal !== move)) return;
     if (s.mode === 'practice') {
       await run('Revealing practice moves…', async () => {
         s.move = move; audio('seal'); draw();
@@ -744,15 +747,27 @@ async function action(name) {
       }); return;
     }
     await run('Sealing your move on the Private ER…', async () => {
+      if (!navigator.onLine) throw new Error('Offline');
       await refreshRoom();
-      if (!(await readRound(s.duel.key))?.moves.every((id) => id < 3)) {
-        await client.delegate(s.duel);
+      const duel = s.duel;
+      if (duel?.phase !== 1 || !participant()) return;
+      const round = await readRound(duel.key);
+      let choice = round?.moves[mySide()];
+      if (!(choice < 3)) {
+        await client.delegate(duel);
         if (s.solo) await readyBot();
-        await client.lock(s.duel, move);
+        const signature = await client.lock(duel, move);
+        choice = signature ? move : await client.pick(duel);
+        if (!(choice >= 0 && choice < 3) || choice === null) throw new Error('The network is still processing. Retry to resume.');
       }
-      s.move = move;
-      localStorage.setItem(moveKey(), String(move));
+      s.move = choice;
+      s.retrySeal = null;
+      localStorage.setItem(moveKey(), String(choice));
       audio('seal'); await resolveChain();
+    }, (error) => {
+      const message = privateMoveRetryMessage(error, { online: navigator.onLine, sealed: moveLocked() });
+      s.retrySeal = message && !moveLocked() ? move : null;
+      return message;
     }); return;
   }
   if (name === 'pack') {
@@ -820,7 +835,8 @@ async function action(name) {
       await Promise.all([refreshRoom(), refreshWallet()]);
     }); return;
   }
-  if (name === 'resolve') await run('Checking the sealed moves…', resolveChain);
+  if (name === 'resolve') await run('Checking the sealed moves…', resolveChain,
+    (error) => privateMoveRetryMessage(error, { online: navigator.onLine, sealed: true }));
 }
 
 // Campaign integration: launch a selected boss without coupling the arena to a map.
