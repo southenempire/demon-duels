@@ -17,6 +17,11 @@ const PLAYER_GENERATION = 'demon-duels:player-generation';
 const playerFor = (generation) => new ArenaClient(localKey(generation ? 'player-' + generation : 'player'));
 let playerGeneration = botGeneration(localStorage.getItem(PLAYER_GENERATION));
 let client = playerFor(playerGeneration);
+function assertCurrentGuest() {
+  if (playerGeneration !== botGeneration(localStorage.getItem(PLAYER_GENERATION))) {
+    throw new Error('Your guest wallet changed in another tab. Reload to continue with the current wallet.');
+  }
+}
 const BOT_GENERATION = 'demon-duels:rival-generation';
 const BOSS_GENERATIONS = 'demon-duels:boss-generations';
 const activeRoomKey = 'demon-duels:active';
@@ -49,6 +54,9 @@ const s = {
 };
 const short = (key) => key?.toString().slice(0, 4) + '…' + key?.toString().slice(-4);
 const keyed = (value, key) => Boolean(value && key && value.equals(key));
+function clearSavedRoom(room) {
+  if (localStorage.getItem(activeRoomKey) === room?.toBase58()) localStorage.removeItem(activeRoomKey);
+}
 const anyCard = () => s.owned.find((card) => keyed(card.key, s.selected) && keyed(card.lock, ZERO)) ??
   s.owned.find((card) => keyed(card.lock, ZERO));
 const audio = (name) => sound.play(name);
@@ -347,7 +355,7 @@ async function refreshRoom() {
     if (room !== s.room || owner !== client) return;
     s.proof = settlement;
     if (previous !== 3) {
-      localStorage.removeItem(activeRoomKey);
+      clearSavedRoom(room);
       await refreshWallet().catch(() => {});
       if (room !== s.room || owner !== client) return;
     }
@@ -357,6 +365,7 @@ async function refreshRoom() {
       window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail }));
     }
   }
+  if (d.phase === 4) clearSavedRoom(room);
 }
 
 async function run(label, action) {
@@ -365,7 +374,7 @@ async function run(label, action) {
   s.waitSince = Date.now();
   s.notice = '';
   draw();
-  try { await action(); }
+  try { assertCurrentGuest(); await action(); }
   catch (error) {
     const message = String(error?.message || error);
     s.notice = /insufficient|insufficientfunds|no record of a prior credit/i.test(message) ?
@@ -527,6 +536,7 @@ export async function startDuel(solo, demonId) {
     progress(demonId === undefined ? 'Preparing a bot card before staking…' : 'Preparing the boss card before staking…');
     prepared = demonId === undefined ? await prepareBot() : await ensureBossCard(demonId);
   }
+  assertCurrentGuest();
   s.solo = solo;
   const { duel } = await client.openDuel(card.key);
   audio('stake');
@@ -555,7 +565,8 @@ function restoreRoom() {
 export async function recoverGuestCards() {
   let recovered = false;
   await run('Checking whether your guest needs new cards…', async () => {
-    const saved = readKey(localStorage.getItem(activeRoomKey));
+    const savedRoom = localStorage.getItem(activeRoomKey);
+    const saved = readKey(savedRoom);
     for (const key of [saved, s.room]) {
       if (!key) continue;
       const duel = await readDuel(key);
@@ -569,12 +580,15 @@ export async function recoverGuestCards() {
       recovered = await recoverGuestPack(client, {
         progress,
         replace() {
+          assertCurrentGuest();
+          if (localStorage.getItem(activeRoomKey) !== savedRoom) {
+            throw new Error('Your saved duel changed in another tab. Open your vault again before refilling.');
+          }
           const next = playerGeneration + 1;
           const replacement = playerFor(next);
           localStorage.setItem(PLAYER_GENERATION, String(next));
           playerGeneration = next;
           client = replacement;
-          localStorage.removeItem(activeRoomKey);
           if (s.duel?.phase >= 3) setRoom(null);
           s.balance = null;
           s.owned = [];
@@ -783,7 +797,7 @@ async function action(name) {
   if (name === 'refund') {
     await run('Returning the stakes…', async () => {
       await client.refund(s.duel);
-      localStorage.removeItem(activeRoomKey);
+      clearSavedRoom(s.room);
       await Promise.all([refreshRoom(), refreshWallet()]);
     }); return;
   }
