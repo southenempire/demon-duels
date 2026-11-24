@@ -2,6 +2,7 @@ import { circleState } from './campaign.js';
 
 export const worlds = Object.freeze({
   0: () => import('./ash-gate/index.js').then((module) => module.ASH_GATE),
+  1: () => import('./hollow-rift/index.js').then(m => m.VOID_WRAITH),
   4: () => import('./world/rime-spire/index.js').then((module) => module.FROST_HERALD),
 });
 

@@ -46,11 +46,13 @@ test('guardian encounters default to a different owned card but allow same-kind 
   assert.equal(defaultStake([], 0), undefined);
 });
 
-test('3D boss models map to their demon IDs and leave other bosses procedural', () => {
+test('3D boss models map to their demon IDs', () => {
   assert.deepEqual(demons.map((_, id) => bossModel(id)), [
-    'ash-warden.glb', undefined, 'marrow-king.glb', 'mire-phantom.glb', 'frost-herald.glb', 'gloam-shade.glb',
+    'ash-warden.glb', 'void-wraith.glb', 'marrow-king.glb', 'mire-phantom.glb', 'frost-herald.glb', 'gloam-shade.glb',
   ]);
-  assert.deepEqual(demons.map((_, id) => bossHeight(id)), [3, 2.4, 2.744, 3.08, 3, 3]);
+  assert.deepEqual(demons.map((_, id) => bossHeight(id)), [3, 3, 2.744, 3.08, 3, 3]);
+  assert.equal(bossModel(-1), undefined);
+  assert.equal(bossHeight(-1), 2.4);
 });
 
 test('private move errors distinguish offline, RPC loss and pending chain confirmation', () => {
