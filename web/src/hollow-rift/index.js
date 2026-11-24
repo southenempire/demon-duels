@@ -1,5 +1,5 @@
 import { inside } from '../ash-gate/stealth.js';
-import { barriers, boss, cover, hasGround, limits, patrols, roofs, shade, spawn } from './layout.js';
+import { barriers, boss, cover, hasGround, limits, patrols, roofDecks, roofs, shade, spawn } from './layout.js';
 import { buildRift } from './scenery.js';
 import { canStrikeWraith, hearsWraith, tearDestination } from './stealth.js';
 
@@ -8,21 +8,24 @@ export const VOID_WRAITH = {
   opponentKind: 1,
   name: 'Hollow Rift',
   chapter: 'II / THE UNDERWORLD',
-  objective: 'Climb the west rooftops and find the void tear. Crouch near the Wraith.',
-  bossName: 'Void Wraith',
+  objective: ({ z, outcome }) => outcome === 'won' ? 'The second seal is yours.'
+    : z < -4.85 ? 'The Wraith hears your steps. Crouch through the shadows to strike.'
+      : 'Climb the west rooftops and find the void tear.',
   boss: { name: 'Void Wraith', model: 'void-wraith.glb', height: 3, pos: { x: boss.x, y: 0, z: boss.z }, facing: boss.yaw },
-  palette: { background: 0x19152e, cone: 0xb69bed },
+  palette: { background: 0x19152e },
   fog: { color: 0x19152e, density: .037 },
-  audio: { circle: 1, footstep: 'step-stone' },
-  patrols, limits, spawn,
-  scenery(T, scene) {
-    scene.background = new T.Color(VOID_WRAITH.palette.background);
-    scene.fog = new T.FogExp2(VOID_WRAITH.fog.color, VOID_WRAITH.fog.density);
+  audio: { ambient: 'amb-circle-1', footstep: 'step-stone' },
+  tells: {
+    ghost: ['The Wraith reaches for Hex first.', 'A Ward turns its curse back on it.'],
+    shadow: ['The Wraith usually opens with Hex.'],
+  },
+  patrols, spawn,
+  scenery(_three, scene) {
     const update = buildRift(scene);
-    return { colliders: [...cover, ...roofs], ledges: roofs, roofs, coverZones: shade, barriers, update };
+    return { limits, colliders: [...cover, ...roofs], ledges: [], roofs: roofDecks, coverZones: shade, barriers, update };
   },
   hooks: {
-    concealedAt: ({ x, y = 0, z }) => y < .3 && shade.some((patch) => inside(x, z, patch)),
+    concealedAt: ({ x, y = 0, z }, { crouched }) => y > 2.35 || crouched && y < .3 && shade.some((patch) => inside(x, z, patch)),
     canTraverse: ({ x, z }) => hasGround(x, z),
     detectsBoss: ({ x, y = 0, z }, { moving, crouched, running, concealed }) =>
       hearsWraith({ x, z, height: y, moving, sneak: crouched, running, hidden: concealed }),

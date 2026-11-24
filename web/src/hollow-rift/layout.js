@@ -12,6 +12,7 @@ export const roofs = [
   { x: -6.8, z: 3.85, w: 2.9, d: 2.45, h: 4.10 },
   { x: 6.8, z: -8.15, w: 2.65, d: 3.7, h: 2.85 },
 ];
+export const roofDecks = roofs.map((roof) => ({ ...roof, w: roof.w + .6, d: roof.d + .6 }));
 export const shade = [
   { x: -6.75, z: 11.15, w: 5.8, d: 2.0 },
   { x: -6.8, z: -.35, w: 4, d: 2.2 },

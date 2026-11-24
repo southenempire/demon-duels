@@ -3,12 +3,16 @@ import assert from 'node:assert/strict';
 import * as T from 'three';
 import { inside, mantleTarget } from '../ash-gate/stealth.js';
 import { VOID_WRAITH } from './index.js';
-import { boss, cover, hasGround, patrols, rift, roofs, shade, spawn, tears } from './layout.js';
+import { boss, cover, hasGround, patrols, rift, roofDecks, roofs, shade, spawn, tears } from './layout.js';
 import { canStrikeWraith, hearsWraith, tearDestination } from './stealth.js';
 
 test('west rooftops can be climbed in sequence on the way to the tear', () => {
-  assert.equal(mantleTarget(spawn.x, 10.8, 0, roofs).h, roofs[0].h);
-  assert.equal(mantleTarget(-6.5, 5.65, roofs[0].h, roofs).h, roofs[1].h);
+  assert.equal(mantleTarget(spawn.x, 10.8, 0, roofDecks).h, roofs[0].h);
+  assert.equal(mantleTarget(-6.5, 5.65, roofs[0].h, roofDecks).h, roofs[1].h);
+  for (const [i, roof] of roofs.entries()) {
+    assert.ok(inside(roof.x, roof.z - roof.d / 2 - .29, roofDecks[i]));
+    assert.ok(!inside(roof.x, roof.z - roof.d / 2 - .29, roof, .28));
+  }
   assert.equal(hasGround(-6.7, (rift.near + rift.far) / 2), false);
   assert.equal(hasGround(8.4, (rift.near + rift.far) / 2), true);
   assert.equal(tearDestination(tears[0].x, tears[0].z, 0), tears[1]);
@@ -55,8 +59,11 @@ test('the engine descriptor builds Hollow Rift for opponent 1 with the Wraith mo
   const scene = new T.Scene();
   const level = VOID_WRAITH.scenery(T, scene);
   assert.ok(scene.children.some((node) => node.isInstancedMesh));
-  assert.equal(level.roofs, roofs);
+  assert.equal(level.roofs, roofDecks);
   assert.equal(level.coverZones, shade);
+  assert.equal(VOID_WRAITH.hooks.concealedAt(tears[0], { crouched: false }), false);
+  assert.equal(VOID_WRAITH.hooks.concealedAt(tears[0], { crouched: true }), true);
+  assert.equal(VOID_WRAITH.hooks.concealedAt({ ...tears[0], y: 2.75 }, { crouched: false }), true);
   assert.equal(VOID_WRAITH.hooks.interactionAt(tears[0]).destination, tears[1]);
   level.update(1);
 });

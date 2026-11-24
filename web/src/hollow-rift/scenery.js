@@ -1,6 +1,6 @@
 import * as T from 'three';
 import { batchStonework, box, mesh, metal } from '../ash-gate/figures.js';
-import { boss, cover, rift, roofs, shade, tears } from './layout.js';
+import { boss, cover, rift, roofDecks, roofs, shade, tears } from './layout.js';
 
 export function buildRift(scene) {
   const obsidian = metal(0x25243a);
@@ -46,6 +46,7 @@ export function buildRift(scene) {
       box(scene, crystal, x + side * (w / 2 - .19), h - .34, z + d / 2, .10, .32, .06);
     }
   }
+  for (const { x, z, w, d, h } of roofDecks) box(scene, edge, x, h - .09, z, w, .18, d);
 
   const shadowMaterial = new T.MeshBasicMaterial({ color: 0x151226, depthWrite: false, transparent: true, opacity: .72 });
   const shadowGeo = new T.CircleGeometry(1, 30);
