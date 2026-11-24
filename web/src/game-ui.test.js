@@ -55,6 +55,9 @@ test('3D move overlay preserves the three chain action IDs and sealed state', ()
   assert.deepEqual([...html.matchAll(/data-action="(move:\d)"/g)].map((match) => match[1]), ['move:0', 'move:1', 'move:2']);
   assert.equal((html.match(/ disabled/g) || []).length, 3);
   assert.match(html, /data-action="move:1" aria-pressed="true" disabled/);
+  assert.match(html, /Rend<\/b><small>BEATS Ward/);
+  assert.match(html, /Ward<\/b><small>BEATS Hex/);
+  assert.match(html, /Hex<\/b><small>BEATS Rend/);
 });
 
 test('world overlays bound meters and retain agreed interaction hooks', () => {

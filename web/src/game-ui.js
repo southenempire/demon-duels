@@ -1,3 +1,5 @@
+import { moves as duelMoves } from './rules.js';
+
 // Pure overlay renderers: callers own their canvas, state, action handlers and
 // focus lifecycle. `actions` is trusted application markup, not player input.
 // Import game-overlays.css after the renderer's own stylesheet.
@@ -41,7 +43,7 @@ export function pauseMenu({ title = 'MEMORY PAUSED', actions = '' } = {}) {
   return `<section class="dd-ui dd-pause" aria-label="Pause menu"><span class="dd-kicker">DEMON DUELS</span><h2>${escape(title)}</h2><nav class="dd-menu" aria-label="Pause actions">${actions}</nav></section>`;
 }
 
-export function movePicker({ moves = [{ id: 0, name: 'Rend', beats: 'Hex' }, { id: 1, name: 'Ward', beats: 'Rend' }, { id: 2, name: 'Hex', beats: 'Ward' }], selected = null, locked = false, busy = false, status = '', actions = '', actionAttribute = 'data-action' } = {}) {
+export function movePicker({ moves = duelMoves, selected = null, locked = false, busy = false, status = '', actions = '', actionAttribute = 'data-action' } = {}) {
   return `<section class="dd-ui dd-picker dd-move-picker" aria-label="Seal your move"><div class="dd-picker-heading"><span class="dd-kicker">${locked ? 'MEMORY SEALED' : 'CHOOSE YOUR APPROACH'}</span><span>${locked ? 'AWAITING REVEAL' : 'SEAL ONE MOVE'}</span></div><div class="dd-moves">${moves.map((move, i) => {
     const id = move.id ?? i;
     const chosen = String(selected) === String(id);
