@@ -8,7 +8,7 @@ import { icon } from './icons.js';
 import { botGeneration, ensurePack, prepareGuest, recoverGuestPack, stockBossCard } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
 import { characters, characterArt } from './characters.js';
-import { confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
+import { arenaCardSide, confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
 import { mount as mountDuel } from './duel3d/index.js';
 import { bossModel } from './duel3d/fighter.js';
 import { meleeTimeline } from './duel3d/timeline.js';
@@ -465,7 +465,7 @@ async function refreshRoom() {
   if (room !== s.room || owner !== client) return;
   if (!d) throw new Error('This duel link does not point to a live room.');
   s.duel = d;
-  const side = mySide();
+  const side = arenaCardSide(d, client.key);
   if (!s.staked || !s.opposing) {
     const cards = await Promise.all([side ? d.card2 : d.card1, side ? d.card1 : d.card2]
       .map((key) => keyed(key, ZERO) ? null : readCard(key)));

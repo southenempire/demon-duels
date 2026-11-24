@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
+import { arenaCardSide, confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
 import { bossModel } from './duel3d/fighter.js';
 import { meleeActions, meleeTimeline } from './duel3d/timeline.js';
 import { characters, characterArt } from './characters.js';
@@ -10,6 +10,15 @@ import { demons, resolve } from './rules.js';
 const p1 = { equals: (other) => other === p1 };
 const p2 = { equals: (other) => other === p2 };
 const duel = { key: 'confirmed-room', phase: 3, p1, p2, winner: p2, moves: [0, 1], crits: [false, true], scores: [3, 4] };
+
+test('open invites put the host stake on the opposing side until the invitee joins', () => {
+  const empty = { equals: (other) => other === empty };
+  const open = { ...duel, p2: empty, phase: 0 };
+  assert.equal(arenaCardSide(open, p1), 0);
+  assert.equal(arenaCardSide(open, p2), 1);
+  assert.equal(arenaCardSide(duel, p2), 1);
+  assert.equal(arenaCardSide(duel, {}), 0);
+});
 
 test('3D boss models map to their demon IDs and leave other bosses procedural', () => {
   assert.deepEqual(demons.map((_, id) => bossModel(id)), [

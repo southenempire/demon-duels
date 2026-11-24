@@ -9,6 +9,11 @@ export function privateMoveRetryMessage(error, { online, sealed }) {
     : ' You don’t need to stake again. When connected, retry sealing your move.');
 }
 
+export function arenaCardSide(duel, player) {
+  if (duel.p2.equals(player)) return 1;
+  return duel.phase === 0 && !duel.p1.equals(player) ? 1 : 0;
+}
+
 // Presentation only: never roll randomness or infer a chain result here.
 export function confirmedFight(duel, side = 0) {
   if (duel?.phase !== 3) return null;
