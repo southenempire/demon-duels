@@ -3,11 +3,11 @@ import { batchStonework, box, mesh, metal } from './figures.js';
 
 export const limits = { left: -10.8, right: 10.8, far: -15, near: 16 };
 export const cover = [
-  { x: -5.5, z: 7.4, w: 4.3, d: 1.2, h: 1.28 },
-  { x: 2.3, z: 4.9, w: 3, d: 1.1, h: 1.38 },
+  { x: -5.5, z: 7.4, w: 4.3, d: 1.2, h: 1.28, vaultable: true },
+  { x: 2.3, z: 4.9, w: 3, d: 1.1, h: 1.38, vaultable: true },
   { x: -2.7, z: -.9, w: 1.5, d: 1.5, h: 2.25 },
-  { x: 6.4, z: -.9, w: 2.5, d: 1.3, h: 1.35 },
-  { x: -6.7, z: -4.5, w: 4.35, d: 1.25, h: 1.3 },
+  { x: 6.4, z: -.9, w: 2.5, d: 1.3, h: 1.35, vaultable: true },
+  { x: -6.7, z: -4.5, w: 4.35, d: 1.25, h: 1.3, vaultable: true },
   { x: 3.8, z: -8.1, w: 1.55, d: 1.55, h: 2.35 },
   { x: -3.8, z: -8.1, w: 1.55, d: 1.55, h: 2.35 },
 ];
@@ -17,7 +17,9 @@ export const roofs = [
   { x: -7.65, z: 2.5, w: 3.05, d: 3.1, h: 2.94 },
   { x: -8, z: .7, w: 2.34, d: 1.32, h: 4.12 },
   { x: 8.82, z: 3.1, w: 3.15, d: 3.5, h: 2.94 },
+  { x: 8.82, z: -1.2, w: 2.4, d: 2.6, h: 2.94 },
 ];
+export const braziers = [[-3.4, 10.8], [7.7, 7.7], [-7.8, .4], [3.4, -.1], [-5.55, -11], [5.55, -11]];
 
 export function buildGate(scene) {
   let seed = 12731;
@@ -92,16 +94,36 @@ export function buildGate(scene) {
     wall(x, -15.7, 7.65, 2.05, 11);
     for (let i = 0; i < 4; i++) box(scene, stone(), x - 2.8 + i * 1.9, 6.82, -15.7, .96, .8, 1.92);
   }
-  for (const { x, z, w, d, h } of cover) wall(x, z, w, d, Math.round(h / .58));
+  const marker = new T.MeshBasicMaterial({ color: 0xc8ae81 });
+  const ashMark = new T.MeshBasicMaterial({ color: 0xb8c1c4, transparent: true, opacity: .13, depthWrite: false });
+  function markLedges(x, z, w, d, h) {
+    for (const i of [-1, 1]) {
+      box(scene, marker, x, h, z + i * (d / 2 + .07), w * .68, .05, .06);
+      box(scene, marker, x + i * (w / 2 + .07), h, z, .06, .05, d * .55);
+    }
+  }
+  for (const { x, z, w, d, h, vaultable } of cover) {
+    wall(x, z, w, d, Math.round(h / .58));
+    if (vaultable) markLedges(x, z, w, d, h);
+  }
   for (const { x, z, w, d, h } of roofs) {
     wall(x, z, w, d, Math.round(h / .58));
     box(scene, lip, x, h - .12, z, w + .04, .24, d + .04);
+    markLedges(x, z, w, d, h);
     for (const offset of [-.65, .65]) {
       box(scene, iron, x + offset, h * .50, z + d / 2 + .068, .25, .7, .035);
       box(scene, brass, x + offset, h * .50, z + d / 2 + .092, .044, .66, .04);
     }
   }
+  const exitLight = new T.MeshBasicMaterial({ color: 0xffbc74 });
+  for (const x of [7.9, 9.74]) {
+    box(scene, iron, x, 3.21, -2.25, .18, .54, .18);
+    box(scene, exitLight, x, 3.44, -2.25, .12, .22, .12);
+  }
   for (const { x, z, w, d } of shade) {
+    const patch = mesh(scene, new T.CircleGeometry(1, 22), ashMark, x, .024, z);
+    patch.rotation.x = -Math.PI / 2;
+    patch.scale.set(w * .54, d * .54, 1);
     for (let i = 0; i < 14; i++) {
       const a = random() * .22 + .07;
       mesh(scene, new T.DodecahedronGeometry(a, 0), basalt,
@@ -151,11 +173,12 @@ export function buildGate(scene) {
   opening.moveTo(-radius, 0); opening.lineTo(radius, 0); opening.lineTo(radius, 3.59);
   opening.absarc(0, 3.59, radius, 0, Math.PI, false); opening.closePath();
   mesh(scene, new T.ShapeGeometry(opening, 24), backlight, 0, 0, gateZ - 1.15);
+  const portcullis = new T.Group();
   for (let i = -5; i <= 5; i++) {
     const x = i * .46, h = 3.55 + Math.sqrt(radius ** 2 - x ** 2);
-    box(scene, iron, x, h / 2, gateZ - .24, .112, h, .17);
+    box(portcullis, iron, x, h / 2, gateZ - .24, .112, h, .17);
   }
-  for (const y of [.8, 2.2, 3.5]) box(scene, iron, 0, y, gateZ - .13, 5.2, .19, .2);
+  for (const y of [.8, 2.2, 3.5]) box(portcullis, iron, 0, y, gateZ - .13, 5.2, .19, .2);
   for (const x of [-5.4, 5.4]) {
     box(scene, iron, x, 5.38, -14.52, 1.58, .078, .14);
     const cloth = mesh(scene, new T.PlaneGeometry(1.21, 2.44, 10, 16), fabric, x, 4.11, -14.49);
@@ -170,6 +193,7 @@ export function buildGate(scene) {
     box(scene, brass, x, 4.35, -14.33, .026, .71, .022);
   }
   batchStonework(scene);
+  scene.add(portcullis);
 
   const sky = new T.HemisphereLight(0xa7bad4, 0x46312d, 1.52);
   scene.add(sky);
@@ -197,7 +221,7 @@ export function buildGate(scene) {
     new T.Vector2(0, -1), new T.Vector2(.63, -.77), new T.Vector2(.93, -.39),
     new T.Vector2(.72, .13), new T.Vector2(.43, .57), new T.Vector2(.16, 1.06), new T.Vector2(0, 1.47),
   ], 9);
-  for (const [x, z] of [[-3.4, 10.8], [7.7, 7.7], [-7.8, .4], [3.4, -.1], [-5.55, -11], [5.55, -11]]) {
+  for (const [x, z] of braziers) {
     box(scene, basalt, x, .15, z, .92, .3, .92);
     mesh(scene, new T.CylinderGeometry(.265, .37, .92, 8), iron, x, .64, z);
     mesh(scene, new T.CylinderGeometry(.49, .27, .27, 10), iron, x, 1.14, z);
@@ -224,7 +248,7 @@ export function buildGate(scene) {
   const dust = new T.Points(ash, new T.PointsMaterial({ color: 0xe99861, size: .030, transparent: true, opacity: .68, depthWrite: false }));
   scene.add(dust);
 
-  return (t, dt) => {
+  const animate = (t, dt) => {
     for (const { x, z, flames, light, glow } of fires) {
       const flicker = Math.sin(t * 14 + x) * .12 + Math.sin(t * 21 + z) * .09;
       light.intensity = 36 * (1 + flicker);
@@ -243,4 +267,14 @@ export function buildGate(scene) {
     }
     ash.attributes.position.needsUpdate = true;
   };
+  animate.setLowQuality = (low) => {
+    moon.castShadow = !low;
+    for (const [i, { light, flames }] of fires.entries()) {
+      light.visible = !low || i % 3 === 0;
+      for (const [j, flame] of flames.entries()) flame.visible = !low || j < 4;
+    }
+    dust.visible = !low;
+  };
+  animate.raise = (progress) => { portcullis.position.y = 6.6 * progress; };
+  return animate;
 }

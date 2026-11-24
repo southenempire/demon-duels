@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ASH_WARDEN, canStrike, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { ASH_WARDEN, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
 import { isAshGate } from '../route.js';
 import { bossMove } from '../world/bot-profile.js';
 import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
+import { separateStep } from './hunters.js';
 
 const guard = { x: 0, z: 0, yaw: 0, range: 6, halfAngle: .5 };
 const wall = { x: 0, z: -2, w: 1, d: 1 };
@@ -29,6 +30,28 @@ test('strike requires a close flank or rear approach without an active alert', (
   assert.deepEqual(ASH_WARDEN, { opponentKind: 0, mode: 'chain', returnToMap: true });
 });
 
+test('omitted terrain hooks keep the world traversable with standard sight and Strike rules', () => {
+  const rules = circleRules();
+  const pos = { x: 0, y: 0, z: -2 };
+  assert.equal(rules.canTraverse(pos), true);
+  assert.equal(rules.tractionAt(pos), 1);
+  assert.equal(rules.interactionAt(pos), null);
+  assert.equal(rules.concealed(pos, {}, () => true), true);
+  assert.equal(rules.detectsBoss(pos, {}, () => sees(guard, pos.x, pos.z, [], false)), true);
+  assert.equal(rules.canStrikeBoss(pos, {}, () => canStrike(pos.x, pos.z, guard, [], false)), false);
+  const custom = circleRules({ concealedAt: () => false, detectsBoss: () => false, canStrikeBoss: () => true, canTraverse: () => false });
+  assert.equal(custom.concealed(pos, {}, () => true), false);
+  assert.equal(custom.detectsBoss(pos, {}, () => true), false);
+  assert.equal(custom.canStrikeBoss(pos, {}, () => false), true);
+  assert.equal(custom.canTraverse(pos), false);
+});
+
+test('ice preserves momentum on release while ordinary terrain stops immediately', () => {
+  assert.equal(dampVelocity(4, 0, 1, .1), 0);
+  assert.ok(dampVelocity(4, 0, .1, .1) > 2);
+  assert.equal(circleRules({ tractionAt: () => -2 }).tractionAt({}), 0);
+});
+
 test('the same bound chain duel must settle before the map credits its result', () => {
   const returned = { mode: 'chain', opponentKind: 0, duel: 'warden', result: { winner: 0 } };
   const settled = { mode: 'chain', opponentKind: 0, duel: 'warden', bossBound: true, won: true };
@@ -39,6 +62,7 @@ test('the same bound chain duel must settle before the map credits its result', 
   assert.equal(outcomeOnReturn({ ...settled, mode: 'practice' }, returned), null);
   assert.equal(outcomeOnReturn({ ...settled, bossBound: false }, returned), null);
   assert.equal(outcomeOnReturn({ ...settled, opponentKind: 1 }, returned), null);
+  assert.equal(outcomeOnReturn({ ...settled, opponentKind: 3 }, { ...returned, opponentKind: 3 }, 3), 'won');
 });
 
 test('nearby ledges are mounted in stages instead of teleporting to arbitrary roofs', () => {
@@ -59,6 +83,27 @@ test('Ash Gate is the default without replacing explicit backup or invite URLs',
   }
 });
 
+test('a low marked barrier offers a vault landing on its far side', () => {
+  const barrier = { x: 0, z: 0, w: 3, d: 1.2, h: 1.28, vaultable: true };
+  assert.deepEqual(mantleTarget(.5, 1.25, 0, [barrier])?.exit, { x: .5, z: -1.03, land: 0 });
+  assert.equal(mantleTarget(.5, 1.25, 0, [{ ...barrier, vaultable: false }])?.exit, undefined);
+});
+
+test('a camera sphere contracts before a wall and clears it above the top', () => {
+  const blocker = { ...wall, h: 1.28 };
+  assert.equal(cameraSweep({ x: 0, y: 2, z: 0 }, { x: 0, y: 2, z: -4 }, [blocker]), 1);
+  const hit = cameraSweep({ x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: -4 }, [blocker]);
+  assert.ok(Math.abs(hit - .33) < .00001);
+});
+
+test('nearby hunters deflect forward movement without blocking it or affecting another level', () => {
+  const peer = { x: 0, y: -.4, height: 0 };
+  const [dx, dz] = separateStep(0, 0, 0, 0, -.1, [peer]);
+  assert.notEqual(dx, 0);
+  assert.equal(dz, -.1);
+  assert.deepEqual(separateStep(0, 0, 3, 0, -.1, [peer]), [0, -.1]);
+});
+
 test('a graded Ash Warden hunt persists only valid chain intel and weights the house bot', () => {
   const profile = profileFor({ ...ASH_WARDEN, ...huntProfile(false, false) });
   assert.equal(profile.grade, 'ghost');
@@ -66,6 +111,10 @@ test('a graded Ash Warden hunt persists only valid chain intel and weights the h
   const store = new Map([[profileKey('warden'), JSON.stringify(profile)]]);
   assert.deepEqual(savedProfile({ getItem: (key) => store.get(key) }, 'warden'), profile);
   assert.equal(profileFor({ ...profile, mode: 'pvp' }), null);
+  const mire = profileFor({ ...ASH_WARDEN, opponentKind: 3, circle: 3, ...huntProfile(true, false) });
+  assert.equal(mire.opponentKind, 3);
+  store.set(profileKey('mire'), JSON.stringify(mire));
+  assert.deepEqual(savedProfile({ getItem: (key) => store.get(key) }, 'mire'), mire);
   assert.equal(huntProfile(false, true).grade, 'shadow');
   assert.equal(huntProfile(true, true).grade, 'exposed');
   for (const roll of [.01, .30, .59]) assert.equal(bossMove(0, 'ghost', roll), 1);

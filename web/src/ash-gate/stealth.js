@@ -25,6 +25,29 @@ export function obstruction(x, z, toX, toZ, blockers, padding = 0) {
   return nearest;
 }
 
+export function cameraSweep(from, to, blockers, radius = .18) {
+  let nearest = 1;
+  for (const b of blockers) {
+    let enter = 0, exit = nearest;
+    for (const [start, end, min, max] of [
+      [from.x, to.x, b.x - b.w / 2 - radius, b.x + b.w / 2 + radius],
+      [from.y, to.y, -radius, b.h + radius],
+      [from.z, to.z, b.z - b.d / 2 - radius, b.z + b.d / 2 + radius],
+    ]) {
+      const delta = end - start;
+      if (!delta) {
+        if (start < min || start > max) { enter = 2; break; }
+        continue;
+      }
+      const a = (min - start) / delta, c = (max - start) / delta;
+      enter = Math.max(enter, Math.min(a, c));
+      exit = Math.min(exit, Math.max(a, c));
+    }
+    if (enter <= exit && enter > 0) nearest = enter;
+  }
+  return nearest;
+}
+
 export function sees(watcher, x, z, blockers, hidden) {
   if (hidden) return false;
   const dx = x - watcher.x, dz = z - watcher.z;
@@ -41,6 +64,21 @@ export function canStrike(x, z, boss, blockers, alert) {
     && obstruction(x, z, boss.x, boss.z, blockers) === 1;
 }
 
+export function circleRules(hooks = {}) {
+  return {
+    concealed: (pos, state, fallback) => hooks.concealedAt ? hooks.concealedAt(pos, state) : fallback(),
+    detectsBoss: (pos, state, fallback) => hooks.detectsBoss ? hooks.detectsBoss(pos, state) : fallback(),
+    canStrikeBoss: (pos, state, fallback) => hooks.canStrikeBoss ? hooks.canStrikeBoss(pos, state) : fallback(),
+    canTraverse: (pos) => hooks.canTraverse ? hooks.canTraverse(pos) : true,
+    interactionAt: (pos) => hooks.interactionAt?.(pos) ?? null,
+    tractionAt: (pos) => Math.max(0, Math.min(1, hooks.tractionAt?.(pos) ?? 1)),
+  };
+}
+
+export function dampVelocity(current, desired, traction, dt) {
+  return traction === 1 ? desired : desired + (current - desired) * Math.exp(-dt * (1.6 + 20 * traction));
+}
+
 export function mantleTarget(x, z, height, roofs) {
   let closest = null, distance = .86;
   for (const roof of roofs) {
@@ -54,16 +92,23 @@ export function mantleTarget(x, z, height, roofs) {
       x: Math.max(roof.x - roof.w / 2 + .44, Math.min(roof.x + roof.w / 2 - .44, edgeX)),
       z: Math.max(roof.z - roof.d / 2 + .44, Math.min(roof.z + roof.d / 2 - .44, edgeZ)),
       h: roof.h,
+      ...(roof.vaultable ? { vaultable: true } : {}),
     };
+    if (roof.vaultable) {
+      const dx = x - edgeX, dz = z - edgeZ;
+      closest.exit = Math.abs(dx) > Math.abs(dz)
+        ? { x: roof.x - Math.sign(dx) * (roof.w / 2 + .43), z: closest.z, land: height }
+        : { x: closest.x, z: roof.z - Math.sign(dz || 1) * (roof.d / 2 + .43), land: height };
+    }
     distance = gap;
   }
   return closest;
 }
 
-export function outcomeOnReturn(settlement, returned) {
-  if (settlement?.mode !== 'chain' || settlement.opponentKind !== ASH_WARDEN.opponentKind ||
+export function outcomeOnReturn(settlement, returned, opponentKind = ASH_WARDEN.opponentKind) {
+  if (settlement?.mode !== 'chain' || settlement.opponentKind !== opponentKind ||
       !settlement.bossBound || !settlement.duel || settlement.duel !== returned?.duel ||
-      returned.mode !== 'chain' || returned.opponentKind !== ASH_WARDEN.opponentKind ||
+      returned.mode !== 'chain' || returned.opponentKind !== opponentKind ||
       typeof settlement.won !== 'boolean') return null;
   return settlement.won ? 'won' : 'lost';
 }

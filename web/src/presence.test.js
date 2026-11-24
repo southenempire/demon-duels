@@ -50,9 +50,18 @@ test('hunters snap on teleports, ignore themselves and leave on bye', () => {
   other.receive(open(seal(alice, pose(1000, 0)), 1000), 1000);
   other.receive(open(seal(alice, pose(1100, 20)), 1100), 1100);
   assert.equal(other.snapshot(2, 1100).at(0).x, 20);
+  assert.equal(other.snapshot(2, 1100).at(0).warp, 1100);
   other.receive(open(seal(alice, { k: 'bye', t: 1200 }), 1200), 1200);
   assert.equal(other.snapshot(2, 1200).length, 0);
   assert.deepEqual(interpolate([], 0), null);
+});
+
+test('remote facing takes the short arc across the angle seam', () => {
+  const samples = [{ at: 0, x: 0, y: 0, r: 3.1, h: 1 }, { at: 100, x: 2, y: 0, r: -3.1, h: 2 }];
+  const pose = interpolate(samples, 50);
+  assert.ok(Math.abs(pose.heading - Math.PI) < .0001);
+  assert.equal(pose.height, 1.5);
+  assert.equal(pose.x, 1);
 });
 
 test('a challenge handshake ends with the challenger staking an onchain duel', () => {
