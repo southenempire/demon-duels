@@ -10,6 +10,7 @@ import { demons, moves, practicePack, resolve } from './rules.js';
 import { characters, characterArt } from './characters.js';
 import { confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
 import { mount as mountDuel } from './duel3d/index.js';
+import { bossModel } from './duel3d/fighter.js';
 import { meleeTimeline } from './duel3d/timeline.js';
 import './duel3d/style.css';
 import { PitSound } from './sound.js';
@@ -190,8 +191,8 @@ function syncDuelView() {
     if (kind === undefined && (side === 0 || !Number.isInteger(s.requestedOpponent))) return null;
     const id = kind ?? s.requestedOpponent;
     const guardian = side === 1 && (s.mode !== 'chain' || s.solo || Number.isInteger(s.requestedOpponent));
-    return { role: guardian ? id === 0 ? 'warden' : 'demon' : 'hunter',
-      color: side === 0 ? '#d9b382' : demons[id]?.glow || '#bc99ff', size: guardian ? id === 0 ? 3 : 2.4 : 1.85 };
+    return { role: guardian ? id : 'hunter', color: side === 0 ? '#d9b382' : demons[id]?.glow || '#bc99ff',
+      size: guardian ? (bossModel(id) ? 3 : 2.4) : 1.85 };
   });
   const onUnavailable = () => {
     duel3DUnavailable = true;
@@ -298,6 +299,18 @@ function inventory() {
     }).join('') + '</div></section>';
 }
 
+function stakePicker() {
+  if (s.playing || roundResult() || s.duel?.phase > 0 || s.staked) return '';
+  const practice = s.mode === 'practice';
+  const cards = practice ? s.practiceCards.map((kind) => ({ kind, key: kind })) :
+    s.owned.filter((card) => keyed(card.lock, ZERO));
+  const selected = practice ? s.practiceStake : anyCard()?.key?.toString();
+  if (!cards.length) return '';
+  return '<div class="duel-stakes" role="group" aria-label="Choose a demon card">' + cards.map(({ key, kind }) =>
+    '<button type="button" data-action="select:' + key + '" aria-pressed="' + (selected === (practice ? key : key.toString())) +
+    '"' + (s.busy ? ' disabled' : '') + '>' + demons[kind].name + '</button>').join('') + '</div>';
+}
+
 function capturedVault() {
   const result = roundResult();
   if (!result || !['spoils', 'finish'].includes(s.frame?.stage)) return '';
@@ -357,21 +370,39 @@ function modal() {
       '<p>Devnet cards have no monetary value. The practice mode uses no blockchain.</p>') + '</section></div>';
 }
 
+function feedback() {
+  return '<div class="feedback" role="status" aria-live="polite">' +
+    (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice)) + '</div>';
+}
+
+function duelScreen() {
+  return '<main class="duel-screen">' + battlefield() +
+    '<nav class="duel-tools" aria-label="Duel options">' +
+      button('map', 'Map', 'secondary', 'arrow') +
+      '<button type="button" class="button secondary" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
+      icon(s.sound ? 'volume' : 'mute', 16) + '</button>' +
+      button('rules', 'Rules', 'secondary') +
+      (safeMode() ? button('wallet', 'Wallet', 'secondary', 'wallet') : '') +
+    '</nav><div class="duel-panels">' + feedback() + stakePicker() + controls() +
+      bossOutcome() + networkProgress() + capturedVault() + '</div></main>';
+}
+
 function draw() {
   const page = campaignPage();
   const focus = document.activeElement?.dataset?.action;
   const hadDialog = Boolean(app.querySelector('[role=dialog]'));
   const kind = s.mode === 'practice' ? 'PRACTICE MODE' : 'SOLANA DEVNET';
-  app.innerHTML = '<header><div class="nav"><button type="button" class="wordmark" data-action="home"><img src="' + ASSET + 'sigil.svg" alt=""><span>DEMON<span>DUELS</span></span></button><div class="nav-right">' +
+  app.innerHTML = (page === null && s.mode !== 'landing' ? duelScreen() :
+    '<header><div class="nav"><button type="button" class="wordmark" data-action="home"><img src="' + ASSET + 'sigil.svg" alt=""><span>DEMON<span>DUELS</span></span></button><div class="nav-right">' +
     statusText(kind) + '<button type="button" class="square sound" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
     icon(s.sound ? 'volume' : 'mute') + '</button><button type="button" class="square help" data-action="rules" aria-label="Duel rules">' + icon('info') + '</button><button type="button" class="button wallet secondary" data-action="wallet" aria-label="Guest wallet and devnet funding">' +
     icon('wallet', 16) + '<span>' + (safeMode() ? short(client.key) : 'Guest wallet') + '</span></button></div></div></header>' +
-    '<main>' + (page ?? (arenaHeading() + battlefield() + controls() + bossOutcome() + networkProgress() + capturedVault())) + '<div class="feedback" role="status" aria-live="polite">' + (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice)) + '</div>' + (page === null ? inventory() : '') +
+    '<main>' + (page ?? (arenaHeading() + battlefield() + controls() + bossOutcome() + networkProgress() + capturedVault())) + feedback() + (page === null ? inventory() : '') +
     '<div class="mechanics"><div>' + icon('lock') + '<span><b>PRIVATE MOVES</b><small>MagicBlock Private ER</small></span></div><div>' + icon('spark') +
     '<span><b>VERIFIABLE CRITS</b><small>MagicBlock VRF</small></span></div><div>' + icon('coin') +
     '<span><b>WINNER TAKES BOTH</b><small>Solana card ownership</small></span></div></div></main>' +
     '<footer><div><span>DEMON DUELS</span> <span>·</span> <span>MAGICBLOCK BLITZ V10</span></div><a href="' + addressExplorer(PROGRAM) +
-    '" target="_blank" rel="noreferrer">Devnet program ' + icon('outside', 13) + '</a></footer>' + modal();
+    '" target="_blank" rel="noreferrer">Devnet program ' + icon('outside', 13) + '</a></footer>') + modal();
   if (s.modal && !hadDialog) app.querySelector('.modal .close')?.focus({ preventScroll: true });
   else if (focus) [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === focus)?.focus({ preventScroll: true });
   syncDuelView();

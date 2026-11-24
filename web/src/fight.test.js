@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
+import { bossModel } from './duel3d/fighter.js';
 import { meleeActions, meleeTimeline } from './duel3d/timeline.js';
 import { characters, characterArt } from './characters.js';
 import { demons, resolve } from './rules.js';
@@ -9,6 +10,12 @@ import { demons, resolve } from './rules.js';
 const p1 = { equals: (other) => other === p1 };
 const p2 = { equals: (other) => other === p2 };
 const duel = { key: 'confirmed-room', phase: 3, p1, p2, winner: p2, moves: [0, 1], crits: [false, true], scores: [3, 4] };
+
+test('3D boss models map to their demon IDs and leave other bosses procedural', () => {
+  assert.deepEqual(demons.map((_, id) => bossModel(id)), [
+    'ash-warden.glb', undefined, undefined, 'mire-phantom.glb', undefined, 'gloam-shade.glb',
+  ]);
+});
 
 test('private move errors distinguish offline, RPC loss and pending chain confirmation', () => {
   const rpc = new Error('failed to get info about account: TypeError: Failed to fetch');

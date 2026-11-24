@@ -1,9 +1,11 @@
 import * as T from 'three';
 
-const profiles = {
-  hunter: { file: 'hunter.glb', guard: 'Guard', counter: 'CounterKill', elbow: 'Elbow', weapon: 'L' },
-  warden: { file: 'ash-warden.glb', guard: 'Idle', counter: 'Heavy', elbow: 'Forearm', weapon: 'R' },
+const bossModels = {
+  0: 'ash-warden.glb',
+  3: 'mire-phantom.glb',
+  5: 'gloam-shade.glb',
 };
+export const bossModel = (id) => bossModels[id];
 const clips = { strike: 'Strike', feint: 'Strike', block: 'Block', parry: 'Parry', dodge: 'Dodge',
   hit: 'HitReact', death: 'Death', fallen: 'Death', victory: 'Victory' };
 const up = new T.Vector3(0, 1, 0);
@@ -29,8 +31,11 @@ export function disposeTree(root) {
 export function createFighter(scene, loader, base, { role, color, size }) {
   const root = new T.Group(), body = new T.Group(), standIn = new T.Group();
   root.add(standIn); standIn.add(body); scene.add(root);
-  const profile = profiles[role];
   const stone = role !== 'hunter';
+  const file = stone ? bossModel(role) : 'hunter.glb';
+  const profile = stone ?
+    { guard: 'Idle', counter: 'Heavy', elbow: 'Forearm', weapon: 'R' } :
+    { guard: 'Guard', counter: 'CounterKill', elbow: 'Elbow', weapon: 'L' };
   const mat = (value, metalness = .1) => new T.MeshStandardMaterial({ color: value, metalness, roughness: .55 });
   const dark = mat(stone ? 0x211c22 : 0x252331);
   const main = mat(stone ? new T.Color(color).multiplyScalar(.46) : 0x88818e, .33);
@@ -115,7 +120,7 @@ export function createFighter(scene, loader, base, { role, color, size }) {
   let model, mixer, tracks, rig, lastAction, activeTrack, dead = false;
   const target = new T.Vector3(), from = new T.Vector3(), to = new T.Vector3();
   const rotation = new T.Quaternion(), rest = new Map();
-  if (profile) loader.load(base + profile.file, ({ scene: asset, animations }) => {
+  if (file) loader.load(base + file, ({ scene: asset, animations }) => {
     if (dead) { disposeTree(asset); return; }
     model = asset;
     model.visible = false;
@@ -130,7 +135,7 @@ export function createFighter(scene, loader, base, { role, color, size }) {
   function pose(action, progress, time, reduced, contact) {
     for (const [joint, authored] of rest) joint.quaternion.copy(authored);
     rest.clear();
-    const name = profile && (action === 'guard' ? profile.guard : action === 'counter' ? profile.counter : clips[action]);
+    const name = action === 'guard' ? profile.guard : action === 'counter' ? profile.counter : clips[action];
     if (action !== lastAction) {
       activeTrack?.stop();
       activeTrack = tracks?.get(name);

@@ -36,3 +36,45 @@
 .duel-text-only .duel-no-webgl { display: block; padding: 10px 18px 0; color: #d8c5b0; }
 .duel-text-only .duel-overlay, .duel-text-only .duel-banner { position: static; background: none; }
 .duel-text-only .duel-mode { margin-top: 10px; }
+
+.duel-screen {
+  position: fixed;
+  inset: 0;
+  isolation: isolate;
+  width: auto;
+  margin: 0;
+  overflow: hidden;
+}
+.duel-screen .duel-scene { position: fixed; inset: 0; height: auto; min-height: 0; border: 0; }
+.duel-screen .duel-mode, .duel-screen .duel-banner { bottom: min(27vh, 220px); }
+.duel-screen .duel-mode { position: absolute; inset-inline: 0; padding: 0; }
+.duel-screen .duel-banner { margin-bottom: 24px; }
+.duel-tools {
+  position: absolute; top: max(12px, env(safe-area-inset-top)); left: 50%;
+  transform: translateX(-50%); display: flex; gap: 6px;
+}
+.duel-tools .button { min-height: 32px; padding: 0 10px; background: #141018ca; }
+.duel-panels {
+  position: absolute; bottom: max(14px, env(safe-area-inset-bottom)); left: 50%;
+  transform: translateX(-50%); display: grid; gap: 6px;
+  width: min(760px, calc(100% - 24px)); max-height: 44vh; overflow: auto;
+}
+.duel-panels .control, .duel-panels .spoils-vault { min-height: 0; padding: 10px 14px; background: #171219ee; }
+.duel-panels .control h2 { font-size: clamp(22px, 3vw, 32px); }
+.duel-panels .feedback { min-height: 0; margin: 0; text-align: center; text-shadow: 0 2px 4px #000; }
+.duel-panels .feedback:empty { display: none; }
+.duel-panels .spoils-vault { margin: 0; }
+.duel-stakes { display: flex; gap: 4px; overflow: auto; padding: 2px; }
+.duel-stakes button {
+  flex: 1 0 auto; border: 1px solid #755b51; border-radius: 3px;
+  background: #171219e8; color: #f8e3ca; padding: 6px 10px; font: 11px var(--mono);
+}
+.duel-stakes button[aria-pressed="true"] { border-color: #ffbd78; background: #4c3028; }
+.duel-screen .duel-text-only .duel-overlay, .duel-screen .duel-text-only .duel-banner { position: absolute; }
+.duel-screen .duel-text-only .duel-no-webgl { position: absolute; top: 21%; inset-inline: 0; text-align: center; }
+@media (max-width: 580px) {
+  .duel-screen .duel-tools { top: 67px; }
+  .duel-screen .duel-fighters { padding: 10px; }
+  .duel-screen .duel-banner, .duel-screen .duel-mode { bottom: max(27vh, 155px); }
+  .duel-panels { max-height: 49vh; }
+}
