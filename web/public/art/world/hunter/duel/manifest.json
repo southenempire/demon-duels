@@ -1,0 +1,332 @@
+{
+  "version": 1,
+  "title": "Demon Duels \u2014 Hooded Hunter v1",
+  "format": "RGBA PNG; straight alpha; sRGB",
+  "frameSize": {
+    "w": 512,
+    "h": 512
+  },
+  "pivot": {
+    "x": 224,
+    "y": 472
+  },
+  "normalizedPivot": {
+    "x": 0.4375,
+    "y": 0.921875
+  },
+  "facing": "right",
+  "layout": "Each duel/<anim>.png is a horizontal strip of frameSize cells, left to right. sheet.png stacks all strips as rows in animation order.",
+  "rendering": "Draw each frame at the pivot (same root as the demon roster). Mirror around the pivot to face left.",
+  "animations": {
+    "idle": {
+      "file": "idle.png",
+      "frames": 4,
+      "fps": 4,
+      "loop": true,
+      "sheetRow": 0,
+      "frameRects": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 512,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1024,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1536,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        }
+      ]
+    },
+    "hit": {
+      "file": "hit.png",
+      "frames": 3,
+      "durationsMs": [
+        170,
+        150,
+        120
+      ],
+      "loop": false,
+      "sheetRow": 1,
+      "frameRects": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 512,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1024,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        }
+      ]
+    },
+    "walk": {
+      "file": "walk.png",
+      "frames": 6,
+      "fps": 10,
+      "loop": true,
+      "sheetRow": 2,
+      "frameRects": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 512,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1024,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1536,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 2048,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 2560,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        }
+      ]
+    },
+    "sneak": {
+      "file": "sneak.png",
+      "frames": 6,
+      "fps": 8,
+      "loop": true,
+      "sheetRow": 3,
+      "frameRects": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 512,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1024,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1536,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 2048,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 2560,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        }
+      ]
+    },
+    "run": {
+      "file": "run.png",
+      "frames": 6,
+      "fps": 14,
+      "loop": true,
+      "sheetRow": 4,
+      "frameRects": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 512,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1024,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1536,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 2048,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 2560,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        }
+      ]
+    },
+    "strike": {
+      "file": "strike.png",
+      "frames": 6,
+      "durationsMs": [
+        90,
+        110,
+        70,
+        150,
+        120,
+        160
+      ],
+      "impactFrame": 3,
+      "loop": false,
+      "sheetRow": 5,
+      "frameRects": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 512,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1024,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1536,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 2048,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 2560,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        }
+      ]
+    },
+    "finisher": {
+      "file": "finisher.png",
+      "frames": 6,
+      "durationsMs": [
+        260,
+        160,
+        240,
+        90,
+        420,
+        500
+      ],
+      "impactFrame": 4,
+      "loop": false,
+      "sheetRow": 6,
+      "frameRects": [
+        {
+          "x": 0,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 512,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1024,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 1536,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 2048,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        },
+        {
+          "x": 2560,
+          "y": 0,
+          "w": 512,
+          "h": 512
+        }
+      ]
+    }
+  },
+  "notes": {
+    "scale": "Hunter is drawn ~10-15% shorter than the demon bosses on the shared 512 canvas so bosses read as larger.",
+    "impactFrame": "Zero-based frame where the blade connects; trigger hit-stop, particles and the duel launch/finisher sync there.",
+    "finisher": "Frames 1-3 are airborne (no ground contact); frame 4 is the landing strike against the target at pivot+~200px right."
+  }
+}
