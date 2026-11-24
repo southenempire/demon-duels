@@ -1,3 +1,14 @@
+export function privateMoveRetryMessage(error, { online, sealed }) {
+  const detail = String(error?.message || error);
+  const connectionLost = /failed to fetch|networkerror|network request|load failed|fetch failed|connection (?:reset|refused)|ECONNRESET|\b(?:502|503|504)\b/i.test(detail);
+  const pending = /network is still processing|timed out|timeout/i.test(detail);
+  const status = !online ? 'You’re offline.' : connectionLost ? 'The devnet connection dropped.' : pending ? 'Devnet hasn’t confirmed the last step yet.' : null;
+  if (!status) return null;
+  return status + (sealed
+    ? ' Your move was sealed. When connected, choose Check for reveal.'
+    : ' You don’t need to stake again. When connected, retry sealing your move.');
+}
+
 // Presentation only: never roll randomness or infer a chain result here.
 export function confirmedFight(duel, side = 0) {
   if (duel?.phase !== 3) return null;
