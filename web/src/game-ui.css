@@ -1,3 +1,4 @@
+@import './game-overlays.css';
 @font-face { font-family: 'Cinzel'; font-style: normal; font-weight: 400; font-display: swap; src: url('../public/fonts/cinzel-regular.ttf') format('truetype'); }
 @font-face { font-family: 'Cinzel'; font-style: normal; font-weight: 700 900; font-display: swap; src: url('../public/fonts/cinzel-bold.ttf') format('truetype'); }
 @font-face { font-family: 'Plex Mono'; font-style: normal; font-weight: 400 700; font-display: swap; src: url('../public/fonts/plex-mono.ttf') format('truetype'); }
