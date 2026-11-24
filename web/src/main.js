@@ -188,7 +188,6 @@ function battlefield() {
         ${taking ? `<small>${s.result ? 'SIMULATED CAPTURE' : 'SETTLED ON SOLANA / WINNER TAKES BOTH'}</small>` :
           frame?.stage === 'decision' ? `<small>${result.score.join(' / ')} · ${result.crits.some(Boolean) ? 'CRITICAL HIT' : 'NO CRITICAL HITS'}</small>` : ''}
       </div>
-      <span class="duel-mode">${s.mode === 'practice' ? 'OFFCHAIN PRACTICE' : 'SOLANA DEVNET'}</span>
     </div>
   </section>`;
 }
@@ -221,7 +220,7 @@ function syncDuelView() {
 }
 
 function moveSelector() {
-  return movePicker({ selected: s.move, locked: moveLocked(), busy: Boolean(s.busy || s.playing) });
+  return movePicker({ selected: s.move, locked: moveLocked(), busy: Boolean(s.busy || s.playing), compact: true });
 }
 
 function resultPanel() {
@@ -259,7 +258,7 @@ function controls() {
     button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') + button('practice', 'Offchain tutorial', 'secondary', 'spark') +
     (worldUnavailable ? '' : '<a class="button secondary" href="?world=3d">Enter Ash Gate (3D)</a>') +
     button('enter', 'Open devnet vault', 'text') + '</div></div>';
-  if (s.mode === 'practice') return '<div class="control"><div class="control-title"><div><span class="eyebrow">OFFCHAIN PRACTICE · NO REAL STAKES</span><h2>' +
+  if (s.mode === 'practice') return '<div class="control"><div class="control-title"><div><h2>' +
     (s.practiceCards.length ? 'Seal your move' : 'Summon your starter pack') + '</h2></div>' + button(s.returnToMap ? 'return-map' : 'leave', s.returnToMap ? 'Return to map' : 'Exit practice', 'text') + '</div>' +
     (s.practiceCards.length ? moveSelector() : '<p>Three sample demons. Try a full duel with no wallet or test SOL.</p>' +
     button('practice-pack', 'Open practice pack', 'primary', 'box')) + '</div>';
@@ -403,7 +402,7 @@ function duelScreen() {
       button('rules', 'Rules', 'secondary') +
       (safeMode() ? button('wallet', 'Wallet', 'secondary', 'wallet') : '') +
     '</nav><p class="duel-no-webgl" hidden>3D combat is unavailable. You can still play and see the duel result.</p>' +
-    '<div class="duel-panels' + (vault ? ' is-result' : '') + '">' + feedback() + stakePicker() + controls() +
+    '<div class="duel-panels' + (vault ? ' is-result' : '') + '"><span class="duel-mode">' + (s.mode === 'practice' ? 'OFFCHAIN PRACTICE · NO REAL STAKES' : 'SOLANA DEVNET · TEST TOKENS ONLY') + '</span>' + feedback() + stakePicker() + controls() +
       (vault ? '' : intel) + networkProgress() + vault + '</div></main>';
 }
 

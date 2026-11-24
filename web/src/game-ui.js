@@ -39,12 +39,23 @@ export function storyPanel({ speaker = 'THE UNDERWORLD', text = '', actions = ''
   return `<section class="dd-ui dd-story" aria-label="Dialogue"><span class="dd-kicker">${escape(speaker)}</span><p>${escape(text)}</p><div class="dd-story-actions">${actions}</div></section>`;
 }
 
+export function controlsPanel({ text = '', actions = '' } = {}) {
+  const entries = String(text).split(/[\n·]/).map((line) => line.trim()).filter(Boolean);
+  const rows = entries.map((line) => {
+    const colon = line.indexOf(':');
+    return colon > 0
+      ? `<div><dt>${escape(line.slice(0, colon))}</dt><dd>${escape(line.slice(colon + 1).trim())}</dd></div>`
+      : `<div class="dd-guide-note"><dt class="sr-only">Tip</dt><dd>${escape(line)}</dd></div>`;
+  }).join('');
+  return `<section class="dd-ui dd-story dd-guide" aria-label="Controls"><span class="dd-kicker">HUNTER’S JOURNAL</span><h2>Field controls</h2><dl>${rows}</dl><div class="dd-story-actions">${actions}</div></section>`;
+}
+
 export function pauseMenu({ title = 'MEMORY PAUSED', actions = '' } = {}) {
   return `<section class="dd-ui dd-pause" aria-label="Pause menu"><span class="dd-kicker">DEMON DUELS</span><h2>${escape(title)}</h2><nav class="dd-menu" aria-label="Pause actions">${actions}</nav></section>`;
 }
 
-export function movePicker({ moves = duelMoves, selected = null, locked = false, busy = false, status = '', actions = '', actionAttribute = 'data-action' } = {}) {
-  return `<section class="dd-ui dd-picker dd-move-picker" aria-label="Seal your move"><div class="dd-picker-heading"><span class="dd-kicker">${locked ? 'MEMORY SEALED' : 'CHOOSE YOUR APPROACH'}</span><span>${locked ? 'AWAITING REVEAL' : 'SEAL ONE MOVE'}</span></div><div class="dd-moves">${moves.map((move, i) => {
+export function movePicker({ moves = duelMoves, selected = null, locked = false, busy = false, compact = false, status = '', actions = '', actionAttribute = 'data-action' } = {}) {
+  return `<section class="dd-ui dd-picker dd-move-picker" aria-label="Seal your move">${compact ? '' : `<div class="dd-picker-heading"><span class="dd-kicker">${locked ? 'MEMORY SEALED' : 'CHOOSE YOUR APPROACH'}</span><span>${locked ? 'AWAITING REVEAL' : 'SEAL ONE MOVE'}</span></div>`}<div class="dd-moves">${moves.map((move, i) => {
     const id = move.id ?? i;
     const chosen = String(selected) === String(id);
     return `<button type="button" class="dd-move${chosen ? ' is-selected' : ''}" ${actionAttr(actionAttribute)}="${escape(move.action ?? `move:${id}`)}" aria-pressed="${chosen}"${locked || busy ? ' disabled' : ''}><span class="dd-move-index" aria-hidden="true">0${i + 1}</span><span><b>${escape(move.name)}</b><small>${move.beats ? 'BEATS ' + escape(move.beats) : escape(move.description || '')}</small></span>${chosen ? '<span class="dd-selected-mark" aria-hidden="true">◇</span>' : ''}</button>`;
