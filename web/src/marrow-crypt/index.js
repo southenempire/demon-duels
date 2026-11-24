@@ -1,6 +1,8 @@
 import { buildCitadel } from './scenery.js';
-import { boss, crowdCover, heardOnBone, limits, obstacles, patrols, roofs, spawn, strikeFrom, walls } from './stealth.js';
+import { boss, courtNoise, crowdCover, heardOnBone, limits, obstacles, patrols, roofs, spawn, strikeFrom, walls } from './stealth.js';
 import { sees } from '../ash-gate/stealth.js';
+
+const noise = courtNoise();
 
 export const MARROW_KING = {
   id: 2, opponentKind: 2, name: 'Bone Citadel', chapter: 'III / THE UNDERWORLD',
@@ -34,11 +36,17 @@ export const MARROW_KING = {
         : 'Practice hand-block (Q) by the throne, then climb the perch.')
         : 'Blend with the court on the left, then climb the bone roofs to the throne.',
   scenery(_three, scene) {
+    noise.reset();
     return { limits, roofs, barriers: walls, animate: buildCitadel(scene) };
   },
   hooks: {
     concealedAt: ({ x, y, z }, { crouched }) => y > boss.y + .7 || crowdCover(x, z, y, crouched),
-    sightRange: (guard, { y }) => Math.abs((guard.y ?? 0) - y) > 1.25 ? 0 : guard.range,
+    sightRange(guard, { y }) {
+      noise.observe(guard);
+      return Math.abs((guard.y ?? 0) - y) > 1.25 ? 0 : guard.range;
+    },
+    onStep: noise.onStep,
+    investigateTargets: noise.investigateTargets,
     detectsBoss: ({ x, y, z }, { crouched, running, moving, concealed }) => {
       if (concealed || Math.abs(y - boss.y) > 1.25) return false;
       const blockers = obstacles.filter((obstacle) => obstacle.h > y + .05);

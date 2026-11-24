@@ -40,6 +40,33 @@ export function heardOnBone(guard, x, z, height, gait) {
     && obstruction(guard.x, guard.z, x, z, obstacles.filter((obstacle) => obstacle.h > listenerHeight + .05)) === 1;
 }
 
+export function courtNoise() {
+  const patrols = new Set();
+  let time = 0;
+  let latest = null;
+  return {
+    reset() {
+      patrols.clear();
+      time = 0;
+      latest = null;
+    },
+    observe(guard) {
+      if (guard.y === undefined) patrols.add(guard);
+    },
+    onStep(pos, { crouched, running }) {
+      const gait = crouched ? 'sneak' : running ? 'sprint' : 'walk';
+      if ([...patrols].some((guard) => heardOnBone(guard, pos.x, pos.z, pos.y, gait))) {
+        latest = { pos, until: time + 1.6 };
+      }
+    },
+    investigateTargets(now) {
+      time = now;
+      if (latest && latest.until <= now) latest = null;
+      return latest ? [latest] : [];
+    },
+  };
+}
+
 export function nextLedge(x, z, height) {
   return mantleTarget(x, z, height, roofs);
 }
