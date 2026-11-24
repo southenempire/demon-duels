@@ -782,14 +782,19 @@ async function resolveChain() {
   await refreshRoom();
 }
 
+function toggleSound() {
+  s.sound = !s.sound;
+  sound.unlock(s.sound);
+  world?.setSound(s.sound);
+  localStorage.setItem('demon-duels:sound', s.sound ? 'on' : 'off');
+}
+
 async function action(name) {
   if (name === 'world-enter') { await openWorld(); return; }
   if (worldArena && ['world-back', 'home', 'leave', 'map', 'campaign-return', 'reset'].includes(name)) name = 'return-map';
   sound.unlock(s.sound);
   if (name === 'sound') {
-    s.sound = !s.sound;
-    sound.unlock(s.sound);
-    localStorage.setItem('demon-duels:sound', s.sound ? 'on' : 'off');
+    toggleSound();
     audio('seal'); draw(); return;
   }
   if (name === 'rules' || name === 'wallet' || name === 'close') {
@@ -1091,11 +1096,7 @@ async function openWorld(savedEncounter) {
       start: () => { sound.unlock(s.sound); sound.setScene('menu'); return s.sound; },
       surface: (name) => sound.unlock(name !== 'circle' && s.sound),
       finisherReady: (detail) => pendingWorldWin && pendingWorldWin.detail === detail,
-      sound: () => {
-        s.sound = !s.sound; sound.unlock(s.sound);
-        localStorage.setItem('demon-duels:sound', s.sound ? 'on' : 'off');
-        return s.sound;
-      },
+      sound: toggleSound,
       exit: () => {
         engine.unmountWorld(); world = null; app.hidden = false;
         livePresence?.dispose(); livePresence = null;

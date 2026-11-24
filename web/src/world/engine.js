@@ -354,12 +354,7 @@ export function mountWorld(el, { wallet, chain }) {
 
   function act(action) {
     if (action === 'exit') { chain.exit(); return; }
-    if (action === 'sound') {
-      const enabled = chain.sound?.();
-      huntAudio.enable(Boolean(enabled));
-      el.querySelector('[data-hunt=sound]').textContent = enabled ? 'Mute sound' : 'Enable sound';
-      return;
-    }
+    if (action === 'sound') { chain.sound?.(); return; }
     if (action === 'start' && scene === 'title') {
       huntAudio.enable(Boolean(chain.start?.()));
       if (flavor.intro) pit();
@@ -509,6 +504,11 @@ export function mountWorld(el, { wallet, chain }) {
     },
     bind(duel) { if (encounter?.mode === 'chain') encounter.duel = duel; },
     rekey(wallet) { player = String(wallet); flavor = loadFlavor(); },
+    setSound(enabled) {
+      huntAudio.enable(enabled);
+      const control = el.querySelector('[data-hunt=sound]');
+      if (control) control.textContent = enabled ? 'Mute sound' : 'Enable sound';
+    },
     finishReturn() { if (encounter?.duel && finishedScene === encounter.duel) chain.returnToWorld(); },
     dispose() {
       controller.abort(); cancelAnimationFrame(frame); clearTimeout(strikeTimer);
