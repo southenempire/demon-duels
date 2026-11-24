@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { Keypair, SystemInstruction, Transaction } from '@solana/web3.js';
+import { ArenaClient } from './chain.js';
 import { botGeneration, ensurePack, prepareGuest, recoverGuestPack, stockBossCard } from './onboarding.js';
 
 test('a new guest is funded before the starter pack is opened', async () => {
@@ -102,6 +104,32 @@ test('refill does not rotate when the complete inventory cannot be read', async 
     replace: () => assert.fail('unexpected wallet replacement'),
     prepare: () => assert.fail('unexpected pack'),
   }), /RPC unavailable/);
+});
+
+test('a previous guest can move its remaining devnet SOL minus the quoted fee', async () => {
+  const from = Keypair.generate();
+  const to = Keypair.generate().publicKey;
+  let balance = 22_000;
+  let sends = 0;
+  const base = {
+    getBalance: async () => balance,
+    getLatestBlockhash: async () => ({ blockhash: to.toBase58(), lastValidBlockHeight: 1 }),
+    getFeeForMessage: async () => ({ value: 5_000 }),
+    sendRawTransaction: async (bytes) => {
+      sends++;
+      const transfer = SystemInstruction.decodeTransfer(Transaction.from(bytes).instructions[0]);
+      assert(transfer.fromPubkey.equals(from.publicKey));
+      assert(transfer.toPubkey.equals(to));
+      assert.equal(transfer.lamports, 17_000n);
+      return 'transfer';
+    },
+    getSignatureStatuses: async () => ({ value: [{ confirmationStatus: 'confirmed' }] }),
+  };
+  const previous = new ArenaClient(from, base);
+  assert.equal(await previous.moveRemainingSol(to), 'transfer');
+  balance = 5_000;
+  assert.equal(await previous.moveRemainingSol(to), null);
+  assert.equal(sends, 1);
 });
 
 test('boss preparation does not substitute the wrong kind when the starter pack budget runs out', async () => {

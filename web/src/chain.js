@@ -115,10 +115,11 @@ export async function proof(key, message, connection = DEVNET) {
   return null;
 }
 
-export function localKey(name) {
+export function localKey(name, { create = true } = {}) {
   const slot = 'demon-duels:v1:' + name;
   const saved = localStorage.getItem(slot);
   if (saved) return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(saved)));
+  if (!create) return null;
   const key = Keypair.generate();
   localStorage.setItem(slot, JSON.stringify(Array.from(key.secretKey)));
   return key;
@@ -148,6 +149,10 @@ export class ArenaClient {
     const window = await connection.getLatestBlockhash('confirmed');
     const tx = new Transaction({ feePayer: this.key, blockhash: window.blockhash, lastValidBlockHeight: window.lastValidBlockHeight });
     tx.add(...instructions);
+    return this.sendPrepared(tx, connection, skipPreflight);
+  }
+
+  async sendPrepared(tx, connection, skipPreflight) {
     tx.sign(this.keypair);
     const signature = await connection.sendRawTransaction(tx.serialize(), { skipPreflight, maxRetries: 6 });
     await until(async () => {
@@ -174,6 +179,19 @@ export class ArenaClient {
 
   async transfer(to, sol) {
     return this.send([SystemProgram.transfer({ fromPubkey: this.key, toPubkey: to, lamports: Math.round(sol * LAMPORTS_PER_SOL) })]);
+  }
+
+  async moveRemainingSol(to) {
+    const balance = await this.base.getBalance(this.key);
+    if (!balance || to.equals(this.key)) return null;
+    const window = await this.base.getLatestBlockhash('confirmed');
+    const instruction = (lamports) => SystemProgram.transfer({ fromPubkey: this.key, toPubkey: to, lamports });
+    const tx = new Transaction({ feePayer: this.key, ...window }).add(instruction(0));
+    const { value: fee } = await this.base.getFeeForMessage(tx.compileMessage(), 'confirmed');
+    if (fee === null) throw new Error('Devnet could not quote the transfer fee. Retry moving your previous guest balance.');
+    if (balance <= fee) return null;
+    tx.instructions = [instruction(balance - fee)];
+    return this.sendPrepared(tx, this.base, false);
   }
 
   async faucet() {

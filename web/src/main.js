@@ -6,7 +6,7 @@ import { icon } from './icons.js';
 import { botGeneration, ensurePack, prepareGuest, recoverGuestPack, stockBossCard } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
 import { characters, characterArt } from './characters.js';
-import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason } from './fight.js';
+import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason, privateMoveRetryMessage } from './fight.js';
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
 import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin, carryCampaign } from './campaign.js';
@@ -16,12 +16,15 @@ const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
 const PLAYER_GENERATION = 'demon-duels:player-generation';
-const playerFor = (generation) => new ArenaClient(localKey(generation ? 'player-' + generation : 'player'));
+const playerFor = (generation, options) => {
+  const key = localKey(generation ? 'player-' + generation : 'player', options);
+  return key && new ArenaClient(key);
+};
 let playerGeneration = botGeneration(localStorage.getItem(PLAYER_GENERATION));
 let client = playerFor(playerGeneration);
 function assertCurrentGuest() {
-  if (botGeneration(localStorage.getItem(PLAYER_GENERATION)) !== playerGeneration) {
-    throw new Error('Your guest changed in another tab. Reload to use that guest and resume its duel.');
+  if (playerGeneration !== botGeneration(localStorage.getItem(PLAYER_GENERATION))) {
+    throw new Error('Your guest wallet changed in another tab. Reload to continue with the current wallet.');
   }
 }
 const BOT_GENERATION = 'demon-duels:rival-generation';
@@ -54,11 +57,15 @@ const s = {
   room: readKey(params.get('room')), solo: false, opposing: null, proof: null, packProof: null, packPending: false, packOpened: false,
   playing: false, frame: null, playedId: null, sequence: 0, resultId: 0,
   waitSince: null,
+  retrySeal: null,
   requestedOpponent: null, returnToMap: false,
 };
 s.circle = Math.min(s.campaign.wins.length, circles.length - 1);
 const short = (key) => key?.toString().slice(0, 4) + '…' + key?.toString().slice(-4);
 const keyed = (value, key) => Boolean(value && key && value.equals(key));
+function clearSavedRoom(room) {
+  if (localStorage.getItem(activeRoomKey) === room?.toBase58()) localStorage.removeItem(activeRoomKey);
+}
 const anyCard = () => s.owned.find((card) => keyed(card.key, s.selected) && keyed(card.lock, ZERO)) ??
   s.owned.find((card) => keyed(card.lock, ZERO));
 const audio = (name) => sound.play(name);
@@ -198,7 +205,8 @@ function controls() {
     if (!participant()) return '<div class="control"><h2>Duel in progress</h2><p>Both players staked. Their moves stay hidden until reveal.</p></div>';
     return '<div class="control"><div class="control-title"><div><span class="eyebrow">02 / MAGICBLOCK PRIVATE ER</span><h2>' + (moveLocked() ? 'Your move is sealed.' : 'Seal your move') + '</h2></div>' +
       (moveLocked() ? button('resolve', 'Check for reveal', 'secondary', 'lock') : '') + '</div>' +
-      (moveLocked() ? '<p>Only your wallet can read your move until both are locked.</p>' : moveSelector()) +
+      (moveLocked() ? '<p>Only your wallet can read your move until both are locked.</p>' : (s.retrySeal !== null
+        ? button('move:' + s.retrySeal, 'Retry ' + moves[s.retrySeal].name, 'primary', 'lock') : moveSelector())) +
       (Date.now() >= s.duel.deadline ? button('refund', 'Release both stakes', 'secondary') : '') + '</div>';
   }
   if (s.busy && !s.duel && s.room) return '<div class="control"><h2>Finding the arena…</h2></div>';
@@ -296,7 +304,8 @@ function modal() {
       '<div class="wallet-address"><code>' + client.key + '</code><button type="button" class="square" data-action="copy-wallet" aria-label="Copy wallet address">' + icon('copy') + '</button></div>' +
       '<p>Balance: <strong>' + (s.balance === null ? 'checking…' : s.balance.toFixed(3) + ' devnet SOL') + '</strong>. Around 0.05 SOL is enough to get started.</p>' +
       ((s.busy || s.notice) ? '<p role="status">' + esc(s.busy || s.notice) + '</p>' : '') +
-      '<div class="actions">' + button('faucet', 'Try quick airdrop', 'primary', 'spark') + '<a class="button secondary" href="https://faucet.solana.com" target="_blank" rel="noreferrer">Solana faucet ' + icon('outside', 15) + '</a>' + button('wallet-refresh', 'Refresh balance', 'text') + '</div>'
+      '<div class="actions">' + button('faucet', 'Try quick airdrop', 'primary', 'spark') + '<a class="button secondary" href="https://faucet.solana.com" target="_blank" rel="noreferrer">Solana faucet ' + icon('outside', 15) + '</a>' + button('wallet-refresh', 'Refresh balance', 'text') +
+      (playerGeneration > 0 ? button('recover-sol', 'Move SOL from previous guests', 'text') : '') + '</div>'
     :
       '<ol><li><b>Stake.</b> Open a free starter pack, then each player stakes one owned card.</li><li><b>Seal.</b> Rend beats Ward. Ward beats Hex. Hex beats Rend. The private rollup hides both moves until they are locked.</li><li><b>Settle.</b> Each move starts with 2 damage. Advantage adds 1; a 25% crit adds 2. VRF breaks ties; the winner gets both cards on devnet.</li></ol>' +
       '<p>Devnet cards have no monetary value. The practice mode uses no blockchain.</p>') + '</section></div>';
@@ -389,7 +398,7 @@ async function refreshRoom() {
     if (room !== s.room || owner !== client) return;
     s.proof = settlement;
     if (previous !== 3) {
-      if (localStorage.getItem(activeRoomKey) === d.key.toString()) localStorage.removeItem(activeRoomKey);
+      clearSavedRoom(room);
       await refreshWallet().catch(() => {});
       if (room !== s.room || owner !== client) return;
     }
@@ -399,9 +408,10 @@ async function refreshRoom() {
       window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail }));
     }
   }
+  if (d.phase === 4) clearSavedRoom(room);
 }
 
-async function run(label, action) {
+async function run(label, action, recoveryMessage) {
   if (s.busy) return;
   s.busy = label;
   s.waitSince = Date.now();
@@ -410,10 +420,10 @@ async function run(label, action) {
   try { assertCurrentGuest(); await action(); }
   catch (error) {
     const message = String(error?.message || error);
-    s.notice = /insufficient|insufficientfunds|no record of a prior credit/i.test(message) ?
+    s.notice = recoveryMessage?.(error) ?? (/insufficient|insufficientfunds|no record of a prior credit/i.test(message) ?
       'Not enough devnet SOL. Fund the guest wallet and retry.' :
       /program is not deployed|program account does not exist/i.test(message) ? 'The devnet program is not responding. Try again later.' :
-      message.split('\n')[0].slice(0, 180);
+      message.split('\n')[0].slice(0, 180));
   } finally { s.busy = null; s.waitSince = null; draw(); }
 }
 
@@ -428,6 +438,7 @@ function setRoom(key) {
   s.opposing = null;
   s.proof = null;
   s.result = null;
+  s.retrySeal = null;
   const url = new URL(location.href);
   if (key) {
     const savedBoss = localStorage.getItem(encounterKey(key));
@@ -577,6 +588,7 @@ export async function startDuel(solo, demonId) {
     progress(demonId === undefined ? 'Preparing a bot card before staking…' : 'Preparing the boss card before staking…');
     prepared = demonId === undefined ? await prepareBot() : await ensureBossCard(demonId);
   }
+  assertCurrentGuest();
   s.solo = solo;
   const { duel } = await client.openDuel(card.key);
   audio('stake');
@@ -624,7 +636,7 @@ export async function recoverGuestCards() {
         replace() {
           assertCurrentGuest();
           if (localStorage.getItem(activeRoomKey) !== savedRoom) {
-            throw new Error('Another tab changed your saved duel. Reload before recovering your guest.');
+            throw new Error('Your saved duel changed in another tab. Open your vault again before refilling.');
           }
           const next = playerGeneration + 1;
           const replacement = playerFor(next);
@@ -633,7 +645,6 @@ export async function recoverGuestCards() {
           localStorage.setItem(PLAYER_GENERATION, String(next));
           playerGeneration = next;
           client = replacement;
-          localStorage.removeItem(activeRoomKey);
           if (s.duel?.phase >= 3) setRoom(null);
           s.balance = null;
           s.owned = [];
@@ -813,7 +824,7 @@ async function action(name) {
   }
   if (name.startsWith('move:')) {
     const move = Number(name.slice(5));
-    if (!moves[move] || moveLocked()) return;
+    if (!moves[move] || moveLocked() || (s.retrySeal !== null && s.retrySeal !== move)) return;
     if (s.mode === 'practice') {
       await run('Revealing practice moves…', async () => {
         s.move = move; audio('seal'); draw();
@@ -824,15 +835,27 @@ async function action(name) {
       }); return;
     }
     await run('Sealing your move on the Private ER…', async () => {
+      if (!navigator.onLine) throw new Error('Offline');
       await refreshRoom();
-      if (!(await readRound(s.duel.key))?.moves.every((id) => id < 3)) {
-        await client.delegate(s.duel);
+      const duel = s.duel;
+      if (duel?.phase !== 1 || !participant()) return;
+      const round = await readRound(duel.key);
+      let choice = round?.moves[mySide()];
+      if (!(choice < 3)) {
+        await client.delegate(duel);
         if (s.solo) await readyBot();
-        await client.lock(s.duel, move);
+        const signature = await client.lock(duel, move);
+        choice = signature ? move : await client.pick(duel);
+        if (!(choice >= 0 && choice < 3) || choice === null) throw new Error('The network is still processing. Retry to resume.');
       }
-      s.move = move;
-      localStorage.setItem(moveKey(), String(move));
+      s.move = choice;
+      s.retrySeal = null;
+      localStorage.setItem(moveKey(), String(choice));
       audio('seal'); await resolveChain();
+    }, (error) => {
+      const message = privateMoveRetryMessage(error, { online: navigator.onLine, sealed: moveLocked() });
+      s.retrySeal = message && !moveLocked() ? move : null;
+      return message;
     }); return;
   }
   if (name === 'pack') {
@@ -862,6 +885,21 @@ async function action(name) {
     }); return;
   }
   if (name === 'wallet-refresh') { await run('Refreshing wallet…', refreshWallet); return; }
+  if (name === 'recover-sol') {
+    await run('Checking previous guest balances…', async () => {
+      let moved = 0;
+      try {
+        for (let generation = playerGeneration - 1; generation >= 0; generation--) {
+          assertCurrentGuest();
+          const previous = playerFor(generation, { create: false });
+          if (await previous?.moveRemainingSol(client.key)) moved++;
+        }
+        s.notice = moved ? 'Previous guest devnet SOL moved here.' : 'No previous guest balance can cover a transfer fee.';
+      } finally {
+        await refreshWallet().catch(() => {});
+      }
+    }); return;
+  }
   if (name === 'bot' || name === 'create') {
     const solo = name === 'bot';
     await run(solo ? 'Staking a card on Solana…' : 'Creating your duel…',
@@ -881,11 +919,12 @@ async function action(name) {
   if (name === 'refund') {
     await run('Returning the stakes…', async () => {
       await client.refund(s.duel);
-      localStorage.removeItem(activeRoomKey);
+      clearSavedRoom(s.room);
       await Promise.all([refreshRoom(), refreshWallet()]);
     }); return;
   }
-  if (name === 'resolve') await run('Checking the sealed moves…', resolveChain);
+  if (name === 'resolve') await run('Checking the sealed moves…', resolveChain,
+    (error) => privateMoveRetryMessage(error, { online: navigator.onLine, sealed: true }));
 }
 
 // Campaign integration: launch a selected boss without coupling the arena to a map.
