@@ -44,16 +44,29 @@ export function settledEvents(logs, discriminator, program = PROGRAM.toString())
   return settled;
 }
 
-export async function hunterLedger(connection) {
+async function transactionLogs(endpoint, signatures, request) {
+  const response = await request(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(signatures.map((signature, id) => ({
+      jsonrpc: '2.0', id, method: 'getTransaction',
+      params: [signature, { commitment: 'confirmed', maxSupportedTransactionVersion: 1 }],
+    }))),
+  });
+  if (!response.ok) throw new Error('Transaction history is unavailable');
+  const results = await response.json();
+  if (!Array.isArray(results) || results.some(({ error }) => error)) throw new Error('Transaction history is unavailable');
+  return results.sort((a, b) => a.id - b.id);
+}
+
+export async function hunterLedger(connection, request = fetch) {
   const signatures = (await connection.getSignaturesForAddress(PROGRAM, { limit: 24 }, 'confirmed'))
     .filter(({ err }) => !err).map(({ signature }) => signature);
   if (!signatures.length) return [];
   const [discriminator, transactions] = await Promise.all([
     prefix('event:DuelSettled'),
-    connection.getTransactions(signatures, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 }),
+    transactionLogs(connection.rpcEndpoint, signatures, request),
   ]);
-  const events = transactions.flatMap((tx, i) => settledEvents(tx?.meta?.logMessages ?? [], discriminator)
-    .map((event) => ({ ...event, proof: signatures[i] }))).slice(0, 6);
+  const events = transactions.flatMap(({ id, result }) => settledEvents(result?.meta?.logMessages ?? [], discriminator)
+    .map((event) => ({ ...event, proof: signatures[id] }))).slice(0, 6);
   if (!events.length) return [];
   const duels = await connection.getMultipleAccountsInfo(events.map(({ duel }) => duel), 'confirmed');
   const duelPrefix = await prefix('account:Duel');

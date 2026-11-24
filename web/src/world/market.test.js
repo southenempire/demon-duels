@@ -62,21 +62,25 @@ test('the ledger ignores foreign logs and identifies the loser and lost card fro
   ]).toString('base64');
   const other = key(7);
   const rpc = {
+    rpcEndpoint: 'https://devnet.example.test',
     async getSignaturesForAddress() { return [{ signature: 'proof', err: null }, { signature: 'failed', err: {} }]; },
-    async getTransactions(signatures) {
-      assert.deepEqual(signatures, ['proof']);
-      return [{ meta: { logMessages: [
-        'Program ' + PROGRAM + ' invoke [1]', 'Program ' + other + ' invoke [2]', 'Program data: ' + event,
-        'Program ' + other + ' success', 'Program data: ' + event, 'Program ' + PROGRAM + ' success',
-      ] } }];
-    },
     async getMultipleAccountsInfo([address]) {
       if (address.equals(duel)) return [room({ p2: challenger, phase: 3, winner: owner })];
       assert(address.equals(prize));
       return [ownedCard(owner, ZERO, 5)];
     },
   };
-  assert.deepEqual(await hunterLedger(rpc), [
+  const fetchLogs = async (endpoint, { body }) => {
+    assert.equal(endpoint, rpc.rpcEndpoint);
+    assert.deepEqual(JSON.parse(body), [{ jsonrpc: '2.0', id: 0, method: 'getTransaction',
+      params: ['proof', { commitment: 'confirmed', maxSupportedTransactionVersion: 1 }] }]);
+    const logMessages = [
+      'Program ' + PROGRAM + ' invoke [1]', 'Program ' + other + ' invoke [2]', 'Program data: ' + event,
+      'Program ' + other + ' success', 'Program data: ' + event, 'Program ' + PROGRAM + ' success',
+    ];
+    return { ok: true, json: async () => [{ id: 0, result: { version: 1, meta: { logMessages } } }] };
+  };
+  assert.deepEqual(await hunterLedger(rpc, fetchLogs), [
     { duel: String(duel), winner: String(owner), proof: 'proof', loser: String(challenger), kind: 5 },
   ]);
 });
