@@ -25,9 +25,15 @@ export function inside(x, z, { x: cx, z: cz, w, d }, padding = 0) {
 
 export function blocksStep(x, z, toX, toZ, wall) {
   if (!inside(toX, toZ, wall, .28)) return false;
-  if (inside(toX, toZ, wall) || !inside(x, z, wall, .28)) return true;
+  if (!inside(x, z, wall, .28)) return true;
   const clearance = (px, pz) => Math.max(Math.abs(px - wall.x) - wall.w / 2, Math.abs(pz - wall.z) - wall.d / 2);
-  return clearance(toX, toZ) < clearance(x, z);
+  const from = clearance(x, z), to = clearance(toX, toZ);
+  return to < 0 ? to <= from : to < from;
+}
+
+export function blocksRadiusStep(x, z, toX, toZ, center, radius) {
+  const to = Math.hypot(toX - center.x, toZ - center.z);
+  return to < radius && to <= Math.hypot(x - center.x, z - center.z);
 }
 
 export function bossPatrol({ points, speed = 1.4, pause = .7 } = {}) {

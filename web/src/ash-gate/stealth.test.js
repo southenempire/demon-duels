@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ASH_WARDEN, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, movementAxis, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees, usesWorldKey, worldFrameRuns } from './stealth.js';
+import { ASH_WARDEN, blocksRadiusStep, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, movementAxis, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees, usesWorldKey, worldFrameRuns } from './stealth.js';
 import { isAshGate } from '../route.js';
 import { bossMove } from '../world/bot-profile.js';
 import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
@@ -65,6 +65,17 @@ test('a hunter falling off an edge can walk out of collider padding but not into
   assert.equal(blocksStep(.6, -2, .55, -2, wall), true);
   assert.equal(blocksStep(.6, -2, .45, -2, wall), true);
   assert.equal(blocksStep(.8, -2, .7, -2, wall), true);
+  assert.equal(blocksStep(.1, -2, .2, -2, wall), false);
+  assert.equal(blocksStep(.2, -2, .1, -2, wall), true);
+});
+
+test('a hunter overlapping a returning guardian can walk out but cannot approach it', () => {
+  const center = { x: 0, z: -2 };
+  assert.equal(blocksRadiusStep(0, -2, .15, -2, center, .74), false);
+  assert.equal(blocksRadiusStep(.2, -2, .35, -2, center, .74), false);
+  assert.equal(blocksRadiusStep(.2, -2, .05, -2, center, .74), true);
+  assert.equal(blocksRadiusStep(.8, -2, .65, -2, center, .74), true);
+  assert.equal(blocksRadiusStep(.65, -2, .8, -2, center, .74), false);
 });
 
 test('patrol sight respects facing, range, stone and hiding in ash', () => {
