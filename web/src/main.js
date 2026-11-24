@@ -1145,13 +1145,14 @@ async function openWorld(savedEncounter) {
 window.addEventListener('demon-duels:settled', (event) => {
   const d = s.duel;
   const bossId = campaignBoss();
-  if (!d || bossId === null || event.detail?.mode !== 'chain' || !isBoundBossSettlement(event.detail, d) ||
+  if (event.detail?.mode !== 'chain' || !event.detail.won || event.detail.player !== client.key.toString() ||
+    !d || bossId === null || !isBoundBossSettlement(event.detail, d) ||
     localStorage.getItem(encounterKey(d.key)) !== String(bossId) || event.detail.duel !== d.key.toString()) return;
   const savedBot = loadRoomBot(d.key);
   if (!savedBot || savedBot.demonId !== bossId) return;
   const result = { bossId, phase: d.phase, player: client.key.toString(), winner: d.winner.toString(),
     opponent: (mySide() ? d.p1 : d.p2).toString(), bot: savedBot.bot.key.toString(), opposingKind: s.opposing?.kind,
-    duel: d.key.toString(), mode: s.mode };
+    duel: d.key.toString(), mode: event.detail.mode };
   if (worldFight) {
     if (event.detail !== liveSettlement) return;
     const commit = prepareBossWin(localStorage, client.key, result);
@@ -1174,15 +1175,18 @@ window.addEventListener('storage', (event) => {
 
 // Live hunters: a challenge accepted in the world becomes an ordinary open/join PvP duel.
 function launchRivalDuel(room, join, returnToMap, source) {
-  if (source === 'market' && !pitUnlocked(readCampaign(localStorage, client.key))) return false;
+  if (!room || (source === 'market' && !pitUnlocked(readCampaign(localStorage, client.key)))) return false;
   const saved = readKey(localStorage.getItem(activeRoomKey));
-  if (!room || (saved && !keyed(saved, room)) || (activeDuel() && !keyed(s.room, room))) return false;
+  if ((activeDuel() && !keyed(s.room, room)) || (saved && !keyed(saved, room))) {
+    s.notice = 'Resume or finish your saved duel before opening another hunter duel.';
+    draw(); return false;
+  }
   if (source === 'presence' || source === 'market') {
     if (!world || worldArena) return false;
     openWorldArena({ mode: 'pvp' });
   }
-  s.journey = 'arena';
   setRoom(room);
+  s.journey = 'arena';
   s.mode = 'chain'; s.solo = false; s.quick = false; s.notice = '';
   s.requestedOpponent = null; s.returnToMap = returnToMap;
   run(join ? 'Staking your card and preparing the private arena…' : 'Opening your duel…', async () => {
@@ -1198,24 +1202,28 @@ function launchRivalDuel(room, join, returnToMap, source) {
   return true;
 }
 
-async function rivalReady() {
+async function rivalReady(owner) {
+  assertCurrentGuest();
+  if (client !== owner) return { ok: false, reason: 'Reload to challenge hunters with your recovered guest.' };
   if (s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
   const active = readKey(localStorage.getItem(activeRoomKey));
   const open = active && await readDuel(active).catch(() => null);
   if (open && open.phase < 3 && (keyed(open.p1, client.key) || keyed(open.p2, client.key))) {
     return { ok: false, reason: 'Finish or cancel your open duel first.' };
   }
+  if (open?.phase >= 3) clearSavedRoom(active);
   await refreshWallet();
   if (!anyCard()) return { ok: false, reason: 'You need an unstaked demon card to duel another hunter.' };
   if (s.balance < 0.006) return { ok: false, reason: 'Fund the guest wallet to stake a card.' };
   return { ok: true };
 }
 
-async function hostRivalDuel(stillWanted) {
-  const ready = await rivalReady();
+async function hostRivalDuel(stillWanted, owner) {
+  const ready = await rivalReady(owner);
   if (!ready.ok) throw new Error(ready.reason);
   if (!stillWanted()) throw new Error('The other hunter backed out before you staked.');
   assertCurrentGuest();
+  if (client !== owner) throw new Error('Reload to challenge hunters with your recovered guest.');
   const { duel } = await client.openDuel(anyCard().key);
   audio('stake');
   localStorage.setItem(activeRoomKey, duel.toBase58());
@@ -1232,7 +1240,9 @@ async function verifyRivalDuel(room, challenger) {
 
 function startGuestPresence() {
   livePresence?.dispose();
-  livePresence = startPresence({ keypair: client.keypair, host: hostRivalDuel, check: rivalReady, verify: verifyRivalDuel });
+  const owner = client;
+  livePresence = startPresence({ keypair: owner.keypair, host: (stillWanted) => hostRivalDuel(stillWanted, owner),
+    check: () => rivalReady(owner), verify: verifyRivalDuel });
 }
 
 let ignorePointerUntil = 0;
