@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "title": "Demon Duels \u2014 Hooded Hunter world sprites v1",
+  "frameSize": {
+    "w": 48,
+    "h": 48
+  },
+  "directions": [
+    "down",
+    "left",
+    "right",
+    "up"
+  ],
+  "pivot": {
+    "x": 24,
+    "y": 46
+  },
+  "layout": "world/hunter/<anim>.png: rows = down, left, right, up; columns = frames left to right. Left is the right row mirrored. 2x/ holds the same layout at 96x96 per frame.",
+  "scale": "Native 48x48; about 40 px tall standing. Draw with image smoothing off.",
+  "animations": {
+    "idle": {
+      "file": "world/hunter/idle.png",
+      "frames": 4,
+      "fps": 4,
+      "loop": true
+    },
+    "hide": {
+      "file": "world/hunter/hide.png",
+      "frames": 2,
+      "fps": 2,
+      "loop": true
+    },
+    "walk": {
+      "file": "world/hunter/walk.png",
+      "frames": 6,
+      "fps": 10,
+      "loop": true
+    },
+    "sneak": {
+      "file": "world/hunter/sneak.png",
+      "frames": 6,
+      "fps": 7,
+      "loop": true
+    },
+    "sprint": {
+      "file": "world/hunter/sprint.png",
+      "frames": 6,
+      "fps": 14,
+      "loop": true
+    },
+    "takedown": {
+      "file": "world/hunter/takedown.png",
+      "frames": 6,
+      "durationsMs": [
+        120,
+        110,
+        110,
+        140,
+        200,
+        160
+      ],
+      "impactFrame": 3,
+      "loop": false
+    },
+    "strike": {
+      "file": "world/hunter/strike.png",
+      "frames": 8,
+      "durationsMs": [
+        80,
+        90,
+        110,
+        70,
+        140,
+        110,
+        120,
+        140
+      ],
+      "impactFrame": 4,
+      "loop": false
+    }
+  }
+}
