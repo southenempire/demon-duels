@@ -12,7 +12,7 @@ import { arenaCardSide, confirmedFight, confirmedSettlement, defaultStake, fight
 import { mount as mountDuel } from './duel3d/index.js';
 import { bossHeight } from './duel3d/fighter.js';
 import { meleeTimeline } from './duel3d/timeline.js';
-import { createTutorialGate } from './duel3d/tutorial.js';
+import { cancelTutorialLaunch, createTutorialGate } from './duel3d/tutorial.js';
 import { showTutorial } from './duel3d/tutorial-view.js';
 import './duel3d/style.css';
 import { PitSound } from './sound.js';
@@ -1089,12 +1089,6 @@ async function action(name) {
     (error) => privateMoveRetryMessage(error, { online: navigator.onLine, sealed: true }));
 }
 
-function cancelTutorialLaunch(mode, returnToMap, opponentKind) {
-  if (returnToMap) window.dispatchEvent(new CustomEvent('demon-duels:return', {
-    detail: { mode, opponentKind, tutorialCancelled: true },
-  }));
-}
-
 // Campaign integration: launch a selected boss without coupling the arena to a map.
 export function launchFight(options = {}) {
   const { opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade, tells } = options;
@@ -1103,7 +1097,7 @@ export function launchFight(options = {}) {
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
   const hunt = ashGate ? profileFor({ mode, opponentKind, grade, tells }) : null;
   const deferLaunch = () => combatTutorial.defer(mode, () => launchFight(options),
-    () => cancelTutorialLaunch(mode, returnToMap, opponentKind));
+    () => cancelTutorialLaunch(window, returnToMap));
   if (activeDuel()) {
     if (mode === 'chain' && roomBoss(s.room) === String(opponentKind)) {
       if (hunt && deferLaunch()) return true;
@@ -1146,9 +1140,7 @@ export function launchFight(options = {}) {
 window.addEventListener('demon-duels:launch', (event) => {
   if (!launchFight(event.detail)) event.preventDefault();
 });
-window.addEventListener('demon-duels:return', ({ detail }) => {
-  if (!detail?.tutorialCancelled) showMap();
-});
+window.addEventListener('demon-duels:return', showMap);
 window.addEventListener('storage', (event) => {
   if (event.key !== campaignKey(client.key)) return;
   s.campaign = readCampaign(localStorage, client.key);
@@ -1164,7 +1156,7 @@ function launchRivalDuel(room, join, returnToMap) {
     draw(); return false;
   }
   if (combatTutorial.defer('pvp', () => launchRivalDuel(room, join, returnToMap),
-    () => cancelTutorialLaunch('pvp', returnToMap))) return true;
+    () => cancelTutorialLaunch(window, returnToMap))) return true;
   ashEncounter = null;
   setRoom(room);
   s.journey = 'arena';

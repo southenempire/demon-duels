@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTutorialGate, tutorialBeats, tutorialKey, tutorialRules } from './tutorial.js';
+import { cancelTutorialLaunch, createTutorialGate, tutorialBeats, tutorialKey, tutorialRules } from './tutorial.js';
 
 test('tutorial teaches the shared matchup cycle and demos the three melee beats without a capture', () => {
   assert.deepEqual(tutorialRules, ['Rend beats Ward', 'Ward beats Hex', 'Hex beats Rend']);
@@ -68,4 +68,15 @@ test('Escape cancels a pending PvP stake without marking the tutorial seen', () 
   assert.deepEqual(writes, []);
   escape();
   assert.equal(cancelled, 2);
+});
+
+test('cancelling a world launch closes the scene without triggering the arena return path', () => {
+  const world = new EventTarget();
+  const closes = [];
+  world.addEventListener('demon-duels:duel3d-close', ({ detail }) => closes.push(detail));
+  world.addEventListener('demon-duels:return', () => assert.fail('tutorial triggered the arena return path'));
+  cancelTutorialLaunch(world, false);
+  assert.deepEqual(closes, []);
+  cancelTutorialLaunch(world, true);
+  assert.deepEqual(closes, [{ tutorialCancelled: true }]);
 });

@@ -12,6 +12,12 @@ export const tutorialBeats = [
   { frame: sample('Hex', 'Rend').find(({ stage }) => stage === 'counter'), caption: 'Hex outplays Rend. The winning hunter finishes with a counter.' },
 ];
 
+export function cancelTutorialLaunch(target, returnToMap) {
+  if (returnToMap) target.dispatchEvent(new CustomEvent('demon-duels:duel3d-close', {
+    detail: { tutorialCancelled: true },
+  }));
+}
+
 export function createTutorialGate(storage, show) {
   let seen = false, active = false;
   const open = (resume, cancel) => {
