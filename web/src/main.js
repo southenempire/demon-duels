@@ -407,8 +407,9 @@ function setRoom(key) {
     if (savedBoss !== null && circles[Number(savedBoss)]) {
       s.requestedOpponent = Number(savedBoss);
       s.returnToMap = true;
-    } else if (campaignBoss() !== null) {
-      localStorage.setItem(encounterKey(key), String(s.requestedOpponent));
+    } else {
+      s.requestedOpponent = null;
+      s.returnToMap = false;
     }
     url.searchParams.set('room', key.toBase58());
     const saved = localStorage.getItem(moveKey());
@@ -552,6 +553,7 @@ export async function startDuel(solo, demonId) {
   s.solo = solo;
   const { duel } = await client.openDuel(card.key);
   audio('stake');
+  if (solo && demonId === campaignBoss()) localStorage.setItem(encounterKey(duel), String(demonId));
   setRoom(duel);
   localStorage.setItem(activeRoomKey, duel.toBase58());
   if (solo) {
