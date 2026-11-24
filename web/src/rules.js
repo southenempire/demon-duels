@@ -5,12 +5,12 @@ export const moves = [
 ];
 
 export const demons = [
-  { name: 'Ash Warden', type: 'INFERNAL', art: 'boss_demon.webp', hue: 0, glow: '#ff6546' },
-  { name: 'Void Wraith', type: 'ABYSSAL', art: 'demon_enemy_final.webp', hue: 0, glow: '#b081ff' },
-  { name: 'Marrow King', type: 'BONEBORN', art: 'boss_demon.webp', hue: 33, glow: '#ffbd5c' },
-  { name: 'Mire Phantom', type: 'VENOMOUS', art: 'demon_enemy_final.webp', hue: 100, glow: '#f78570' },
-  { name: 'Frost Herald', type: 'GLACIAL', art: 'boss_demon.webp', hue: 171, glow: '#72bcff' },
-  { name: 'Gloam Shade', type: 'SPECTRAL', art: 'demon_enemy_final.webp', hue: 231, glow: '#80ecbb' },
+  { name: 'Ash Warden', type: 'INFERNAL', art: 'boss_demon.webp', hue: 0, glow: '#ff782d' },
+  { name: 'Void Wraith', type: 'ABYSSAL', art: 'demon_enemy_final.webp', hue: 0, glow: '#ba83ff' },
+  { name: 'Marrow King', type: 'BONEBORN', art: 'boss_demon.webp', hue: 33, glow: '#ebbf71' },
+  { name: 'Mire Phantom', type: 'VENOMOUS', art: 'demon_enemy_final.webp', hue: 100, glow: '#bded40' },
+  { name: 'Frost Herald', type: 'GLACIAL', art: 'boss_demon.webp', hue: 171, glow: '#79baff' },
+  { name: 'Gloam Shade', type: 'SPECTRAL', art: 'demon_enemy_final.webp', hue: 231, glow: '#66e9ef' },
 ];
 
 export function resolve(mine, theirs, random) {
