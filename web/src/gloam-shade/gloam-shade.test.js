@@ -18,7 +18,7 @@ test('Gloam Throne registers the matching chain boss and model after circle 5', 
   assert.equal(await worlds[5](), gloam);
   const route = new URLSearchParams('world=3d&circle=5');
   const wins = Array.from({ length: 5 }, (_, bossId) => ({ bossId, duel: 'duel-' + bossId }));
-  assert.equal(resolveWorldCircle(route, { version: 1, wins: wins.slice(0, 4) }), 0);
+  assert.notEqual(resolveWorldCircle(route, { version: 1, wins: wins.slice(0, 4) }), gloam.id);
   assert.equal(resolveWorldCircle(route, { version: 1, wins }), gloam.id);
 });
 

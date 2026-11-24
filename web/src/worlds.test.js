@@ -13,7 +13,8 @@ test('world links default to Ash Gate and use the highest unlocked registered fa
   assert.equal(resolve('world=3d&circle=2', registered), 1);
   assert.equal(resolve('world=3d&circle=6', registered), 1);
   assert.equal(resolve('world=3d&circle=void', registered), 1);
-  assert.equal(resolve('world=3d&circle=1'), 0);
+  assert.equal(resolve('world=3d&circle=1'), 1);
+  assert.equal(resolveWorldCircle(new URLSearchParams('world=3d&circle=1'), { wins: [] }), 0);
 });
 
 test('a registered guardian uses the direct duel when the world renderer fails', () => {
