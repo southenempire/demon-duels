@@ -3,14 +3,26 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#100b14">
+    <meta name="theme-color" content="#0b0d0e">
     <meta name="description" content="Stake a demon. Seal your move. Winner takes both. A card dueler powered by MagicBlock and Solana devnet.">
     <title>Demon Duels — The Pit</title>
     <link rel="icon" href="./art/sigil.svg" type="image/svg+xml">
-    <link rel="preload" href="./art/arena.webp" as="image">
+    <link rel="preload" href="./fonts/cinzel-regular.ttf" as="font" type="font/ttf" crossorigin>
+    <style>
+      body { margin: 0; background: #0b0d0e; }
+      .boot-screen { min-height: 100svh; display: grid; place-content: center; justify-items: center; gap: 22px; color: #d4c9a7; font: 11px/1.8 monospace; letter-spacing: .2em; text-align: center; padding: 24px; box-sizing: border-box; }
+      .boot-screen img { width: 48px; filter: grayscale(1) sepia(.3); }
+      .boot-screen strong { font: 24px Georgia, serif; letter-spacing: .15em; }
+      .boot-screen small { color: #9b9f91; font-size: 9px; letter-spacing: .13em; }
+      .boot-track { width: 160px; height: 2px; overflow: hidden; background: #353c31; }
+      .boot-track::after { content: ''; display: block; width: 45%; height: 100%; background: #c7bb91; animation: boot-travel 1.8s ease-in-out infinite alternate; }
+      .boot-screen button { background: #d0c29a; border: 1px solid #e8dcb9; padding: 12px 22px; color: #171a19; font: 11px monospace; cursor: pointer; }
+      @keyframes boot-travel { to { transform: translateX(125%); } }
+      @media (prefers-reduced-motion: reduce) { .boot-track::after { animation: none; width: 100%; } }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app"><div class="boot-screen" role="status"><img src="./art/sigil.svg" alt=""><strong>DEMON DUELS</strong><div class="boot-track" aria-hidden="true"></div><small>OPENING THE GATES</small></div></div>
     <script type="module" src="./src/bootstrap.js"></script>
   </body>
 </html>
