@@ -761,15 +761,21 @@ function launchRivalDuel(room, join, returnToMap) {
 
 async function rivalReady() {
   if (s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
+  const active = readKey(localStorage.getItem(activeRoomKey));
+  const open = active && await readDuel(active).catch(() => null);
+  if (open && open.phase < 3 && (keyed(open.p1, client.key) || keyed(open.p2, client.key))) {
+    return { ok: false, reason: 'Finish or cancel your open duel first.' };
+  }
   await refreshWallet();
   if (!anyCard()) return { ok: false, reason: 'You need an unstaked demon card to duel another hunter.' };
   if (s.balance < 0.006) return { ok: false, reason: 'Fund the guest wallet to stake a card.' };
   return { ok: true };
 }
 
-async function hostRivalDuel() {
+async function hostRivalDuel(stillWanted) {
   const ready = await rivalReady();
   if (!ready.ok) throw new Error(ready.reason);
+  if (!stillWanted()) throw new Error('The other hunter backed out before you staked.');
   const { duel } = await client.openDuel(anyCard().key);
   audio('stake');
   localStorage.setItem(activeRoomKey, duel.toBase58());
