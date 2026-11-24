@@ -329,6 +329,7 @@ function modal() {
       '<p>Devnet cards have no monetary value. The practice mode uses no blockchain.</p>') + '</section></div>';
 }
 
+let dialogReturnAction;
 function draw() {
   if (s.journey === 'arena' && s.mode !== 'landing') preloadFighters();
   const page = campaignPage();
@@ -346,8 +347,15 @@ function draw() {
     '<span><b>WINNER TAKES BOTH</b><small>Solana card ownership</small></span></div></div></main>' +
     '<footer><div><span>DEMON DUELS</span> <span>·</span> <span>MAGICBLOCK BLITZ V10</span></div><a href="' + addressExplorer(PROGRAM) +
     '" target="_blank" rel="noreferrer">Devnet program ' + icon('outside', 13) + '</a></footer>' + modal();
-  if (s.modal && !hadDialog) app.querySelector('.modal .close')?.focus({ preventScroll: true });
-  else if (focus) [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === focus)?.focus({ preventScroll: true });
+  if (s.modal && !hadDialog) {
+    dialogReturnAction = focus;
+    app.querySelector('.modal .close')?.focus({ preventScroll: true });
+  } else if (!s.modal && hadDialog) {
+    [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === dialogReturnAction)?.focus({ preventScroll: true });
+  } else if (focus) {
+    const previous = [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === focus && !element.disabled);
+    (previous || (s.modal && app.querySelector('.modal .close')))?.focus({ preventScroll: true });
+  }
   effects.mount(app.querySelector('.pit-particles'));
   sound.setScene(s.playing || s.mode === 'practice' || s.duel?.phase === 1 || s.duel?.phase === 2 ? 'fight' : 'menu');
   if (s.journey === 'arena' && roundResult() && !s.busy && s.playedId !== fightId()) {

@@ -19,18 +19,21 @@ export function titleScreen({ actions, loading = '' } = {}) {
 }
 
 export function installDialogKeys(root) {
-  root.addEventListener('keydown', (event) => {
+  // Rerendering a busy dialog can remove/disable its focused control and send
+  // focus to <body>. Listen on the document so the next Tab is still trapped.
+  const doc = root.ownerDocument;
+  doc.addEventListener('keydown', (event) => {
     if (event.key !== 'Tab') return;
     const dialog = root.querySelector('[role="dialog"]');
-    if (!dialog) return;
+    if (!dialog || !dialog.getClientRects().length) return;
     const controls = [...dialog.querySelectorAll('button:not(:disabled), a[href], input, select, textarea, [tabindex="0"]')]
       .filter((element) => element.getClientRects().length);
     const first = controls[0];
     const last = controls.at(-1);
     if (!first) { event.preventDefault(); return; }
-    if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+    if (event.shiftKey && (doc.activeElement === first || !dialog.contains(doc.activeElement))) {
       event.preventDefault(); last.focus();
-    } else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
+    } else if (!event.shiftKey && (doc.activeElement === last || !dialog.contains(doc.activeElement))) {
       event.preventDefault(); first.focus();
     }
   });
