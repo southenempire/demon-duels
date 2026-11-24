@@ -56,6 +56,8 @@ test('all six contract IDs have distinct, present poses and portraits', () => {
   assert.equal(characters.length, demons.length);
   const paths = new Set();
   for (let kind = 0; kind < demons.length; kind++) {
+    assert.equal(demons[kind].art, characters[kind].portrait, 'Roster and arena must use the same clean portrait');
+    assert.equal(demons[kind].hue, characters[kind].hue, 'Do not recolor a distinct character into a legacy variant');
     for (const pose of ['idle', 'attack', 'hit', 'crit', 'defeat']) {
       const art = characterArt(kind, pose);
       assert.ok(existsSync(new URL('../public/art/' + art, import.meta.url)), art);
