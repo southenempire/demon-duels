@@ -201,6 +201,16 @@ export class ArenaClient {
     ])]);
   }
 
+  async retryPack() {
+    const pack = packKey(this.key);
+    const retry = pda('pack-retry', pack.toBuffer());
+    const state = await checkedAccount(this.base, retry, 'PackRetry', 16);
+    if (state && Number(state.readBigInt64LE(8)) * 1000 > Date.now()) return null;
+    return this.send([await this.programIx('retry_pack', [
+      signer(this.key), r(pack), w(retry), w(QUEUE), r(SYSTEM), ...vrfAccounts,
+    ])]);
+  }
+
   async openDuel(card) {
     const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(8))).readBigUInt64LE();
     const duel = duelKey(this.key, nonce);

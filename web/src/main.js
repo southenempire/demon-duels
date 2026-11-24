@@ -128,7 +128,7 @@ function controls() {
   if (!card) {
     return '<div class="control"><div><span class="eyebrow">01 / MAGICBLOCK VRF</span><h2>' + (s.packPending ? 'Starter pack is rolling…' : 'Summon your starter pack') + '</h2><p>' +
       (s.packPending ? 'Awaiting the verifiable randomness callback.' : 'Claim three random demons. The pack is free; devnet SOL covers transaction fees.') + '</p></div><div class="actions">' +
-      button('pack', s.packPending ? 'Check pack' : 'Open starter pack', 'primary', 'box') + '</div></div>';
+      button('pack', s.packPending ? 'Retry starter pack' : 'Open starter pack', 'primary', 'box') + '</div></div>';
   }
   return '<div class="control"><div><span class="eyebrow">01 / ONCHAIN CARD ESCROW</span><h2>' + (s.duel?.phase === 0 ? 'Match the stake' : 'Choose your challenger') +
     '</h2><p>' + (s.duel?.phase === 0 ? 'Pick a demon from your vault and join this duel.' : 'Select one card. The victor keeps both staked demons.') +

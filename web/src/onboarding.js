@@ -12,6 +12,7 @@ export async function ensurePack(owner, pack = undefined, wait = until) {
   const existing = pack === undefined ? await owner.pack() : pack;
   if (existing?.opened) return;
   if (!existing) await owner.requestPack();
+  else if (!await owner.retryPack()) throw new Error('A starter pack retry is already pending. Check again in a few minutes.');
   await wait(async () => (await owner.pack())?.opened, 60000);
 }
 
