@@ -4,6 +4,7 @@ export const worlds = Object.freeze({
   0: () => import('./ash-gate/index.js').then((module) => module.ASH_GATE),
   1: () => import('./hollow-rift/index.js').then(m => m.VOID_WRAITH),
   2: () => import('./marrow-crypt/index.js').then((module) => module.MARROW_KING),
+  3: () => import('./drowned-mire/index.js').then((module) => module.DROWNED_MIRE),
 });
 
 export function opensWorldHunt(circle, { rendererUnavailable, hasOpenDuel }, registered = worlds) {

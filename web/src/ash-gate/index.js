@@ -1,5 +1,5 @@
 import * as T from 'three';
-import { loadingScreen, pauseMenu, storyPanel, titleScreen, worldHud } from '../game-ui.js';
+import { controlsPanel, loadingScreen, pauseMenu, titleScreen, worldHud } from '../game-ui.js';
 import { characters } from '../characters.js';
 import { demons } from '../rules.js';
 import { installHuntAudio } from '../world/audio.js';
@@ -274,8 +274,8 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
   const pivot = new T.Vector3();
   const cameraGoal = new T.Vector3();
   const controlsGuide = descriptor.guide?.[touch ? 'touch' : 'keyboard'] ?? (touch
-    ? 'Drag the left stick to move or sprint. Drag the scene to look.\nTap Crouch for stealth and Jump or Climb at a ledge.\nPractice Block, then circle behind ' + bossName + ' and tap Strike.'
-    : 'WASD / ↑↓←→: move · Drag mouse: look · Shift: sprint\nC or Ctrl: crouch · Space: jump or climb\nQ: hand-block · E: strike · F: challenge a nearby hunter');
+    ? 'Left stick: Move or sprint\nDrag scene: Look around\nCrouch: Stay hidden\nJump / Climb: Cross a ledge\nBlock: Practice hand-block\nStrike: Circle behind ' + bossName + ', then strike'
+    : 'WASD / Arrow keys: Move · Drag mouse: Look around · Shift: Sprint\nC or Ctrl: Crouch · Space: Jump or climb\nQ: Hand-block · E: Strike · F: Challenge a nearby hunter');
   const objectiveCopy = descriptor.objective ?? ASH_GATE.objective;
   const position = () => ({ x, y: height, z });
   const sight = (guard, pos) => hooks.sightRange ? { ...guard, range: hooks.sightRange(guard, pos) ?? guard.range } : guard;
@@ -288,8 +288,8 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
     if (menu === 'loading') html = loadingScreen({ label: 'Entering the Underworld', detail: 'Loading ' + name });
     else if (menu === 'title') html = titleScreen({ actions: button('start', 'Enter ' + name) + exit + sound });
     else if (menu === 'pause') html = pauseMenu({ actions: button('resume', 'Resume memory') + button('guide', 'Controls') + sound + exit });
-    else if (menu === 'guide') html = storyPanel({
-      speaker: 'Hunter’s journal', text: controlsGuide, actions: button('resume', 'Resume memory'),
+    else if (menu === 'guide') html = controlsPanel({
+      text: controlsGuide, actions: button('resume', 'Resume memory'),
     });
     else {
       const prompt = blockPrompt ? { key: touch ? 'Tap' : 'Q', label: 'Practice hand-block', action: 'block' }
