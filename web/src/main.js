@@ -14,7 +14,7 @@ import { PitSound } from './sound.js';
 import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, prepareBossWin, carryCampaign } from './campaign.js';
 import { storyView, mapView, codexView, journeyNav, encounterHeading, campaignResult } from './campaign-view.js';
 import { startPresence } from './presence-live.js';
-import { isAshGate } from './route.js';
+import { initialJourney, isAshGate } from './route.js';
 import { profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
 import { bossMove } from './world/bot-profile.js';
 import { installDialogKeys } from './game-ui.js';
@@ -61,7 +61,7 @@ function preloadFighters() {
 }
 const s = {
   mode: params.has('room') ? 'chain' : 'landing',
-  journey: params.has('room') ? 'arena' : localStorage.getItem('demon-duels:story-seen') ? 'map' : 'story',
+  journey: initialJourney(params, localStorage.getItem('demon-duels:story-seen')),
   campaign: readCampaign(localStorage, client.key), circle: 0,
   balance: null, owned: [], selected: null, practiceCards: [], practiceStake: 0, practiceRival: 1,
   result: null, move: null, duel: null, busy: null, notice: '', modal: null, quick: false,
