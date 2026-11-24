@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ASH_WARDEN, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { ASH_WARDEN, blocksStep, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
 import { isAshGate } from '../route.js';
 import { bossMove } from '../world/bot-profile.js';
 import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
@@ -8,6 +8,14 @@ import { separateStep } from './hunters.js';
 
 const guard = { x: 0, z: 0, yaw: 0, range: 6, halfAngle: .5 };
 const wall = { x: 0, z: -2, w: 1, d: 1 };
+
+test('a hunter falling off an edge can walk out of collider padding but not into the ledge', () => {
+  assert.equal(blocksStep(.6, -2, .7, -2, wall), false);
+  assert.equal(blocksStep(.6, -2, .6, -1.9, wall), false);
+  assert.equal(blocksStep(.6, -2, .55, -2, wall), true);
+  assert.equal(blocksStep(.6, -2, .45, -2, wall), true);
+  assert.equal(blocksStep(.8, -2, .7, -2, wall), true);
+});
 
 test('patrol sight respects facing, range, stone and hiding in ash', () => {
   assert.equal(sees(guard, 0, -4, [], false), true);

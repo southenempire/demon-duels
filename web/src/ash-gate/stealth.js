@@ -4,6 +4,13 @@ export function inside(x, z, { x: cx, z: cz, w, d }, padding = 0) {
   return Math.abs(x - cx) < w / 2 + padding && Math.abs(z - cz) < d / 2 + padding;
 }
 
+export function blocksStep(x, z, toX, toZ, wall) {
+  if (!inside(toX, toZ, wall, .28)) return false;
+  if (inside(toX, toZ, wall) || !inside(x, z, wall, .28)) return true;
+  const clearance = (px, pz) => Math.max(Math.abs(px - wall.x) - wall.w / 2, Math.abs(pz - wall.z) - wall.d / 2);
+  return clearance(toX, toZ) < clearance(x, z);
+}
+
 export function obstruction(x, z, toX, toZ, blockers, padding = 0) {
   let nearest = 1;
   for (const b of blockers) {

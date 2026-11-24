@@ -8,7 +8,7 @@ import { figure } from './figures.js';
 import { ashHunters, emit } from './hunters.js';
 import { installModel } from './models.js';
 import { braziers, buildGate, cover, limits, roofs, shade } from './scenery.js';
-import { cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { blocksStep, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
 import './style.css';
 import '../game-overlays.css';
 
@@ -228,9 +228,9 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
   }
   const keys = new Set();
   const controls = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC', 'KeyQ', 'KeyE', 'KeyF', 'Space', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight']);
-  const canMoveTo = (x, z) => within(x, z, bounds) && rules.canTraverse({ x, y: height, z })
-    && !walls.some((b) => b.h > height + .03 && inside(x, z, b, .28))
-    && (outcome === 'won' || Math.abs(height - bossGround) > .7 || Math.hypot(x - boss.x, z - boss.z) >= .74);
+  const canMoveTo = (toX, toZ) => within(toX, toZ, bounds) && rules.canTraverse({ x: toX, y: height, z: toZ })
+    && !walls.some((b) => b.h > height + .03 && blocksStep(x, z, toX, toZ, b))
+    && (outcome === 'won' || Math.abs(height - bossGround) > .7 || Math.hypot(toX - boss.x, toZ - boss.z) >= .74);
   let x = spawn.x, z = spawn.z, facing = spawn.facing ?? 0, yaw = facing, tilt = .16, height = spawn.y ?? 0, falling = 0, climb = null, ledge = null;
   let active = true, crouch = false, gait = 0, bend = 0, step = 0, alert = 0, attack = 0;
   let block = 0, blockLearned = false, blockPrompt = false;
@@ -239,7 +239,7 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
   let wardenSees = false, sneaking = false, searchGuard = null;
   let duelOpen = false, frameRequest = null;
   let seal = earnedSeal();
-  let ready = false, pending = null, settlement = null, outcome = seal ? 'won' : null, noticeTime = 0, pointer = null;
+  let ready = false, pending = null, settlement = null, outcome = null, noticeTime = 0, pointer = null;
   let watched = false, spotted = false, nearbyPeer = null, lastPose = -Infinity, lastFootstep = 0;
   let menu = 'loading', status = 'clear', notice = '', rendered = '', sceneEntered = false;
   let audioEnabled = localStorage.getItem('demon-duels:sound') === 'on';
@@ -249,9 +249,9 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
     if (sound !== false) emit('audio', { cue: sound, circle: id });
   };
   const useAudio = () => audio.enable(active && audioEnabled);
-  if (outcome === 'won') warden.root.visible = false;
   let previous = performance.now(), sceneTime = 0;
-  let victoryTime = seal ? 3.5 : 0;
+  let victoryTime = 0;
+  if (seal) scenery.raise?.(1);
   let flight = false, boom = Infinity, strikeFrame = 0, hunterOpacity = 1;
   const fadedMaterials = new Map();
   const focus = new T.Vector3();
@@ -568,6 +568,10 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
       scenery.raise?.(T.MathUtils.smoothstep(victoryTime, .65, 3.2));
       wardenRig.model?.update('Death', dt);
       warden.root.visible = victoryTime < 3.5 && Boolean(wardenRig.model);
+      if (victoryTime >= 3.5) {
+        outcome = null;
+        warden.root.visible = true;
+      }
     } else {
       wardenRig.model?.update(wardenSees || boss.suspicion > 0 ? 'Alert' : 'Idle', dt, undefined, glance);
     }
@@ -635,11 +639,12 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
     world.style.setProperty('--ash-suspicion', suspicion.toFixed(3));
     world.style.setProperty('--ash-alert', alert > 0 ? '.32' : (suspicion * .27).toFixed(3));
 
-    strikeFrame = approach(strikeFrame, ready || attack ? 1 : 0, 5, dt);
+    const strikeScale = id === 0 ? 1 : Math.max(1, bossConfig.height / 2.3);
+    strikeFrame = approach(strikeFrame, ready || attack ? 1 : 0, 5 / strikeScale, dt);
     const cameraYaw = yaw + angleDelta(yaw, bossBearing + Math.PI) * strikeFrame;
     const [cx, cz] = forward(cameraYaw);
-    const dist = 3.28 + 1.05 * strikeFrame;
-    const shoulder = (.47 + .66 * strikeFrame) * Math.min(1, camera.aspect / .8);
+    const dist = 3.28 + (1.05 + (strikeScale - 1) * 3.28) * strikeFrame;
+    const shoulder = (.47 + (.66 + (strikeScale - 1) * 1.6) * strikeFrame) * Math.min(1, camera.aspect / .8);
     pivot.set(x, height + 1.58 - bend * .12, z);
     cameraGoal.set(x - cx * dist - cz * shoulder, height + 1.82 + tilt * 2.68 - bend * .17, z - cz * dist + cx * shoulder);
     const length = pivot.distanceTo(cameraGoal);

@@ -52,7 +52,7 @@ const bossFor = (generation) => new ArenaClient(localKey('boss-' + generation));
 const roomBotKey = (room) => 'demon-duels:room-bot:' + room;
 const ASSET = import.meta.env.BASE_URL + 'art/';
 const sound = new PitSound(import.meta.env.BASE_URL + 'audio/');
-let worldName = 'Ash Gate';
+let worldName = null;
 export function setExploring(active, name) {
   if (name) worldName = name;
   sound.unlock(!active && s.sound);
@@ -114,7 +114,7 @@ function campaignPage() {
 
 function bossOutcome() {
   const boss = campaignBoss();
-  if (ashGate || boss === null || s.duel?.phase !== 3 || !emittedSettlements.has(fightId()) || !participant() || s.playing || guardianFinisher.pending) return '';
+  if (worldName || boss === null || s.duel?.phase !== 3 || !emittedSettlements.has(fightId()) || !participant() || s.playing || guardianFinisher.pending) return '';
   return campaignResult(boss, keyed(s.duel.winner, client.key), s.campaign, button);
 }
 
@@ -225,7 +225,7 @@ function resultPanel() {
     '</span><h2>' + title + '</h2><div class="damage">' + line + '</div></div><div class="actions">' +
     (s.result && !s.returnToMap ? button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') : '') +
     button('replay', 'Replay fight', 'text') + button('duel-receipt', 'Details', 'text') +
-    (ashGate && s.returnToMap ? '' : button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow')) + '</div></div>';
+    (worldName && s.returnToMap ? '' : button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow')) + '</div></div>';
 }
 
 function resultReceipt(both) {
@@ -287,7 +287,7 @@ function controls() {
   return '<div class="control"><div><span class="eyebrow">01 / ONCHAIN CARD ESCROW</span><h2>' + (s.duel?.phase === 0 ? 'Match the stake' : 'Choose your challenger') +
     '</h2><p>' + (s.duel?.phase === 0 ? 'Pick a demon from your vault and join this duel.' : 'Select one card. The victor keeps both staked demons.') +
     '</p></div><div class="actions">' + (s.duel?.phase === 0 ? button('join', 'Stake & join', 'primary', 'blade') :
-      (campaignBoss() !== null ? button('bot', 'Face ' + demons[campaignBoss()].name, 'primary', 'blade') :
+      (campaignBoss() !== null ? button('bot', 'Stake & face ' + demons[campaignBoss()].name, 'primary', 'blade') :
         button('bot', 'Duel the bot', 'primary', 'blade') + button('create', 'Invite a friend', 'secondary', 'people'))) + '</div></div>';
 }
 
@@ -375,10 +375,11 @@ function duelScreen() {
   const vault = capturedVault();
   const intel = s.returnToMap && ashEncounter?.tells.length ?
     '<section class="control"><div><span class="eyebrow">' + esc(ashEncounter.grade.toUpperCase()) +
-    ' / ASH GATE INTEL</span><ul>' + ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '';
+    ' / ' + esc((worldName ?? circles[ashEncounter.circle]?.realm ?? 'Guardian').toUpperCase()) + ' INTEL</span><ul>' +
+    ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '';
   return '<main class="duel-screen">' + battlefield() +
     '<nav class="duel-tools" aria-label="Duel options">' +
-      (ashGate && s.returnToMap ? button('return-map', 'Return to ' + esc(worldName), 'secondary', 'arrow') :
+      (worldName && s.returnToMap ? button('return-map', 'Return to ' + esc(worldName), 'secondary', 'arrow') :
         button('map', 'Map', 'secondary', 'arrow')) +
       '<button type="button" class="button secondary" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
       icon(s.sound ? 'volume' : 'mute', 16) + '</button>' +
@@ -828,7 +829,8 @@ async function startQuickDuel() {
     await prepareGuest(client, progress);
     await refreshWallet();
     if (!anyCard()) throw new Error('This guest vault has no unstaked cards.');
-    await startDuel(true, s.requestedOpponent ?? undefined);
+    if (ashEncounter) s.quick = false;
+    else await startDuel(true, s.requestedOpponent ?? undefined);
   });
 }
 
@@ -934,14 +936,14 @@ async function action(name) {
       circle: savedWorld?.circle ?? ashEncounter?.circle };
     if (activeDuel() || checkingBossSettlement()) {
       showMap();
-      if (!ashGate && !savedWorld) return;
+      if (!worldName && !savedWorld) return;
     } else {
       setRoom(null); s.mode = 'landing'; s.returnToMap = false; s.requestedOpponent = null;
       ashEncounter = null;
       showMap();
     }
     window.dispatchEvent(new CustomEvent('demon-duels:return', { detail }));
-    if (!ashGate && savedWorld) location.href = '?world=3d&circle=' + savedWorld.circle;
+    if (!worldName && savedWorld) location.href = '?world=3d&circle=' + savedWorld.circle;
     return;
   }
   if (name === 'replay' && roundResult()) {
