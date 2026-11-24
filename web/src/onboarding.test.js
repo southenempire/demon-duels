@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { botGeneration, ensurePack, prepareGuest, stockBossCard } from './onboarding.js';
+import { botGeneration, ensurePack, prepareGuest, recoverGuestPack, stockBossCard } from './onboarding.js';
 
 test('a new guest is funded before the starter pack is opened', async () => {
   const order = [];
@@ -63,6 +63,45 @@ test('an exhausted boss pool opens packs until the requested kind is found', asy
   });
   assert.equal(packs, 2);
   assert.deepEqual(prepared, { bot, generation: 1, card: { kind: 0 }, demonId: 0 });
+});
+
+test('a guest who lost every card opens a pack on the replacement wallet', async () => {
+  const guest = {
+    inventory: async (options) => { assert.equal(options.allowFallback, false); return []; },
+    pack: async () => ({ opened: true }),
+  };
+  const replacement = {};
+  assert.equal(await recoverGuestPack(guest, {
+    replace: () => replacement,
+    prepare: async (owner) => assert.equal(owner, replacement),
+  }), true);
+});
+
+test('refill retries an unopened replacement pack on the same wallet', async () => {
+  const guest = { inventory: async () => [], pack: async () => ({ opened: false }) };
+  assert.equal(await recoverGuestPack(guest, {
+    replace: () => assert.fail('unexpected wallet replacement'),
+    prepare: async (owner) => assert.equal(owner, guest),
+  }), true);
+});
+
+test('refill keeps a wallet with any owned cards, including locked cards', async () => {
+  const guest = { inventory: async () => [{ lock: 'duel' }], pack: async () => ({ opened: true }) };
+  assert.equal(await recoverGuestPack(guest, {
+    replace: () => assert.fail('unexpected wallet replacement'),
+    prepare: () => assert.fail('unexpected pack'),
+  }), false);
+});
+
+test('refill does not rotate when the complete inventory cannot be read', async () => {
+  const guest = {
+    inventory: async () => { throw new Error('RPC unavailable'); },
+    pack: async () => ({ opened: true }),
+  };
+  await assert.rejects(recoverGuestPack(guest, {
+    replace: () => assert.fail('unexpected wallet replacement'),
+    prepare: () => assert.fail('unexpected pack'),
+  }), /RPC unavailable/);
 });
 
 test('boss preparation does not substitute the wrong kind when the starter pack budget runs out', async () => {

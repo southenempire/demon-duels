@@ -182,10 +182,11 @@ export class ArenaClient {
     return signature;
   }
 
-  async inventory() {
+  async inventory({ allowFallback = true } = {}) {
     const result = await this.base.getProgramAccounts(PROGRAM, {
       commitment: 'confirmed', filters: [{ dataSize: 73 }, { memcmp: { offset: 8, bytes: this.key.toBase58() } }],
-    }).catch(async () => {
+    }).catch(async (error) => {
+      if (!allowFallback) throw error;
       const keys = [0, 1, 2].map((i) => cardKey(this.key, i));
       const raw = await this.base.getMultipleAccountsInfo(keys, 'confirmed');
       return raw.flatMap((account, i) => account?.owner.equals(PROGRAM) ? [{ account, pubkey: keys[i] }] : []);
