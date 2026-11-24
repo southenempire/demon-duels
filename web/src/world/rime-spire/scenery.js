@@ -1,4 +1,4 @@
-import { barriers, bounds, buttresses, caveWalls, colliders, coverZones, ice, roofs, stone } from './layout.js';
+import { barriers, bounds, buttresses, caveWalls, colliders, coverZones, ice, roofBodies, roofs, stone } from './layout.js';
 import { maxTracks } from './tracks.js';
 
 export function buildSpire(T, scene, intel) {
@@ -72,12 +72,13 @@ export function buildSpire(T, scene, intel) {
     }
   }
 
-  for (const wall of [...buttresses, ...roofs, ...barriers]) masonry(wall);
+  for (const wall of [...buttresses, ...roofBodies, ...barriers]) masonry(wall);
   for (const { x, z, w, d, h } of roofs) {
+    box(trim, x, h - .12, z, w, .23, d);
     box(snow, x, h - .017, z, w * .94, .034, d * .96);
     for (const ox of [-.31, .31]) {
-      box(deep, x + ox * w, h * .54, z + d / 2 + .012, .31, .85, .027);
-      box(glass, x + ox * w, h * .54 + .014, z + d / 2 + .032, .19, .67, .016);
+      box(deep, x + ox * w, h * .54, z + d / 2 - .318, .31, .85, .027);
+      box(glass, x + ox * w, h * .54 + .014, z + d / 2 - .298, .19, .67, .016);
     }
   }
 
@@ -148,11 +149,49 @@ export function buildSpire(T, scene, intel) {
     lantern.position.set(x, 1.26, z);
     root.add(lantern);
   }
-  for (const { pos: { x, y, z } } of intel) {
+  const inscriptions = new Map();
+  for (const { id, pos: { x, y, z }, text } of intel) {
     box(deep, x, y + .27, z, .45, .54, .42);
     const scroll = shape(trim, new T.CylinderGeometry(.09, .09, .39, 10), x, y + .59, z);
     scroll.rotation.z = Math.PI / 2;
     shape(light, new T.OctahedronGeometry(.075), x, y + .78, z);
+    if (typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 176;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) continue;
+      const colon = text.indexOf(':');
+      ctx.fillStyle = '#101e30ef';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#8bb1cb';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(6, 6, 628, 164);
+      ctx.font = 'bold 28px Georgia';
+      ctx.fillStyle = '#9fdef6';
+      ctx.fillText(text.slice(0, colon).toUpperCase(), 26, 49);
+      ctx.font = '30px Georgia';
+      ctx.fillStyle = '#e8f5fd';
+      let line = '', row = 92;
+      for (const word of text.slice(colon + 2).split(' ')) {
+        if (line && ctx.measureText(line + ' ' + word).width > 575) {
+          ctx.fillText(line, 26, row);
+          line = '';
+          row += 38;
+        }
+        line += (line ? ' ' : '') + word;
+      }
+      ctx.fillText(line, 26, row);
+      const map = new T.CanvasTexture(canvas);
+      map.colorSpace = T.SRGBColorSpace;
+      const inscription = new T.Sprite(new T.SpriteMaterial({ map, transparent: true, depthWrite: false, toneMapped: false }));
+      inscription.name = id;
+      inscription.position.set(x, y + 1.54, z);
+      inscription.scale.set(2.05, .565, 1);
+      inscription.visible = false;
+      inscriptions.set(id, inscription);
+      root.add(inscription);
+    }
   }
 
   const dummy = new T.Object3D();
@@ -187,7 +226,10 @@ export function buildSpire(T, scene, intel) {
   root.add(prints);
 
   return {
-    colliders, ledges: roofs, roofs, coverZones, barriers, bounds,
+    colliders, ledges: roofs, roofs, coverZones, barriers, limits: bounds,
+    showIntel(id) {
+      for (const [key, inscription] of inscriptions) inscription.visible = key === id;
+    },
     drawTracks(tracks) {
       prints.count = tracks.length;
       tracks.forEach(({ pos, yaw, offset }, i) => {

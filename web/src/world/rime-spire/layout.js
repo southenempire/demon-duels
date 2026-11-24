@@ -27,6 +27,7 @@ export const buttresses = [
   { x: -.15, z: 2.15, w: 1.6, d: 1.2, h: 2.45 },
   { x: 3.4, z: -3.3, w: 2.85, d: 1.15, h: 1.45 },
   { x: -2.65, z: -7.95, w: 1.1, d: 2.5, h: 2.6 },
+  { x: .55, z: -8.85, w: 4.6, d: .75, h: 1.8 },
   { x: 5.4, z: -8.9, w: 1.25, d: 2, h: 2.8 },
 ];
 
@@ -37,7 +38,8 @@ export const barriers = [
   { x: 0, z: 16.75, w: 23, d: 1.5, h: 4 },
 ];
 
-export const colliders = [...caveWalls, ...buttresses, ...roofs];
+export const roofBodies = roofs.map((roof) => ({ ...roof, w: roof.w - .66, d: roof.d - .66 }));
+export const colliders = [...caveWalls, ...buttresses, ...roofBodies];
 
 export const stone = [
   { x: 1.3, z: 12.45, w: 3.15, d: 4.1 },
@@ -47,7 +49,7 @@ export const stone = [
   { x: -8.2, z: .15, w: 1.35, d: 10.25 },
   { x: -7.25, z: -5.0, w: 3.2, d: 1.3 },
   { x: -6.5, z: -8.65, w: 1.7, d: 2.65 },
-  { x: -3.15, z: -9.9, w: 8.65, d: 1.6 },
+  { x: -3.15, z: -10.25, w: 8.65, d: 2.2 },
   { x: 1.35, z: -11.95, w: 4.6, d: 4.7 },
 ];
 

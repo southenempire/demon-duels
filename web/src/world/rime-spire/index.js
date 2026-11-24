@@ -1,4 +1,4 @@
-import { bounds, coverZones, herald, inside, spawn, surfaceAt } from './layout.js';
+import { coverZones, herald, inside, spawn, surfaceAt } from './layout.js';
 import { buildSpire } from './scenery.js';
 import { createTracks } from './tracks.js';
 
@@ -19,36 +19,47 @@ const story = {
 };
 
 const tracks = createTracks();
-let drawTracks;
+let drawTracks, showIntel;
 let drawnTail, drawnLength = 0;
 
-const RIME_SPIRE = {
+export const FROST_HERALD = {
   id: 4,
   opponentKind: 4,
   name: 'Rime Spire',
   chapter: 'Circle V · The Last Winter',
   objective: 'Stay on stone. Climb the west roofs and strike the Frost Herald from the flank.',
   spawn,
-  bounds,
   boss: {
     name: 'Frost Herald', model: 'frost-herald.glb', height: 3,
     pos: herald, facing: Math.PI,
-    patrol: [[1.4, -10.6], [1.4, -12.4], [2.6, -12.4], [2.6, -10.6]],
   },
   patrols: [
     { route: [[-4.1, 8.8], [-1.5, 8.8], [-1.5, 6.1], [-4.1, 6.1]], facing: -Math.PI / 2 },
     { route: [[6.05, 6.5], [8.15, 6.5], [8.15, 1.9], [4.45, 1.9], [4.45, 6.5]], facing: -Math.PI / 2 },
     { route: [[-1.4, -5.15], [2.4, -5.15], [2.4, -7.8], [-1.4, -7.8]], facing: -Math.PI / 2 },
   ],
-  palette: { background: 0x687e9b, exposure: 1.04, cone: 0xe9ae71 },
+  palette: { background: 0x687e9b },
   fog: { color: 0x92aabe, density: .037 },
-  audio: { ambience: 'amb-circle-4', footstep: 'step-stone', footsteps: { stone: 'step-stone', snow: 'step-snow', ice: 'step-stone' } },
+  audio: { ambient: 'amb-circle-4', footstep: false },
   intel,
-  story,
+  copy: {
+    enter: story.enter.join(' '),
+    seen: story.stalk[0],
+    alerted: story.alerted,
+    strike: story.strike.join(' '),
+    victory: story.clear.join(' '),
+    defeat: story.lost.join(' '),
+    roof: 'Above the thralls — the bell is still silent.',
+    hidden: 'Hidden in the ice cave.',
+    reset: 'Caught. Your footprints give you away — stay on the stone path.',
+  },
+  tells: { ghost: [intel[0].text, intel[1].text], shadow: [intel[2].text], exposed: [] },
+  codex: story.codex,
   scenery(T, scene) {
     tracks.reset();
-    const { drawTracks: draw, ...geometry } = buildSpire(T, scene, intel);
+    const { drawTracks: draw, showIntel: read, ...geometry } = buildSpire(T, scene, intel);
     drawTracks = draw;
+    showIntel = read;
     drawnTail = undefined;
     drawnLength = 0;
     return geometry;
@@ -61,10 +72,21 @@ const RIME_SPIRE = {
       return surfaceAt(pos) === 'ice' ? .18 : 1;
     },
     concealedAt(pos) {
-      return (pos.y ?? 0) < 1.8 && coverZones.some((zone) => inside(pos, zone));
+      const height = pos.y ?? 0;
+      return height > 2.35 || (height < 1.8 && coverZones.some((zone) => inside(pos, zone)));
     },
     onStep(pos) {
       tracks.onStep(pos);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('demon-duels:audio', {
+          detail: { circle: 4, cue: surfaceAt(pos) === 'snow' ? 'step-snow' : 'step-stone' },
+        }));
+      }
+    },
+    interactionAt(pos) {
+      showIntel?.(intel.find(({ pos: scroll }) =>
+        Math.abs((pos.y ?? 0) - scroll.y) < .8 && Math.hypot(pos.x - scroll.x, pos.z - scroll.z) < 1.7)?.id);
+      return null;
     },
     investigateTargets(time) {
       const active = tracks.at(time);
@@ -78,5 +100,3 @@ const RIME_SPIRE = {
     },
   },
 };
-
-export default RIME_SPIRE;

@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as T from 'three';
-import { canStrike, mantleTarget } from '../../ash-gate/stealth.js';
-import circle from './index.js';
+import { canStrike, inside as paddedInside, mantleTarget } from '../../ash-gate/stealth.js';
+import { huntProfile } from '../../ash-gate/encounter.js';
+import { resolveWorldCircle, worlds } from '../../worlds.js';
+import { FROST_HERALD as circle } from './index.js';
 import { inside, surfaceAt } from './layout.js';
 
 test('Rime Spire sets the fifth guardian and has a stone and rooftop flank route', () => {
@@ -21,10 +23,12 @@ test('Rime Spire sets the fifth guardian and has a stone and rooftop flank route
   assert.equal(mantleTarget(-6.5, 5.12, 0, ledges).h, low.h);
   assert.equal(mantleTarget(low.x, 1.6, low.h, ledges).h, middle.h);
   assert.equal(mantleTarget(middle.x, -1.48, middle.h, ledges).h, high.h);
+  const highEnd = high.z - high.d / 2;
+  assert.ok(!colliders.some((area) => area.h > roofs[3].h && paddedInside(high.x, highEnd - .01, area, .28)));
   assert.equal(surfaceAt(circle.spawn), 'stone');
-  assert.equal(surfaceAt({ x: -.6, z: -10.1 }), 'stone');
+  for (let x = -6.75; x < 0; x += .25) assert.equal(surfaceAt({ x, z: -10.95 }), 'stone');
   const boss = { ...circle.boss.pos, yaw: circle.boss.facing, range: 6.4, halfAngle: .61 };
-  assert.equal(canStrike(-.6, -10.1, boss, colliders, false), true);
+  assert.equal(canStrike(-.6, -10.95, boss, colliders, false), true);
   assert.equal(canStrike(boss.x, boss.z + 1.5, boss, colliders, false), false);
 });
 
@@ -32,8 +36,20 @@ test('ice changes ground speed and only the cave interior provides ground concea
   assert.equal(circle.hooks.speedAt({ x: 3, z: 5 }), 1.3);
   assert.equal(circle.hooks.speedAt({ x: 3, y: 2, z: 5 }), 1);
   assert.equal(circle.hooks.speedAt(circle.spawn), 1);
-  assert.equal(circle.hooks.concealedAt({ x: -9.5, z: 6, y: 3 }), false);
+  assert.equal(circle.hooks.concealedAt({ x: -9.5, z: 6, y: 2 }), false);
+  assert.equal(circle.hooks.concealedAt({ x: -5.9, z: 2.9, y: 2.7 }), true);
   assert.equal(circle.hooks.concealedAt(circle.spawn), false);
+});
+
+test('the registry unlocks Frost Herald only on the fourth seal and grades its own intel', async () => {
+  const params = new URLSearchParams('world=3d&circle=4');
+  const wins = [0, 1, 2, 3].map((bossId) => ({ bossId, duel: String(bossId) }));
+  assert.notEqual(resolveWorldCircle(params, { wins: wins.slice(0, 3) }), circle.id);
+  assert.equal(resolveWorldCircle(params, { wins }), circle.id);
+  assert.equal(await worlds[4](), circle);
+  assert.deepEqual(huntProfile(false, false, circle.tells), { grade: 'ghost', tells: circle.intel.slice(0, 2).map(({ text }) => text) });
+  assert.deepEqual(huntProfile(false, true, circle.tells), { grade: 'shadow', tells: [circle.intel[2].text] });
+  assert.deepEqual(huntProfile(true, true, circle.tells), { grade: 'exposed', tells: [] });
 });
 
 test('only ground-level ice reduces traction', () => {
