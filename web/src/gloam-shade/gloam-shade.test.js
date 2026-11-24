@@ -7,7 +7,7 @@ import { resolveWorldCircle, worlds } from '../worlds.js';
 import { GLOAM_SHADE as gloam } from './index.js';
 
 const hall = gloam.scenery(T, new T.Scene());
-const { concealedAt } = gloam.hooks;
+const { canTraverse, concealedAt } = gloam.hooks;
 const shade = { ...gloam.boss.pos, yaw: gloam.boss.facing, range: 6.4, halfAngle: .61 };
 
 test('Gloam Throne registers the matching chain boss and model after circle 5', async () => {
@@ -31,6 +31,20 @@ test('light replaces darkness as concealment without marking every roof as safe'
   assert.equal(concealedAt({ x: -8, y: 2.65, z: 5.6 }), true);
   assert.equal(concealedAt({ x: -8, y: 0, z: 5.6 }), false);
   assert.equal(concealedAt({ x: 8.65, y: 3.9, z: 1 }), false);
+});
+
+test('a dark rooftop exposes the hunter to a patrol without losing movement or camera collision', () => {
+  const hunter = { x: 7.1, y: 2.5, z: 7.8 };
+  const [x, z] = gloam.patrols[0].route[1];
+  const patrol = { x, z, yaw: -Math.PI / 3, range: 6, halfAngle: .44 };
+  const roof = hall.roofs.find((surface) => inside(hunter.x, hunter.z, surface));
+  assert.equal(roof?.h, hunter.y);
+  assert.equal(concealedAt(hunter), false);
+  assert.equal(sees(patrol, hunter.x, hunter.z, [...hall.colliders, roof], false), false);
+  assert.equal(sees(patrol, hunter.x, hunter.z, hall.colliders, concealedAt(hunter)), true);
+  assert.equal(canTraverse({ ...hunter, y: 0 }), false);
+  assert.equal(canTraverse(hunter), true);
+  assert.ok(hall.cameraBlockers.includes(roof));
 });
 
 test('the west roofs are mantleable in order and lead to a hidden flank Strike', () => {
@@ -59,7 +73,7 @@ test('the west roofs are mantleable in order and lead to a hidden flank Strike',
 });
 
 test('the patrols loop over clear ground without crossing any solid scenery', () => {
-  const solids = [...hall.colliders, ...hall.barriers];
+  const solids = [...hall.colliders, ...hall.roofs, ...hall.barriers];
   assert.ok(gloam.patrols.length > 1);
   for (const { route } of gloam.patrols) {
     for (let i = 0; i < route.length; i++) {

@@ -15,11 +15,12 @@ north along the last band of light to reach the Gloam Shade's flank.
 | --- | --- |
 | `id`, `opponentKind` | Both `5`; the journal gate is the fifth sequential seal, id `4`. |
 | `name`, `chapter`, `objective`, `copy`, `tells` | World title and chapter, a position-aware HUD objective, story feedback, and stealth-grade duel intel. |
-| `scenery(T, scene)` | Builds the room and returns `{ limits, colliders, ledges, roofs, coverZones, barriers }`. `limits` is `{ left, right, far, near }`; geometry lists use centered XZ rectangles `{ x, z, w, d, h }`. `h` is the top of solids and the floor elevation of light zones. |
+| `scenery(T, scene)` | Builds the room and returns `{ limits, colliders, ledges, roofs, coverZones, barriers, cameraBlockers }`. `limits` is `{ left, right, far, near }`; geometry lists use centered XZ rectangles `{ x, z, w, d, h }`. `h` is the top of solids and the floor elevation of light zones. |
 | `spawn`, `boss` | `spawn: { x, z }`, `boss: { model, height, pos: { x, z }, facing }`; facing is the Ash Gate yaw in radians. |
 | `patrols` | `{ route: [[x, z], ...], facing }` entries; routes loop. |
 | `palette`, `fog`, `audio` | `{ background }`, `{ color, density }`, `{ footstep }`; ambience follows circle id 5. |
 | `hooks.concealedAt(pos)` | Returns true only inside an illuminated rectangle at the hunter's current elevation (`pos.y`). This replaces Ash Gate's ash/roof concealment rule, not the usual stone occlusion; a dark roof is not automatically safe. |
+| `hooks.canTraverse(pos)` | Blocks movement through a roof below its surface. Roofs block the camera but not 2D sight rays, which would otherwise treat every rooftop as concealed. |
 
 The shared mount dispatches cancelable `demon-duels:launch` on Strike
 with `{ opponentKind: 5, mode: 'chain', returnToMap: true }` and the world

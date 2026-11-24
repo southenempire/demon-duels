@@ -101,5 +101,5 @@ export function scenery(T, scene) {
   throneLight.position.set(0, 4.6, -19.4);
   scene.add(sky, moon, throneLight);
 
-  return { limits, colliders: [...cover, ...roofs], ledges: roofs, roofs, coverZones, barriers };
+  return { limits, colliders: cover, ledges: roofs, roofs, coverZones, barriers, cameraBlockers: roofs };
 }

@@ -45,3 +45,7 @@ export const patrols = [
 export function concealedAt({ x, y = 0, z }) {
   return coverZones.some((zone) => Math.abs(y - zone.h) < .32 && inside(x, z, zone));
 }
+
+export function canTraverse({ x, y, z }) {
+  return roofs.every((roof) => roof.h <= y + .03 || !inside(x, z, roof, .28));
+}

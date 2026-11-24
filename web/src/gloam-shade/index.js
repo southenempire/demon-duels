@@ -1,4 +1,4 @@
-import { concealedAt, patrols, spawn, throne } from './layout.js';
+import { canTraverse, concealedAt, patrols, spawn, throne } from './layout.js';
 import { scenery } from './scenery.js';
 
 export const GLOAM_SHADE = {
@@ -32,5 +32,5 @@ export const GLOAM_SHADE = {
   palette: { background: 0x191529 },
   fog: { color: 0x191529, density: .031 },
   audio: { footstep: 'step-stone' },
-  hooks: { concealedAt },
+  hooks: { canTraverse, concealedAt },
 };
