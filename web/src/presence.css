@@ -1,0 +1,11 @@
+.hunter-presence {
+  position: fixed; z-index: 60; top: 16px; left: 50%; transform: translateX(-50%);
+  display: grid; gap: 8px; min-width: min(360px, calc(100vw - 32px)); max-width: calc(100vw - 32px);
+  padding: 14px 16px; border: 1px solid rgba(255, 189, 92, .45); border-radius: 12px;
+  background: rgba(16, 11, 20, .94); color: #f4e9dc; box-shadow: 0 12px 40px rgba(0, 0, 0, .55);
+  font-size: 14px; line-height: 1.4; text-align: center;
+}
+.hunter-presence[hidden] { display: none; }
+.hunter-presence b { font-size: 15px; letter-spacing: .04em; color: #ffbd5c; }
+.hunter-presence span { color: #d6c7d9; }
+.hunter-presence div { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }

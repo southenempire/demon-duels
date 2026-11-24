@@ -9,6 +9,7 @@ import { characters, characterArt } from './characters.js';
 import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason, privateMoveRetryMessage } from './fight.js';
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
+import { startPresence } from './presence-live.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
@@ -365,7 +366,8 @@ async function refreshRoom() {
       await refreshWallet().catch(() => {});
       if (room !== s.room || owner !== client) return;
     }
-    const detail = confirmedSettlement(d, client.key, s.opposing?.kind ?? null, s.proof);
+    const settled = confirmedSettlement(d, client.key, s.opposing?.kind ?? null, s.proof);
+    const detail = settled && !s.solo ? { ...settled, mode: 'pvp' } : settled;
     if (detail && !emittedSettlements.has(detail.duel)) {
       emittedSettlements.add(detail.duel);
       window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail }));
@@ -840,8 +842,9 @@ async function action(name) {
 }
 
 // Campaign integration: launch a selected boss without coupling the arena to a map.
-export function launchFight({ opponentKind, mode = 'practice', returnToMap = true } = {}) {
+export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, room, join = false } = {}) {
   if (s.busy || s.playing) return false;
+  if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
   setRoom(null);
   s.requestedOpponent = opponentKind; s.returnToMap = returnToMap;
@@ -855,6 +858,58 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
   return true;
 }
 window.addEventListener('demon-duels:launch', (event) => launchFight(event.detail));
+
+// Live hunters: a challenge accepted in the world becomes an ordinary open/join PvP duel.
+function launchRivalDuel(room, join, returnToMap) {
+  if (!room) return false;
+  setRoom(room);
+  s.mode = 'chain'; s.solo = false; s.quick = false; s.notice = '';
+  s.requestedOpponent = null; s.returnToMap = returnToMap;
+  localStorage.setItem(activeRoomKey, room.toBase58());
+  run(join ? 'Staking your card and preparing the private arena…' : 'Opening your duel…', async () => {
+    await Promise.all([refreshRoom(), refreshWallet()]);
+    if (join && s.duel.phase === 0 && !participant()) {
+      if (!anyCard()) throw new Error('Choose an unstaked demon first.');
+      await client.joinDuel(s.duel, anyCard().key);
+      audio('stake');
+      await refreshRoom(); await client.delegate(s.duel); await refreshWallet();
+    }
+  });
+  return true;
+}
+
+async function rivalReady() {
+  if (s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
+  const active = readKey(localStorage.getItem(activeRoomKey));
+  const open = active && await readDuel(active).catch(() => null);
+  if (open && open.phase < 3 && (keyed(open.p1, client.key) || keyed(open.p2, client.key))) {
+    return { ok: false, reason: 'Finish or cancel your open duel first.' };
+  }
+  await refreshWallet();
+  if (!anyCard()) return { ok: false, reason: 'You need an unstaked demon card to duel another hunter.' };
+  if (s.balance < 0.006) return { ok: false, reason: 'Fund the guest wallet to stake a card.' };
+  return { ok: true };
+}
+
+async function hostRivalDuel(stillWanted) {
+  const ready = await rivalReady();
+  if (!ready.ok) throw new Error(ready.reason);
+  if (!stillWanted()) throw new Error('The other hunter backed out before you staked.');
+  const { duel } = await client.openDuel(anyCard().key);
+  audio('stake');
+  localStorage.setItem(activeRoomKey, duel.toBase58());
+  return duel.toBase58();
+}
+
+async function verifyRivalDuel(room, challenger) {
+  const key = readKey(room);
+  const duel = key && await until(() => readDuel(key), 20000).catch(() => null);
+  if (!duel || duel.phase !== 0 || !duel.p1.equals(new PublicKey(challenger)) || !keyed(duel.p2, ZERO)) {
+    throw new Error('That duel is not open on chain. No card was taken.');
+  }
+}
+
+startPresence({ keypair: client.keypair, host: hostRivalDuel, check: rivalReady, verify: verifyRivalDuel });
 
 let ignorePointerUntil = 0;
 app.addEventListener('click', (event) => {
