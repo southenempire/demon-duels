@@ -70,7 +70,8 @@ test('only the matching bound Marrow King chain result is recognized on return',
 test('the registered Bone Citadel opens only after the first two wins', async () => {
   const route = new URLSearchParams('world=3d&circle=2');
   const wins = [{ bossId: 0 }, { bossId: 1 }];
-  assert.equal(resolveWorldCircle(route, { wins: wins.slice(0, 1) }), 0);
+  assert.equal(resolveWorldCircle(route, { wins: [] }), 0);
+  assert.equal(resolveWorldCircle(route, { wins: wins.slice(0, 1) }), 1);
   assert.equal(resolveWorldCircle(route, { wins }), 2);
   assert.equal(await worlds[2](), MARROW_KING);
 });
