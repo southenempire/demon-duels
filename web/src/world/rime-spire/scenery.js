@@ -114,7 +114,6 @@ export function buildSpire(T, scene, intel) {
   }
 
   for (const x of [-6.1, 1.4, 7.9]) arch(x, -14.81, x === 1.4 ? 4.2 : 2.9, 2.5, trim);
-  box(glass, 1.4, 3.3, -14.73, 2.18, 3.95, .11);
   const rose = shape(glass, new T.CircleGeometry(1.12, 24), 1.4, 5.28, -14.57);
   rose.castShadow = false;
   shape(trim, new T.TorusGeometry(1.07, .105, 8, 24), 1.4, 5.28, -14.53);
