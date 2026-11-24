@@ -1,4 +1,6 @@
 import './style.css';
+import './finishers/style.css';
+import { campaignApproval, matchesBossStake, previewFinisher, settlementCinematics } from './finishers/index.js';
 import './arena.css';
 import { PublicKey } from '@solana/web3.js';
 import { ArenaClient, PROGRAM, ZERO, addressExplorer, cardKey, explorer, localKey, packKey, proof, readCard, readCards, readDuel, readRound, until, sleep } from './chain.js';
@@ -119,8 +121,20 @@ function bossOutcome() {
   return campaignResult(boss, keyed(s.duel.winner, client.key), s.campaign, button);
 }
 
-const roundResult = () => s.result || confirmedFight(s.duel, mySide());
+const roundResult = () => s.result || (bossEncounter() && !emittedSettlements.has(fightId()) ? null : confirmedFight(s.duel, mySide()));
 const fightId = () => s.result ? 'practice:' + s.resultId : s.duel?.key?.toString();
+const bossEncounter = () => s.mode === 'chain' && s.solo && Number.isInteger(s.requestedOpponent) && participant();
+function isBoundBossSettlement(detail, duel) {
+  if (!bossEncounter() || !keyed(duel.p1, client.key)) return false;
+  try {
+    const saved = loadRoomBot(duel.key);
+    const binding = saved && { kind: saved.demonId, player: saved.bot.key.toString(), card: saved.key?.toString() };
+    return matchesBossStake(detail, s.requestedOpponent, fightId(), duel.p2.toString(), duel.card2.toString(), binding);
+  } catch { return false; }
+}
+let liveSettlement;
+const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
+const presentFinisher = () => finishers.play(fightId()).catch(() => {});
 const fighterKinds = () => [
   s.mode === 'practice' ? s.practiceStake : s.mode === 'landing' ? 0 : s.staked?.kind ?? anyCard()?.kind,
   s.mode === 'practice' ? s.practiceRival : s.mode === 'landing' ? 1 : s.opposing?.kind,
@@ -358,6 +372,10 @@ async function playFight() {
   await preloadFighters();
   for (const frame of fightTimeline(result)) {
     if (sequence !== s.sequence) return;
+    if (frame.stage === 'spoils') {
+      await presentFinisher();
+      if (sequence !== s.sequence) return;
+    }
     s.frame = frame;
     if (frame.sound && !(s.duel && !participant() && (frame.sound === 'victory' || frame.sound === 'defeat'))) audio(frame.sound);
     if (frame.stage === 'windup') audio(moves[result.moves[frame.attacker]].name.toLowerCase());
@@ -370,6 +388,7 @@ async function playFight() {
   if (sequence !== s.sequence) return;
   s.playing = false;
   draw();
+  world?.finishReturn();
 }
 
 async function refreshWallet() {
@@ -415,7 +434,17 @@ async function refreshRoom() {
     const detail = confirmedSettlement(d, client.key, s.opposing?.kind ?? null, s.proof);
     if (detail && !emittedSettlements.has(detail.duel)) {
       emittedSettlements.add(detail.duel);
-      window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail }));
+      const boundBoss = isBoundBossSettlement(detail, d);
+      const approval = boundBoss && detail.won ? campaignApproval(localStorage, detail) : null;
+      if (boundBoss && (worldFight ? Boolean(approval) : previous !== undefined || approval)) {
+        liveSettlement = detail;
+      }
+      try { window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail })); }
+      finally { liveSettlement = undefined; }
+      if (finishers.has(detail.duel) && approval && !approval()) finishers.clear();
+      if (previous === undefined && finishers.has(detail.duel)) {
+        s.playedId = null; s.frame = null;
+      }
     }
   }
   if (d.phase === 4) clearSavedRoom(room);
@@ -438,6 +467,7 @@ async function run(label, action, recoveryMessage) {
 }
 
 function setRoom(key) {
+  finishers.clear();
   document.querySelectorAll('.capture-card').forEach((card) => card.remove());
   s.sequence++;
   s.playing = false;
@@ -759,7 +789,10 @@ async function action(name) {
   }
   if (name === 'skip' && s.playing) {
     document.querySelectorAll('.capture-card').forEach((card) => card.remove());
-    s.sequence++; s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); return;
+    const sequence = ++s.sequence;
+    await presentFinisher();
+    if (sequence !== s.sequence) return;
+    s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); world?.finishReturn(); return;
   }
   if (s.busy || s.playing) return;
   if (name === 'begin') {
@@ -1110,6 +1143,7 @@ document.addEventListener('keydown', (event) => {
 restoreRoom();
 if (s.room) s.journey = 'arena';
 draw();
+if (import.meta.env.DEV) previewFinisher(params)?.catch(() => {});
 const savedHunt = s.room && readWorldJSON(localStorage, worldEncounterKey(s.room));
 async function openInitialSurface() {
   if ((savedHunt || (!s.room && params.get('world') === '1')) && params.get('world') !== '0') await openWorld(savedHunt);
