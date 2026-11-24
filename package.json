@@ -1,0 +1,22 @@
+{
+  "name": "demon-duels",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "start": "vite preview --host 0.0.0.0",
+    "test": "node --test",
+    "smoke:devnet": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@magicblock-labs/ephemeral-rollups-sdk": "0.14.3",
+    "@solana/web3.js": "1.98.4",
+    "buffer": "6.0.3",
+    "tweetnacl": "1.0.3"
+  },
+  "devDependencies": {
+    "vite": "6.4.2"
+  }
+}
