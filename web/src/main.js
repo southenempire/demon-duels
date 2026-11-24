@@ -178,7 +178,7 @@ function battlefield() {
   </section>`;
 }
 
-let duelView, duel3DUnavailable = false;
+let duelView, duel3DUnavailable = false, duelSceneOpen = false;
 function syncDuelView() {
   const host = app.querySelector('[data-duel-viewport]');
   if (!host) {
@@ -220,17 +220,23 @@ function resultPanel() {
     both.winner === 0 ? 'The pit is yours.' : 'The pit takes its due.';
   const line = both.moves.map((id, index) => '<span><b>' + moves[id].name + '</b> · ' + both.score[index] + ' DMG' +
     (both.crits[index] ? ' <em>CRIT</em>' : '') + '</span>').join('<small>VS</small>');
+  return '<div class="control has-result"><div class="result-copy"><span class="eyebrow">' + (s.result ? 'PRACTICE COMPLETE' : 'SETTLED ON SOLANA DEVNET') +
+    '</span><h2>' + title + '</h2><div class="damage">' + line + '</div></div><div class="actions">' +
+    (s.result && !s.returnToMap ? button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') : '') +
+    button('replay', 'Replay fight', 'text') + button('duel-receipt', 'Details', 'text') +
+    button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow') + '</div></div>';
+}
+
+function resultReceipt(both) {
+  const lostCard = both.winner === 0 ? s.opposing : s.staked;
   const breakdown = both.moves.map((move, side) => '<div><b>' + (side ? 'OPPONENT' : 'PLAYER 01') + ' / ' + moves[move].name + '</b><span>2 base + ' +
     Number((move + 1) % 3 === both.moves[1 - side]) + ' advantage + ' + (both.crits[side] ? '2' : '0') + ' crit = <strong>' + both.score[side] + '</strong></span></div>').join('');
-  const receipt = '<div class="proof-receipt"><div class="score-breakdown">' + breakdown + '</div><p>Each demon has a 25% crit chance: +2 clash power on a critical hit. Equal scores use ' + (s.result ? 'local randomness' : 'MagicBlock VRF') + ' to break the tie.</p>' + (s.result ? '<p>Practice uses local randomness. No blockchain transaction or card transfer.</p>' :
+  return '<div class="proof-receipt"><div class="score-breakdown">' + breakdown + '</div><p>' +
+    fightReason(both, Boolean(s.result)) + '</p><p>Each demon has a 25% crit chance: +2 clash power on a critical hit. Equal scores use ' +
+    (s.result ? 'local randomness' : 'MagicBlock VRF') + ' to break the tie.</p>' + (s.result ? '<p>Practice uses local randomness. No blockchain transaction or card transfer.</p>' :
     '<div class="proof-explanation"><span><b>Settlement receipt</b><small>MagicBlock VRF chose crits and ties; the same transaction assigned both cards to the winner.</small></span>' +
-    (proofLink(s.proof, 'View settlement proof') || '<span class="muted">Indexing Explorer proof…</span>') + '</div><a class="proof-link" href="' + addressExplorer(s.duel.key) + '" target="_blank" rel="noreferrer">Duel account: cards, winner & scores ' + icon('outside', 14) + '</a>') + '</div>';
-  return '<div class="control has-result"><div class="result-copy"><span class="eyebrow">' + (s.result ? 'PRACTICE COMPLETE' : 'SETTLED ON SOLANA DEVNET') +
-    '</span><h2>' + title + '</h2><div class="damage">' + line + '</div><p class="outcome-reason">' + fightReason(both, Boolean(s.result)) + '</p><p class="capture-receipt">' +
-    (s.result ? 'Simulated capture: ' : spectating ? (both.winner === 0 ? 'Player one captured ' : 'Player two captured ') : both.winner === 0 ? 'You captured ' : 'You lost ') +
-    '<b>' + (demons[fighterKinds()[1 - both.winner]]?.name || 'the opposing demon') + '</b>' + (s.result ? ' · no cards changed ownership.' : ' · ownership settled on devnet.') + '</p></div><div class="actions">' +
-    (s.result && !s.returnToMap ? button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') : '') +
-    button('replay', 'Replay fight', 'text') + button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow') + '</div>' + receipt + '</div>';
+    (proofLink(s.proof, 'View settlement proof') || '<span class="muted">Indexing Explorer proof…</span>') + '</div><a class="proof-link" href="' + addressExplorer(s.duel.key) + '" target="_blank" rel="noreferrer">Duel account: cards, winner & scores ' + icon('outside', 14) + '</a>' +
+    (lostCard ? '<br><a class="proof-link" href="' + addressExplorer(lostCard.key) + '" target="_blank" rel="noreferrer">Captured card account ' + icon('outside', 14) + '</a>' : '')) + '</div>' + bossOutcome();
 }
 
 function controls() {
@@ -316,18 +322,16 @@ function capturedVault() {
   const result = roundResult();
   if (!result || !['spoils', 'finish'].includes(s.frame?.stage)) return '';
   const loser = 1 - result.winner;
-  const card = loser ? s.opposing : s.staked;
   const kind = fighterKinds()[loser];
   const demon = demons[kind];
   const spectator = s.duel && !participant();
   const owner = spectator ? (result.winner ? 'PLAYER TWO' : 'PLAYER ONE') : result.winner ? 'PIT RIVAL' : 'YOUR';
-  return `<section class="spoils-vault ${s.frame.stage === 'finish' ? 'landed' : ''}" aria-label="Winner's captured card"><div><span class="eyebrow">${s.result ? 'SIMULATED CAPTURE' : 'OWNED ON SOLANA DEVNET'}</span><h2>${owner} VAULT</h2><p>${demon?.name || 'Demon'} · ${s.result ? 'Practice only · no ownership change' : 'Confirmed winner takes both cards'}</p></div><div class="captured-slot" data-capture-target>${demon ? `<img src="${ASSET + characters[kind].portrait}" alt="${demon.name}">` : ''}${icon('box', 24)}</div>${s.result ? '' : '<div class="capture-links">' + (proofLink(s.proof, 'Ownership receipt') || '<span class="muted">Indexing proof…</span>') + (card ? '<a class="proof-link" href="' + addressExplorer(card.key) + '" target="_blank" rel="noreferrer">Captured card account ' + icon('outside', 14) + '</a>' : '') + '</div>'}</section>`;
+  return `<section class="spoils-vault ${s.frame.stage === 'finish' ? 'landed' : ''}" aria-label="Winner's captured card"><div><span class="eyebrow">${s.result ? 'SIMULATED CAPTURE' : 'OWNED ON SOLANA DEVNET'}</span><h2>${owner} VAULT</h2><p>${demon?.name || 'Demon'} · ${s.result ? 'Practice only · no ownership change' : 'Confirmed winner takes both cards'}</p></div><div class="captured-slot" data-capture-target>${demon ? `<img src="${ASSET + characters[kind].portrait}" alt="${demon.name}">` : ''}${icon('box', 24)}</div></section>`;
 }
 
 function animateCapture() {
   const result = roundResult();
   const loser = 1 - result.winner;
-  app.querySelector('.spoils-vault')?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
   const origin = duelView?.fighterPoint(loser);
   const target = app.querySelector('[data-capture-target]')?.getBoundingClientRect();
   const kind = fighterKinds()[loser];
@@ -356,6 +360,11 @@ function networkProgress() {
 
 function modal() {
   if (!s.modal) return '';
+  if (s.modal === 'duel-receipt') {
+    const result = roundResult();
+    return result ? '<div class="overlay" data-dismiss><section class="modal duel-receipt" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><button type="button" class="square close" data-action="close" aria-label="Close dialog">' +
+      icon('cross') + '</button><h2 id="dialog-title">Duel details</h2>' + resultReceipt(result) + '</section></div>' : '';
+  }
   const fund = s.modal === 'wallet';
   return '<div class="overlay" data-dismiss><section class="modal" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><button type="button" class="square close" data-action="close" aria-label="Close dialog">' +
     icon('cross') + '</button><span class="eyebrow">' + (fund ? 'ISOLATED DEVNET ACCOUNT' : 'THE PIT / FIELD GUIDE') + '</span><h2 id="dialog-title">' +
@@ -377,6 +386,7 @@ function feedback() {
 }
 
 function duelScreen() {
+  const vault = capturedVault();
   return '<main class="duel-screen">' + battlefield() +
     '<nav class="duel-tools" aria-label="Duel options">' +
       button('map', 'Map', 'secondary', 'arrow') +
@@ -384,8 +394,8 @@ function duelScreen() {
       icon(s.sound ? 'volume' : 'mute', 16) + '</button>' +
       button('rules', 'Rules', 'secondary') +
       (safeMode() ? button('wallet', 'Wallet', 'secondary', 'wallet') : '') +
-    '</nav><div class="duel-panels">' + feedback() + stakePicker() + controls() +
-      bossOutcome() + networkProgress() + capturedVault() + '</div></main>';
+    '</nav><div class="duel-panels' + (vault ? ' is-result' : '') + '">' + feedback() + stakePicker() + controls() +
+      networkProgress() + vault + '</div></main>';
 }
 
 function draw() {
@@ -407,6 +417,11 @@ function draw() {
   if (s.modal && !hadDialog) app.querySelector('.modal .close')?.focus({ preventScroll: true });
   else if (focus) [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === focus)?.focus({ preventScroll: true });
   syncDuelView();
+  const sceneOpen = Boolean(app.querySelector('.duel-screen'));
+  if (sceneOpen !== duelSceneOpen) {
+    duelSceneOpen = sceneOpen;
+    window.dispatchEvent(new CustomEvent(sceneOpen ? 'demon-duels:duel3d-open' : 'demon-duels:duel3d-close'));
+  }
   sound.setScene(s.playing || s.mode === 'practice' || s.duel?.phase === 1 || s.duel?.phase === 2 ? 'fight' : 'menu');
   if (s.journey === 'arena' && roundResult() && !s.busy && s.playedId !== fightId()) {
     s.playedId = fightId();
@@ -813,7 +828,7 @@ async function action(name) {
     localStorage.setItem('demon-duels:sound', s.sound ? 'on' : 'off');
     audio('seal'); draw(); return;
   }
-  if (name === 'rules' || name === 'wallet' || name === 'close') {
+  if (name === 'rules' || name === 'wallet' || name === 'close' || (name === 'duel-receipt' && !s.playing && roundResult())) {
     s.modal = name === 'close' ? null : name; draw();
     if (name === 'wallet') refreshWallet().then(draw).catch(() => {});
     return;
@@ -850,6 +865,7 @@ async function action(name) {
     }); return;
   }
   if (name === 'pit') {
+    s.modal = null;
     if (!pitUnlocked(s.campaign)) { showMap(); s.notice = 'Defeat all six guardians to unlock the open pit.'; draw(); return; }
     if (activeDuel()) { s.journey = 'arena'; s.mode = 'chain'; draw(); return; }
     setRoom(null); s.requestedOpponent = null; s.returnToMap = false; s.journey = 'arena';
@@ -862,6 +878,7 @@ async function action(name) {
     return;
   }
   if (name === 'campaign-return') {
+    s.modal = null;
     if (activeDuel()) { showMap(); return; }
     setRoom(null); s.requestedOpponent = null; s.returnToMap = false;
     showMap(); return;
