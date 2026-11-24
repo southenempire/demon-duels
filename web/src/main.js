@@ -2,18 +2,22 @@ import './style.css';
 import { PublicKey } from '@solana/web3.js';
 import { ArenaClient, PROGRAM, ZERO, addressExplorer, explorer, localKey, packKey, proof, readCard, readDuel, readRound, until, sleep } from './chain.js';
 import { icon } from './icons.js';
+import { botGeneration, ensurePack, prepareGuest } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
 const client = new ArenaClient(localKey('player'));
-const bot = new ArenaClient(localKey('rival'));
+const BOT_GENERATION = 'demon-duels:rival-generation';
+const activeRoomKey = 'demon-duels:active';
+const botFor = (generation) => new ArenaClient(localKey(generation ? 'rival-' + generation : 'rival'));
+const roomBotKey = (room) => 'demon-duels:room-bot:' + room;
 const ASSET = import.meta.env.BASE_URL + 'art/';
 const s = {
   mode: params.has('room') ? 'chain' : 'landing',
   balance: null, owned: [], selected: null, practiceCards: [], practiceStake: 0, practiceRival: 1,
-  result: null, move: null, duel: null, busy: null, notice: '', modal: null,
+  result: null, move: null, duel: null, busy: null, notice: '', modal: null, quick: false,
   sound: localStorage.getItem('demon-duels:sound') === 'on',
   room: readKey(params.get('room')), solo: false, opposing: null, proof: null, packProof: null, packPending: false,
 };
@@ -86,13 +90,15 @@ function resultPanel() {
   return '<div class="control has-result"><div class="result-copy"><span class="eyebrow">' + (s.result ? 'PRACTICE COMPLETE' : 'SETTLED ON SOLANA DEVNET') +
     '</span><h2>' + title + '</h2><div class="damage">' + line + '</div></div><div class="actions">' +
     (s.result ? '' : proofLink(s.proof, 'Settlement transaction') || '<span class="muted">Indexing Explorer proof…</span>') +
+    (s.result ? button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') : '') +
     button('reset', s.result ? 'Play again' : 'Back to the pit', 'secondary', 'arrow') + '</div></div>';
 }
 
 function controls() {
   if (s.result || s.duel?.phase === 3) return resultPanel();
-  if (s.mode === 'landing') return '<div class="control intro"><div><span class="eyebrow">THE STAKES ARE REAL. THE SOL IS NOT.</span><h2>One demon in. Two demons out.</h2><p>Stake a card, seal a move, and fight for both.</p></div><div class="actions">' +
-    button('enter', 'Enter devnet', 'primary', 'blade') + button('practice', 'Practice vs bot', 'secondary', 'spark') + '</div></div>';
+  if (s.mode === 'landing') return '<div class="control intro"><div><span class="eyebrow">THE STAKES ARE REAL. THE SOL IS NOT.</span><h2>One demon in. Two demons out.</h2><p>Get a free starter pack and stake one demon against the bot. No wallet extension or real SOL.</p></div><div class="actions">' +
+    button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') + button('practice', 'Offchain tutorial', 'secondary', 'spark') +
+    button('enter', 'Open devnet vault', 'text') + '</div></div>';
   if (s.mode === 'practice') return '<div class="control"><div class="control-title"><div><span class="eyebrow">OFFCHAIN PRACTICE · NO REAL STAKES</span><h2>' +
     (s.practiceCards.length ? 'Seal your move' : 'Summon your starter pack') + '</h2></div>' + button('leave', 'Exit practice', 'text') + '</div>' +
     (s.practiceCards.length ? moveSelector() : '<p>Three sample demons. Try a full duel with no wallet or test SOL.</p>' +
@@ -109,8 +115,15 @@ function controls() {
       (Date.now() >= s.duel.deadline ? button('refund', 'Release both stakes', 'secondary') : '') + '</div>';
   }
   if (s.busy && !s.duel && s.room) return '<div class="control"><h2>Finding the arena…</h2></div>';
-  if (s.duel?.phase === 0 && keyed(s.duel.p1, client.key)) return '<div class="control"><div><span class="eyebrow">01 / ONCHAIN CARD ESCROW</span><h2>Waiting for a challenger</h2><p>Send the duel link; only the first opponent to stake can join.</p></div><div class="actions">' +
+  if (s.duel?.phase === 0 && keyed(s.duel.p1, client.key)) return '<div class="control"><div><span class="eyebrow">01 / ONCHAIN CARD ESCROW</span>' +
+    (s.solo ? '<h2>Preparing the bot</h2><p>The bot will stake a card and privately seal its move.</p>' :
+      '<h2>Waiting for a challenger</h2><p>Send the duel link; only the first opponent to stake can join.</p>') + '</div><div class="actions">' +
     button(s.solo ? 'bot-resume' : 'invite', s.solo ? 'Resume bot' : 'Copy invite', 'primary', s.solo ? 'spark' : 'copy') + button('refund', 'Cancel duel', 'secondary') + '</div></div>';
+  if (s.quick && !s.room) return '<div class="control"><div><span class="eyebrow">SOLANA DEVNET / QUICK DUEL</span><h2>' +
+    (s.busy ? 'Preparing your duel…' : 'Quick duel paused') + '</h2><p>' +
+    (s.busy ? 'Setting up a guest wallet, starter cards and a bot opponent.' : 'Retry setup, open your vault, or play the offchain tutorial.') + '</p></div>' +
+    (s.busy ? '' : '<div class="actions">' + button('quick-duel', 'Retry quick duel', 'primary') + button('enter', 'Open devnet vault') +
+      button('practice', 'Offchain tutorial', 'text') + '</div>') + '</div>';
   const card = anyCard();
   if (!card) {
     return '<div class="control"><div><span class="eyebrow">01 / MAGICBLOCK VRF</span><h2>' + (s.packPending ? 'Starter pack is rolling…' : 'Summon your starter pack') + '</h2><p>' +
@@ -148,6 +161,7 @@ function modal() {
       '<p>This browser holds your guest key. Send devnet SOL only. Clearing browser storage will lose access to this wallet and its cards.</p>' +
       '<div class="wallet-address"><code>' + client.key + '</code><button type="button" class="square" data-action="copy-wallet" aria-label="Copy wallet address">' + icon('copy') + '</button></div>' +
       '<p>Balance: <strong>' + (s.balance === null ? 'checking…' : s.balance.toFixed(3) + ' devnet SOL') + '</strong>. Around 0.05 SOL is enough to get started.</p>' +
+      ((s.busy || s.notice) ? '<p role="status">' + esc(s.busy || s.notice) + '</p>' : '') +
       '<div class="actions">' + button('faucet', 'Try quick airdrop', 'primary', 'spark') + '<a class="button secondary" href="https://faucet.solana.com" target="_blank" rel="noreferrer">Solana faucet ' + icon('outside', 15) + '</a>' + button('wallet-refresh', 'Refresh balance', 'text') + '</div>'
     :
       '<ol><li><b>Stake.</b> Open a free starter pack, then each player stakes one owned card.</li><li><b>Seal.</b> Rend beats Ward. Ward beats Hex. Hex beats Rend. The private rollup hides both moves until they are locked.</li><li><b>Settle.</b> Each move starts with 2 damage. Advantage adds 1; a 25% crit adds 2. VRF breaks ties; the winner gets both cards on devnet.</li></ol>' +
@@ -195,7 +209,7 @@ async function refreshRoom() {
   if (d.phase === 3) {
     s.proof ||= await proof(d.key, 'Demon Duels: winner').catch(() => null);
     if (previous !== 3) {
-      localStorage.removeItem('demon-duels:active');
+      localStorage.removeItem(activeRoomKey);
       audio('strike');
       await refreshWallet().catch(() => {});
     }
@@ -236,23 +250,44 @@ function setRoom(key) {
   history.replaceState(null, '', url);
 }
 
-async function ensurePack(owner) {
-  const existing = await owner.pack();
-  if (!existing) await owner.requestPack();
-  await until(async () => (await owner.pack())?.opened, 60000);
+function progress(label) {
+  s.busy = label;
+  draw();
 }
 
-async function readyBot() {
+async function prepareBot() {
+  let generation = botGeneration(localStorage.getItem(BOT_GENERATION));
+  let bot = botFor(generation);
+  let pack = await bot.pack();
+  let card = pack?.opened ? (await bot.inventory()).find((item) => keyed(item.lock, ZERO)) : null;
+  if (pack?.opened && !card) {
+    generation += 1;
+    bot = botFor(generation);
+    localStorage.setItem(BOT_GENERATION, String(generation));
+    pack = undefined;
+  }
   if (await bot.balance() < 0.02) await client.transfer(bot.key, 0.03);
-  await ensurePack(bot);
-  const cards = (await bot.inventory()).filter((card) => keyed(card.lock, ZERO));
-  if (!cards.length) throw new Error('The bot has no unstaked cards left on this browser.');
+  if (!card) {
+    await ensurePack(bot, pack);
+    card = (await bot.inventory()).find((item) => keyed(item.lock, ZERO));
+  }
+  if (!card) throw new Error('The bot’s vault is not ready. Retry to prepare a card.');
+  return { bot, card, generation };
+}
+
+async function readyBot(prepared) {
   await refreshRoom();
+  let bot;
   if (s.duel.phase === 0) {
-    await bot.joinDuel(s.duel, cards[0].key);
+    const { bot: challenger, card, generation } = prepared ?? await prepareBot();
+    localStorage.setItem(roomBotKey(s.room), String(generation));
+    await challenger.joinDuel(s.duel, card.key);
     await refreshRoom();
+    bot = challenger;
   }
   if (s.duel.phase === 1) {
+    bot ??= botFor(botGeneration(localStorage.getItem(roomBotKey(s.room))));
+    if (!keyed(s.duel.p2, bot.key)) return;
     await bot.delegate(s.duel);
     await bot.lock(s.duel, crypto.getRandomValues(new Uint8Array(1))[0] % 3);
   }
@@ -266,18 +301,52 @@ async function startDuel(solo) {
     await refreshWallet();
     throw new Error('Fund this guest wallet with devnet SOL before staking.');
   }
+  let prepared;
+  if (solo) {
+    progress('Preparing a bot card before staking…');
+    prepared = await prepareBot();
+  }
   s.solo = solo;
   const { duel } = await client.openDuel(card.key);
   setRoom(duel);
-  localStorage.setItem('demon-duels:active', duel.toBase58());
+  localStorage.setItem(activeRoomKey, duel.toBase58());
   if (solo) localStorage.setItem('demon-duels:solo:' + duel, '1');
   await refreshRoom();
   if (solo) {
-    s.busy = 'The bot is staking and sealing its move…';
-    draw();
-    await readyBot();
+    progress('The bot is staking and sealing its move…');
+    await readyBot(prepared);
   }
   await refreshWallet();
+}
+
+function restoreRoom() {
+  const saved = readKey(localStorage.getItem(activeRoomKey));
+  if (!s.room && saved) {
+    s.solo = localStorage.getItem('demon-duels:solo:' + saved) === '1';
+    setRoom(saved);
+  }
+}
+
+async function startQuickDuel() {
+  s.mode = 'chain';
+  s.quick = true;
+  s.result = null;
+  s.move = null;
+  await run('Checking your guest wallet…', async () => {
+    restoreRoom();
+    if (s.room) {
+      await Promise.all([refreshRoom(), refreshWallet()]);
+      if (s.duel.phase < 3) {
+        if (s.solo && s.duel.phase === 0) await readyBot();
+        return;
+      }
+      setRoom(null);
+    }
+    await prepareGuest(client, progress);
+    await refreshWallet();
+    if (!anyCard()) throw new Error('This guest vault has no unstaked cards.');
+    await startDuel(true);
+  });
 }
 
 async function resolveChain() {
@@ -325,12 +394,12 @@ async function action(name) {
   }
   if (s.busy) return;
   if (name === 'home' || name === 'leave' || name === 'reset') {
-    setRoom(null); s.mode = name === 'reset' ? s.mode : 'landing'; s.solo = false; s.notice = '';
+    setRoom(null); s.mode = name === 'reset' ? s.mode : 'landing'; s.solo = false; s.quick = false; s.notice = '';
     if (s.mode === 'practice') s.practiceRival = (s.practiceRival + 1) % demons.length;
     draw(); return;
   }
   if (name === 'practice') {
-    s.mode = 'practice'; s.notice = ''; draw(); return;
+    s.mode = 'practice'; s.quick = false; s.notice = ''; draw(); return;
   }
   if (name === 'practice-pack') {
     s.practiceCards = practicePack(); s.practiceStake = s.practiceCards[0]; s.practiceRival = (s.practiceStake + 1) % demons.length;
@@ -338,15 +407,13 @@ async function action(name) {
   }
   if (name === 'enter') {
     s.mode = 'chain';
+    s.quick = false;
     await run('Loading your devnet vault…', async () => {
-      const saved = readKey(localStorage.getItem('demon-duels:active'));
-      if (!s.room && saved) {
-        s.solo = localStorage.getItem('demon-duels:solo:' + saved) === '1';
-        setRoom(saved);
-      }
+      restoreRoom();
       await Promise.all([refreshWallet(), refreshRoom()]);
     }); return;
   }
+  if (name === 'quick-duel') { await startQuickDuel(); return; }
   if (name.startsWith('select:')) {
     if (s.mode === 'practice') s.practiceStake = Number(name.slice(7));
     else s.selected = readKey(name.slice(7));
@@ -402,23 +469,28 @@ async function action(name) {
     await run('Staking your card and preparing the private arena…', async () => {
       if (!anyCard()) throw new Error('Choose an unstaked demon first.');
       await client.joinDuel(s.duel, anyCard().key);
-      localStorage.setItem('demon-duels:active', s.room.toBase58());
+      localStorage.setItem(activeRoomKey, s.room.toBase58());
       await refreshRoom(); await client.delegate(s.duel); await refreshWallet();
     }); return;
   }
   if (name === 'refund') {
     await run('Returning the stakes…', async () => {
       await client.refund(s.duel);
-      localStorage.removeItem('demon-duels:active');
+      localStorage.removeItem(activeRoomKey);
       await Promise.all([refreshRoom(), refreshWallet()]);
     }); return;
   }
   if (name === 'resolve') await run('Checking the sealed moves…', resolveChain);
 }
 
+let ignorePointerUntil = 0;
 app.addEventListener('click', (event) => {
   const element = event.target.closest('[data-action]');
-  if (element) action(element.dataset.action).catch(() => {});
+  if (element) {
+    if (event.detail && performance.now() < ignorePointerUntil) return;
+    if (event.detail && element.dataset.action === 'reset') ignorePointerUntil = performance.now() + 500;
+    action(element.dataset.action).catch(() => {});
+  }
   else if (event.target.matches('[data-dismiss]')) { s.modal = null; draw(); }
 });
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && s.modal) { s.modal = null; draw(); } });

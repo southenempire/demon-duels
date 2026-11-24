@@ -4,8 +4,9 @@
 
 ## Play
 
-- **Practice vs bot** is instant, costs nothing, and works without a wallet or RPC.
-- **Enter devnet** creates a guest wallet in the browser. Fund it with about 0.05 **devnet** SOL, not mainnet SOL. The starter pack is free; SOL covers network fees and account rent. Keep the same browser profile to retain the guest wallet and its cards.
+- **Play a real devnet duel** sets up a browser guest, requests free devnet SOL if needed, opens a MagicBlock VRF starter pack, and stakes one card against the bot. No wallet extension or real SOL needed.
+- **Offchain tutorial** is instant and works without a wallet or RPC. To choose a stake manually or invite a friend, use **Open devnet vault**. If the airdrop is unavailable, fund the guest with about 0.05 **devnet** SOL, never mainnet SOL.
+- Keep the same browser profile and deployment URL to retain the guest wallet and its cards.
 - Open a starter pack, choose a card, and challenge the bot or send a duel link to a friend. In a friend duel, both players need their own funded guest wallet and card.
 - Rend beats Ward, Ward beats Hex, and Hex beats Rend. Each move starts at 2 damage, advantage adds 1, and a 25% crit adds 2. VRF breaks ties. The winner takes ownership of both cards.
 
