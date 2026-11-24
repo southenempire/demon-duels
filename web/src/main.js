@@ -695,7 +695,10 @@ async function action(name) {
   }
   if (name === 'wallet-refresh') { await run('Refreshing wallet…', refreshWallet); return; }
   if (name === 'bot' || name === 'create') {
-    await run(name === 'bot' ? 'Staking a card on Solana…' : 'Creating your duel…', () => startDuel(name === 'bot')); return;
+    const solo = name === 'bot';
+    await run(solo ? 'Staking a card on Solana…' : 'Creating your duel…',
+      () => startDuel(solo, solo ? s.requestedOpponent ?? undefined : undefined));
+    return;
   }
   if (name === 'bot-resume') { await run('Resuming the bot…', readyBot); return; }
   if (name === 'join') {
