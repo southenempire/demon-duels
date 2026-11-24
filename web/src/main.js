@@ -9,7 +9,7 @@ import { characters, characterArt } from './characters.js';
 import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason } from './fight.js';
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
-import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, recordBossWin } from './campaign.js';
+import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin } from './campaign.js';
 import { storyView, mapView, codexView, journeyNav, encounterHeading, campaignResult } from './campaign-view.js';
 
 const app = document.getElementById('app');
@@ -833,13 +833,14 @@ window.addEventListener('demon-duels:settled', (event) => {
   if (!d || bossId === null || localStorage.getItem(encounterKey(d.key)) !== String(bossId) || event.detail?.duel !== d.key.toString()) return;
   const savedBot = loadRoomBot(d.key);
   if (!savedBot || savedBot.demonId !== bossId) return;
-  const next = recordBossWin(s.campaign, { bossId, phase: d.phase, player: client.key.toString(), winner: d.winner.toString(),
+  s.campaign = persistBossWin(localStorage, client.key, { bossId, phase: d.phase, player: client.key.toString(), winner: d.winner.toString(),
     opponent: (mySide() ? d.p1 : d.p2).toString(), bot: savedBot.bot.key.toString(), opposingKind: s.opposing?.kind,
     duel: d.key.toString(), mode: s.mode });
-  if (next !== s.campaign) {
-    s.campaign = next;
-    localStorage.setItem(campaignKey(client.key), JSON.stringify(next));
-  }
+});
+window.addEventListener('storage', (event) => {
+  if (event.key !== campaignKey(client.key)) return;
+  s.campaign = readCampaign(localStorage, client.key);
+  draw();
 });
 
 let ignorePointerUntil = 0;

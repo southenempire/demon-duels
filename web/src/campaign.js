@@ -48,3 +48,11 @@ export function recordBossWin(progress, result) {
     opposingKind !== bossId || progress.wins.some((win) => win.duel === duel)) return progress;
   return { version: 1, wins: [...progress.wins, { bossId, duel }] };
 }
+
+export function persistBossWin(storage, player, result) {
+  // Another tab may have earned more seals since this tab last rendered.
+  const current = readCampaign(storage, player);
+  const next = recordBossWin(current, result);
+  if (next !== current) storage.setItem(campaignKey(player), JSON.stringify(next));
+  return next;
+}

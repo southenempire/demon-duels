@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { circles, campaignKey, freshCampaign, readCampaign, circleState, pitUnlocked, recordBossWin } from './campaign.js';
+import { circles, campaignKey, freshCampaign, readCampaign, circleState, pitUnlocked, recordBossWin, persistBossWin } from './campaign.js';
 
 const result = (bossId = 0) => ({ bossId, mode: 'chain', phase: 3, player: 'player', winner: 'player',
   opponent: 'boss-wallet', bot: 'boss-wallet', opposingKind: bossId, duel: 'confirmed-duel-' + bossId });
@@ -48,4 +48,16 @@ test('wallet-local journal survives reload and ignores corrupt, skipped and dupl
   raw = JSON.stringify({ version: 1, wins: [...progress.wins, { bossId: 1, duel: progress.wins[0].duel }] });
   assert.deepEqual(readCampaign(storage, 'player'), progress);
   assert.notEqual(campaignKey('one-wallet'), campaignKey('another-wallet'));
+});
+
+test('a late settlement in an older tab cannot overwrite newer seals', () => {
+  const values = new Map();
+  const storage = { getItem: (key) => values.get(key), setItem: (key, value) => values.set(key, value) };
+  persistBossWin(storage, 'player', result(0));
+  const newer = persistBossWin(storage, 'player', result(1));
+  const late = persistBossWin(storage, 'player', { ...result(0), duel: 'older-tab-guardian' });
+  assert.deepEqual(late, newer);
+  assert.deepEqual(readCampaign(storage, 'player'), newer);
+  assert.equal(persistBossWin(storage, 'player', result(2)).wins.length, 3);
+  assert.deepEqual(readCampaign(storage, 'another-player'), freshCampaign());
 });
