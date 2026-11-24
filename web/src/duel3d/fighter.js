@@ -2,6 +2,7 @@ import * as T from 'three';
 
 const bossModels = {
   0: { file: 'ash-warden.glb' },
+  1: { file: 'void-wraith.glb' },
   2: { file: 'marrow-king.glb', height: 2.744 },
   3: { file: 'mire-phantom.glb', height: 3.08 },
   4: { file: 'frost-herald.glb' },
