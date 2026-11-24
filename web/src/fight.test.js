@@ -1,13 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason } from './fight.js';
+import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason, privateMoveRetryMessage } from './fight.js';
 import { characters, characterArt } from './characters.js';
 import { demons, resolve } from './rules.js';
 
 const p1 = { equals: (other) => other === p1 };
 const p2 = { equals: (other) => other === p2 };
 const duel = { key: 'confirmed-room', phase: 3, p1, p2, winner: p2, moves: [0, 1], crits: [false, true], scores: [3, 4] };
+
+test('private move errors distinguish offline, RPC loss and pending chain confirmation', () => {
+  const rpc = new Error('failed to get info about account: TypeError: Failed to fetch');
+  assert.match(privateMoveRetryMessage(rpc, { online: false, sealed: false }), /offline.*retry sealing/i);
+  assert.match(privateMoveRetryMessage(rpc, { online: true, sealed: true }), /connection dropped.*Check for reveal/i);
+  assert.match(privateMoveRetryMessage(new Error('The network is still processing.'), { online: true, sealed: false }), /hasn’t confirmed.*retry sealing/i);
+  assert.equal(privateMoveRetryMessage(new Error('Invalid choice'), { online: true, sealed: false }), null);
+});
 
 test('only a settled chain account can produce a combat result', () => {
   for (const phase of [0, 1, 2, 4]) assert.equal(confirmedFight({ ...duel, phase }), null);
