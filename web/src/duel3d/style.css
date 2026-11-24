@@ -90,5 +90,6 @@
   .duel-panels.is-result { grid-template-columns: minmax(0, 1fr); }
   .duel-panels.is-result .control, .duel-panels.is-result .spoils-vault { padding: 6px 9px; }
   .duel-panels.is-result .spoils-vault p { font-size: 10px; }
-  .duel-screen .duel-scene:is([data-phase="take"], [data-phase="return"]) .duel-banner { bottom: 166px; }
+  .duel-screen .duel-scene[data-phase="take"] .duel-banner { bottom: 166px; }
+  .duel-screen .duel-scene[data-phase="return"] .duel-banner { display: none; }
 }
