@@ -1,8 +1,8 @@
 import './style.css';
 import { PublicKey } from '@solana/web3.js';
-import { ArenaClient, PROGRAM, ZERO, addressExplorer, explorer, localKey, packKey, proof, readCard, readDuel, readRound, until, sleep } from './chain.js';
+import { ArenaClient, PROGRAM, ZERO, addressExplorer, cardKey, explorer, localKey, packKey, proof, readCard, readCards, readDuel, readRound, until, sleep } from './chain.js';
 import { icon } from './icons.js';
-import { botGeneration, ensurePack, prepareGuest } from './onboarding.js';
+import { botGeneration, ensurePack, prepareGuest, stockBossCard } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
 
 const app = document.getElementById('app');
@@ -10,8 +10,10 @@ const params = new URLSearchParams(location.search);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
 const client = new ArenaClient(localKey('player'));
 const BOT_GENERATION = 'demon-duels:rival-generation';
+const BOSS_GENERATIONS = 'demon-duels:boss-generations';
 const activeRoomKey = 'demon-duels:active';
 const botFor = (generation) => new ArenaClient(localKey(generation ? 'rival-' + generation : 'rival'));
+const bossFor = (generation) => new ArenaClient(localKey('boss-' + generation));
 const roomBotKey = (room) => 'demon-duels:room-bot:' + room;
 const ASSET = import.meta.env.BASE_URL + 'art/';
 const s = {
@@ -275,42 +277,116 @@ async function prepareBot() {
   return { bot, card, generation };
 }
 
+export async function ensureBossCard(demonId) {
+  let total = botGeneration(localStorage.getItem(BOSS_GENERATIONS));
+  const packFunds = 0.008;
+  const botFunds = 0.03;
+  const stakeFunds = 0.006;
+  const stakeable = (card, bot) => card && keyed(card.owner, bot.key) && keyed(card.lock, ZERO);
+  const keys = (bot) => [0, 1, 2].map((i) => cardKey(bot.key, i));
+  return stockBossCard(demonId, {
+    async find(kind) {
+      for (let end = total; end > 0; end -= 30) {
+        const generations = Array.from({ length: Math.min(end, 30) }, (_, i) => end - 1 - i);
+        const bots = generations.map(bossFor);
+        const cards = await readCards(bots.flatMap(keys));
+        const i = cards.findIndex((card, index) => card?.kind === kind && stakeable(card, bots[Math.floor(index / 3)]));
+        if (i !== -1) {
+          const index = Math.floor(i / 3);
+          return { bot: bots[index], generation: generations[index], card: cards[i] };
+        }
+      }
+      return null;
+    },
+    async mint() {
+      if (await client.balance() < packFunds + botFunds + stakeFunds) return null;
+      const generation = total;
+      const bot = bossFor(generation);
+      const pack = await bot.pack();
+      if (!pack?.opened) {
+        const topUp = packFunds - await bot.balance();
+        if (topUp > 0) await client.transfer(bot.key, topUp);
+      }
+      localStorage.setItem(BOSS_GENERATIONS, String(++total));
+      await ensurePack(bot, pack);
+      const cards = (await readCards(keys(bot))).filter((card) => stakeable(card, bot));
+      return { bot, generation, cards };
+    },
+    async fund(bot) {
+      const topUp = botFunds - await bot.balance();
+      if (await client.balance() < Math.max(0, topUp) + stakeFunds) {
+        throw new Error('Fund the guest wallet to stake against this boss. Your card was not staked.');
+      }
+      if (topUp > 0) await client.transfer(bot.key, topUp);
+    },
+  });
+}
+
+function saveRoomBot(room, prepared) {
+  localStorage.setItem(roomBotKey(room), JSON.stringify({
+    generation: prepared.generation, demonId: prepared.demonId, card: prepared.card.key.toBase58(),
+  }));
+}
+
+function loadRoomBot(room) {
+  const raw = localStorage.getItem(roomBotKey(room));
+  if (!raw) return null;
+  const saved = raw.startsWith('{') ? JSON.parse(raw) : { generation: raw };
+  const generation = botGeneration(saved.generation);
+  return {
+    bot: saved.demonId === undefined ? botFor(generation) : bossFor(generation),
+    generation, demonId: saved.demonId, key: readKey(saved.card),
+  };
+}
+
 async function readyBot(prepared) {
   await refreshRoom();
-  let bot;
+  const saved = loadRoomBot(s.room);
+  let bot = prepared?.bot ?? saved?.bot;
   if (s.duel.phase === 0) {
-    const { bot: challenger, card, generation } = prepared ?? await prepareBot();
-    localStorage.setItem(roomBotKey(s.room), String(generation));
-    await challenger.joinDuel(s.duel, card.key);
+    if (!prepared && saved?.key) {
+      const card = await readCard(saved.key);
+      if (!card || !keyed(card.owner, bot.key) || !keyed(card.lock, ZERO) ||
+          (saved.demonId !== undefined && card.kind !== saved.demonId)) {
+        throw new Error('The prepared card is no longer available. Cancel this duel and try again.');
+      }
+      prepared = { ...saved, card };
+    }
+    prepared ??= await prepareBot();
+    bot = prepared.bot;
+    saveRoomBot(s.room, prepared);
+    await bot.joinDuel(s.duel, prepared.card.key);
     await refreshRoom();
-    bot = challenger;
   }
   if (s.duel.phase === 1) {
-    bot ??= botFor(botGeneration(localStorage.getItem(roomBotKey(s.room))));
+    bot ??= botFor(0);
     if (!keyed(s.duel.p2, bot.key)) return;
     await bot.delegate(s.duel);
     await bot.lock(s.duel, crypto.getRandomValues(new Uint8Array(1))[0] % 3);
   }
 }
 
-async function startDuel(solo) {
+export async function startDuel(solo, demonId) {
   const card = anyCard();
   if (!card) throw new Error('Choose an unstaked demon first.');
-  if (await client.balance() < (solo ? 0.037 : 0.006)) {
+  if (await client.balance() < (solo && demonId === undefined ? 0.037 : 0.006)) {
     s.modal = 'wallet';
     await refreshWallet();
     throw new Error('Fund this guest wallet with devnet SOL before staking.');
   }
   let prepared;
   if (solo) {
-    progress('Preparing a bot card before staking…');
-    prepared = await prepareBot();
+    progress(demonId === undefined ? 'Preparing a bot card before staking…' : 'Preparing the boss card before staking…');
+    prepared = demonId === undefined ? await prepareBot() : await ensureBossCard(demonId);
   }
   s.solo = solo;
   const { duel } = await client.openDuel(card.key);
   setRoom(duel);
   localStorage.setItem(activeRoomKey, duel.toBase58());
-  if (solo) localStorage.setItem('demon-duels:solo:' + duel, '1');
+  if (solo) {
+    saveRoomBot(duel, prepared);
+    localStorage.setItem('demon-duels:solo:' + duel, '1');
+  }
   await refreshRoom();
   if (solo) {
     progress('The bot is staking and sealing its move…');
