@@ -295,7 +295,7 @@ async function playFight() {
     draw();
     if (frame.stage === 'strike') effects.burst(frame.attacker, result.crits[frame.attacker], demons[fighterKinds()[frame.attacker]]?.glow || '#ffbd5c');
     if (frame.stage === 'spoils') animateCapture();
-    await sleep(reduced ? 70 : frame.duration);
+    await sleep(reduced ? Math.max(frame.duration, 1000) : frame.duration);
   }
   if (sequence !== s.sequence) return;
   s.playing = false;

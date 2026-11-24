@@ -236,4 +236,5 @@ footer { width: min(1180px, calc(100% - 64px)); color: #7f707e; }
   .pit-particles, .clash-fx, .hit-flare { display: none; }
   .stage-finish .pose-defeat .fighter-motion { transform: translateY(20px) scale(.85); opacity: .4; }
   .fight-callout { animation: none; }
+  .hit-number { animation: none !important; opacity: 1; transform: translate(-50%, 0); }
 }
