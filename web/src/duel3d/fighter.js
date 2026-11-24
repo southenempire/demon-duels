@@ -1,13 +1,14 @@
 import * as T from 'three';
 
 const bossModels = {
-  0: 'ash-warden.glb',
-  2: 'marrow-king.glb',
-  3: 'mire-phantom.glb',
-  4: 'frost-herald.glb',
-  5: 'gloam-shade.glb',
+  0: { file: 'ash-warden.glb' },
+  2: { file: 'marrow-king.glb', height: 2.744 },
+  3: { file: 'mire-phantom.glb', height: 3.08 },
+  4: { file: 'frost-herald.glb' },
+  5: { file: 'gloam-shade.glb' },
 };
-export const bossModel = (id) => bossModels[id];
+export const bossModel = (id) => bossModels[id]?.file;
+export const bossHeight = (id) => bossModels[id] ? bossModels[id].height ?? 3 : 2.4;
 const clips = { strike: 'Strike', feint: 'Strike', block: 'Block', parry: 'Parry', dodge: 'Dodge',
   hit: 'HitReact', death: 'Death', fallen: 'Death', victory: 'Victory' };
 const up = new T.Vector3(0, 1, 0);

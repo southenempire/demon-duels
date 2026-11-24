@@ -10,15 +10,16 @@ import { demons, moves, practicePack, resolve } from './rules.js';
 import { characters, characterArt } from './characters.js';
 import { arenaCardSide, confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
 import { mount as mountDuel } from './duel3d/index.js';
-import { bossModel } from './duel3d/fighter.js';
+import { bossHeight } from './duel3d/fighter.js';
 import { meleeTimeline } from './duel3d/timeline.js';
 import './duel3d/style.css';
 import { PitSound } from './sound.js';
 import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin, carryCampaign } from './campaign.js';
 import { storyView, mapView, codexView, journeyNav, encounterHeading, campaignResult } from './campaign-view.js';
 import { startPresence } from './presence-live.js';
-import { installDialogKeys } from './game-ui.js';
+import { duelHud, installDialogKeys, movePicker } from './game-ui.js';
 import './game-ui.css';
+import './game-overlays.css';
 
 const app = document.getElementById('app');
 installDialogKeys(app);
@@ -145,8 +146,10 @@ const fighterKinds = () => [
 ];
 
 const arenaPhase = (frame) => frame?.stage === 'decision' ? 'crit' :
-  ['spoils', 'finish'].includes(frame?.stage) ? 'take' : frame ? 'clash' :
-    moveLocked() || s.duel?.phase === 1 ? 'seal' : s.duel?.phase === 2 ? 'crit' : s.duel ? 'faceoff' : 'stake';
+  frame?.stage === 'finish' && !s.playing ? 'return' :
+    ['spoils', 'finish'].includes(frame?.stage) ? 'take' : frame ? 'clash' :
+      s.duel?.phase === 2 ? 'crit' : moveLocked() || s.duel?.phase === 1 || (s.mode === 'practice' && s.practiceCards.length) ? 'seal' :
+        s.duel ? 'faceoff' : 'stake';
 
 function battlefield() {
   const result = roundResult();
@@ -157,21 +160,21 @@ function battlefield() {
     (frame?.stage === 'reveal' ? 'MOVES REVEALED' : frame?.stage === 'decision' ?
       (frame.tied ? s.result ? 'PRACTICE TIE-BREAK' : 'VRF TIE-BREAK' :
         s.result ? 'PRACTICE CRIT ROLL' : 'MAGICBLOCK VRF') : moveLocked() ? 'MOVE SEALED' : '');
-  const kinds = fighterKinds();
+  const [player, opponent] = fighterKinds().map((kind, side) => ({
+    label: side ? (s.mode === 'practice' || s.solo || Number.isInteger(s.requestedOpponent) ? 'GUARDIAN' : 'CHALLENGER') :
+      s.duel && s.duel.phase !== 0 && !participant() ? 'PLAYER ONE' : 'HUNTER',
+    name: demons[kind]?.name || 'Awaiting stake',
+    card: demons[kind]?.type,
+    detail: frame ? moves[result.moves[side]].name + (frame.attacks > side ? ' / ' + result.score[side] + ' POWER' : '') :
+      side === 0 && moveLocked() ? moves[s.move].name + ' / SEALED' : (phase === 'seal' || phase === 'crit') && s.mode !== 'practice' ? 'HIDDEN' : '',
+    crit: ['decision', 'counter', 'spoils', 'finish'].includes(frame?.stage) && result.crits[side],
+    winner: taking && result.winner === side,
+  }));
   return `<section class="duel-scene" aria-label="3D melee arena" data-phase="${phase}" data-beat="${frame?.stage || 'guard'}">
     <p class="duel-no-webgl" hidden>3D combat is unavailable. You can still play and see the duel result.</p>
     <div class="duel-viewport" data-duel-viewport></div>
     <div class="duel-overlay">
-      <div class="duel-fighters">${kinds.map((kind, side) => {
-        const demon = demons[kind];
-        const move = frame ? moves[result.moves[side]] : null;
-        const role = side ? (s.mode === 'practice' || s.solo ? 'GUARDIAN' : 'CHALLENGER') :
-          s.duel && !participant() ? 'PLAYER ONE' : 'HUNTER';
-        const status = move ? move.name + (frame.attacks > side ? ' / ' + result.score[side] + ' POWER' : '') +
-          (['decision', 'counter', 'spoils', 'finish'].includes(frame.stage) && result.crits[side] ? ' / CRIT' : '') :
-          side === 0 && moveLocked() ? moves[s.move].name + ' / SEALED' : phase === 'seal' || phase === 'crit' ? 'HIDDEN' : '';
-        return `<div style="--duel-accent:${demon?.glow || '#e2cfb6'}"><small>${role}</small><strong>${demon?.name || 'Awaiting stake'}</strong><span>${status}</span></div>`;
-      }).join('')}</div>
+      ${duelHud({ player, opponent, phase })}
       <div class="duel-banner" role="status">${title ? `<strong>${title}</strong>` : ''}
         ${taking ? `<small>${s.result ? 'SIMULATED CAPTURE' : 'SETTLED ON SOLANA / WINNER TAKES BOTH'}</small>` :
           frame?.stage === 'decision' ? `<small>${result.score.join(' / ')} · ${result.crits.some(Boolean) ? 'CRITICAL HIT' : 'NO CRITICAL HITS'}</small>` : ''}
@@ -195,7 +198,7 @@ function syncDuelView() {
     const id = kind ?? s.requestedOpponent;
     const guardian = side === 1 && (s.mode !== 'chain' || s.solo || Number.isInteger(s.requestedOpponent));
     return { role: guardian ? id : 'hunter', color: side === 0 ? '#d9b382' : demons[id]?.glow || '#bc99ff',
-      size: guardian ? (bossModel(id) ? 3 : 2.4) : 1.85 };
+      size: guardian ? bossHeight(id) : 1.85 };
   });
   const onUnavailable = () => {
     duel3DUnavailable = true;
@@ -209,10 +212,7 @@ function syncDuelView() {
 }
 
 function moveSelector() {
-  const disabled = Boolean(s.busy || s.playing || moveLocked());
-  return '<div class="move-grid">' + moves.map((move, i) =>
-    '<button type="button" class="move ' + (s.move === i ? 'chosen' : '') + '" data-action="move:' + i + '"' + (disabled ? ' disabled' : '') + '><span class="move-icon">' + icon(move.icon, 23) +
-    '</span><span><b>' + move.name + '</b><small>Beats ' + move.beats + '</small></span><kbd>' + (i + 1) + '</kbd></button>').join('') + '</div>';
+  return movePicker({ selected: s.move, locked: moveLocked(), busy: Boolean(s.busy || s.playing) });
 }
 
 function resultPanel() {
@@ -1081,7 +1081,9 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
   }
   return true;
 }
-window.addEventListener('demon-duels:launch', (event) => launchFight(event.detail));
+window.addEventListener('demon-duels:launch', (event) => {
+  if (!launchFight(event.detail)) event.preventDefault();
+});
 window.addEventListener('demon-duels:return', showMap);
 window.addEventListener('demon-duels:settled', (event) => {
   const d = s.duel;

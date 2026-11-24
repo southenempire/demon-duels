@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { arenaCardSide, confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
-import { bossModel } from './duel3d/fighter.js';
+import { bossHeight, bossModel } from './duel3d/fighter.js';
 import { meleeActions, meleeTimeline } from './duel3d/timeline.js';
 import { characters, characterArt } from './characters.js';
 import { demons, resolve } from './rules.js';
@@ -24,6 +24,7 @@ test('3D boss models map to their demon IDs and leave other bosses procedural', 
   assert.deepEqual(demons.map((_, id) => bossModel(id)), [
     'ash-warden.glb', undefined, 'marrow-king.glb', 'mire-phantom.glb', 'frost-herald.glb', 'gloam-shade.glb',
   ]);
+  assert.deepEqual(demons.map((_, id) => bossHeight(id)), [3, 2.4, 2.744, 3.08, 3, 3]);
 });
 
 test('private move errors distinguish offline, RPC loss and pending chain confirmation', () => {
