@@ -19,7 +19,7 @@
 .duel-mode, .duel-banner small {
   color: #ead8c4; font: 10px/1.45 var(--mono); letter-spacing: .09em; text-transform: uppercase;
 }
-.duel-mode { display: block; padding: 0 18px 12px; text-align: center; opacity: .8; }
+.duel-mode { display: block; font-size: 11px; text-align: left; color: #c8cec7; }
 .duel-banner {
   position: absolute; bottom: 9%; inset-inline: 0; display: grid; gap: 5px; justify-items: center;
   color: #ffdfb5; text-align: center; text-shadow: 0 2px 8px #000, 0 2px 18px #000;
@@ -36,8 +36,7 @@
   overflow: hidden;
 }
 .duel-screen .duel-scene { position: fixed; inset: 0; height: auto; min-height: 0; border: 0; }
-.duel-screen .duel-mode, .duel-screen .duel-banner { bottom: min(27vh, 220px); }
-.duel-screen .duel-mode { position: absolute; inset-inline: 0; padding: 0; }
+.duel-screen .duel-banner { bottom: min(27vh, 220px); }
 .duel-screen .duel-banner { margin-bottom: 24px; }
 .duel-tools {
   position: absolute; top: var(--duel-tools-top); left: 50%;
@@ -49,9 +48,11 @@
   transform: translateX(-50%); display: grid; gap: 6px;
   width: min(760px, calc(100% - 24px)); max-height: 44vh; overflow: auto;
 }
+.duel-screen .duel-panels > .duel-mode { position: static; inset: auto; padding: 0; }
 .duel-panels .control, .duel-panels .spoils-vault { min-height: 0; padding: 10px 14px; background: #171219ee; }
 .duel-panels .control h2 { font-size: clamp(22px, 3vw, 32px); }
-.duel-panels .control .dd-picker { position: static; transform: none; width: 100%; }
+.duel-panels .control .dd-picker { position: static; transform: none; width: 100%; padding: 0; border: 0; background: none; }
+.duel-panels .control .dd-moves { margin-top: 0; }
 .duel-panels .feedback { min-height: 0; margin: 0; text-align: center; text-shadow: 0 2px 4px #000; }
 .duel-panels .feedback:empty { display: none; }
 .duel-panels .spoils-vault { margin: 0; }
@@ -59,7 +60,7 @@
   width: min(1040px, calc(100% - 24px)); max-height: none; overflow: visible;
   grid-template-columns: minmax(0, 1fr) auto; align-items: end;
 }
-.duel-panels.is-result .feedback { grid-column: 1 / -1; }
+.duel-panels.is-result .feedback, .duel-panels.is-result .duel-mode { grid-column: 1 / -1; }
 .duel-panels.is-result .control { gap: 6px 12px; border-radius: 4px; }
 .duel-panels.is-result .control h2, .duel-panels.is-result .spoils-vault h2 { font-size: 21px; }
 .duel-panels.is-result .damage { margin-top: 4px; }
@@ -67,7 +68,6 @@
 .duel-panels.is-result .spoils-vault { gap: 8px; flex-wrap: nowrap; }
 .duel-panels.is-result .captured-slot { width: 38px; height: 47px; }
 .duel-screen .duel-scene:is([data-phase="take"], [data-phase="return"]) .duel-banner { bottom: clamp(100px, 17vh, 158px); }
-.duel-screen .duel-scene:is([data-phase="take"], [data-phase="return"]) .duel-mode { display: none; }
 .duel-receipt .proof-receipt { border: 0; }
 .duel-stakes { display: flex; gap: 4px; overflow: auto; padding: 2px; }
 .duel-stakes .proof-link { flex: 0 0 auto; padding-inline: 10px; background: #171219e8; }
@@ -85,7 +85,7 @@
 .duel-text-only .duel-overlay { background: none; }
 .duel-text-only .dd-hud { margin-inline: 20px; }
 .duel-screen.duel-text-only .duel-banner { margin: 10px 0 0; }
-.duel-screen.duel-text-only .duel-banner:empty, .duel-text-only :is(.duel-mode, .duel-viewport) { display: none; }
+.duel-screen.duel-text-only .duel-banner:empty, .duel-text-only .duel-viewport { display: none; }
 .duel-text-only .duel-tools { transform: none; justify-content: center; margin-top: 12px; }
 .duel-text-only .duel-no-webgl { margin: 12px 18px; color: #d8c5b0; text-align: center; }
 .duel-text-only .duel-panels { transform: none; max-height: none; overflow: visible; margin-inline: auto; }
@@ -101,7 +101,7 @@ html:has(.duel-tutorial[open]) { overflow: hidden; }
 .duel-tutorial-text { padding-inline-start: 20px; }
 @media (max-width: 580px) {
   .duel-screen { --duel-tools-top: max(112px, env(safe-area-inset-top)); }
-  .duel-screen .duel-banner, .duel-screen .duel-mode { bottom: max(27vh, 155px); }
+  .duel-screen .duel-banner { bottom: max(27vh, 155px); }
   .duel-panels { max-height: 49vh; }
   .duel-panels.is-result { grid-template-columns: minmax(0, 1fr); }
   .duel-panels.is-result .control, .duel-panels.is-result .spoils-vault { padding: 6px 9px; }

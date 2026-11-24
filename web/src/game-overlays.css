@@ -11,22 +11,22 @@
 .dd-ui :is(button, a):focus-visible { outline: 2px solid var(--dd-white); outline-offset: 4px; }
 .dd-ui .dd-kicker { display: block; font: 9px/1.6 var(--dd-mono); letter-spacing: .18em; color: var(--dd-dim); text-transform: uppercase; }
 .dd-ui kbd { display: inline-block; border: 1px solid #d5ddd264; padding: 2px 5px; color: #eeeee5; font: 9px/1.3 var(--dd-mono); background: #080d0db3; box-shadow: none; border-radius: 0; }
-.dd-title { position: absolute; inset: 0; display: flex; align-items: center; isolation: isolate; background: linear-gradient(90deg, #080d10e8, #080d1077 43%, transparent 78%); overflow: auto; }
+.dd-title { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: stretch; isolation: isolate; background: linear-gradient(90deg, #080d10e8, #080d1077 43%, transparent 78%); overflow: auto; }
 .dd-title::after { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(0deg, #080d10c9, transparent 25% 75%, #080d1044); }
-.dd-title-copy { padding: 65px clamp(28px, 7vw, 130px) 110px; max-width: 760px; }
-.dd-title .dd-kicker { margin-bottom: 30px; font-size: 8px; letter-spacing: .27em; }
+.dd-title-copy { margin-block: auto; padding: 48px clamp(28px, 7vw, 130px); max-width: 760px; }
+.dd-title .dd-kicker { margin-bottom: 25px; font-size: 11px; letter-spacing: .18em; }
 .dd-title .dd-title-logo { font: 400 clamp(54px, 7vw, 108px)/.95 var(--dd-serif); letter-spacing: .04em; color: var(--dd-white); text-shadow: 0 3px 22px #0009; }
 .dd-title-logo span { display: block; font-size: .86em; letter-spacing: .16em; margin-top: 9px; }
-.dd-title-chapter { display: flex; align-items: center; gap: 13px; font: 9px var(--dd-mono); letter-spacing: .2em; color: #d3d5cd; margin-top: 27px; }
+.dd-title-chapter { display: flex; align-items: center; gap: 13px; font: 11px var(--dd-mono); letter-spacing: .14em; color: #d3d5cd; margin-top: 27px; }
 .dd-title-chapter::before { content: ''; width: 23px; height: 2px; background: var(--dd-red); }
-.dd-title .dd-title-lore { margin: 28px 0; color: #bdc3bc; font: 12px/1.9 var(--dd-serif); letter-spacing: .015em; }
+.dd-title .dd-title-lore { margin: 24px 0; color: #c8cec7; font: 15px/1.8 var(--dd-serif); letter-spacing: .015em; }
 .dd-menu { display: grid; gap: 2px; width: min(320px, 100%); pointer-events: auto; }
-.dd-menu :is(button, a) { position: relative; display: flex; align-items: center; justify-content: start; gap: 11px; min-height: 46px; width: 100%; border: 0; border-left: 2px solid transparent; padding: 12px 20px; background: none; color: #c1c8c0; font: 10px/1.6 var(--dd-mono); letter-spacing: .12em; text-align: left; text-decoration: none; text-transform: uppercase; }
+.dd-menu :is(button, a) { position: relative; display: flex; align-items: center; justify-content: start; gap: 11px; min-height: 48px; width: 100%; border: 0; border-left: 2px solid transparent; padding: 12px 18px; background: none; color: #cbd1c9; font: 13px/1.6 var(--dd-mono); letter-spacing: .07em; text-align: left; text-decoration: none; text-transform: uppercase; }
 .dd-menu :is(button, a):first-child { color: #f1f2e9; border-left-color: var(--dd-red); background: linear-gradient(90deg, #d4d9cb1c, transparent); }
 .dd-menu :is(button, a):hover:not(:disabled), .dd-menu :is(button, a):focus-visible { color: #fff; border-left-color: var(--dd-red); background: linear-gradient(90deg, #d4d9cb2b, transparent); }
 .dd-menu svg { width: 14px; height: 14px; }
-.dd-title-loading { color: var(--dd-dim); font-size: 9px; margin: 15px 0 0 20px; }
-.dd-edition { position: absolute; left: clamp(28px, 5vw, 90px); right: clamp(28px, 5vw, 90px); bottom: 25px; display: flex; justify-content: space-between; gap: 20px; color: #a3ada8; font: 8px/1.7 var(--dd-mono); letter-spacing: .1em; }
+.dd-title-loading { color: var(--dd-dim); font-size: 12px; margin: 15px 0 0 18px; }
+.dd-edition { flex-shrink: 0; margin: 0 clamp(28px, 5vw, 90px) 25px; display: flex; justify-content: space-between; gap: 20px; color: #b4bdb7; font: 10px/1.7 var(--dd-mono); letter-spacing: .06em; }
 .dd-loading { position: absolute; inset: 0; z-index: 10; display: grid; align-content: center; justify-items: center; gap: 22px; padding: 30px; background: #0a1011f5; }
 .dd-load-sigil { color: #cdd4ca; font: 72px/1 var(--dd-serif); }
 .dd-loading h2 { font: 13px/1.6 var(--dd-serif); letter-spacing: .16em; text-align: center; }
@@ -61,7 +61,21 @@
 .dd-story { position: absolute; z-index: 5; bottom: 7%; left: 12%; right: 12%; border-top: 1px solid var(--dd-line); padding: 27px 35px 22px; background: linear-gradient(90deg, #0a1211ec, #0a1211a8); pointer-events: auto; }
 .dd-story > p { max-width: 880px; margin-top: 15px; white-space: pre-line; color: var(--dd-white); font: 400 clamp(17px, 2vw, 27px)/1.7 var(--dd-serif); }
 .dd-story-actions { display: flex; justify-content: end; margin-top: 20px; }
-.dd-story-actions button, .dd-picker-actions button { background: transparent; border: 0; border-bottom: 1px solid #d6ded387; padding: 10px 14px; font-size: 9px; letter-spacing: .1em; }
+.dd-story-actions button, .dd-picker-actions button { min-height: 44px; background: transparent; border: 0; border-bottom: 1px solid #d6ded387; padding: 10px 14px; font-size: 12px; letter-spacing: .06em; }
+.dd-guide { left: 50%; right: auto; transform: translateX(-50%); width: min(680px, calc(100% - 48px)); max-height: calc(100% - 48px); overflow-y: auto; bottom: 24px; }
+.dd-guide .dd-kicker, .dd-pause > .dd-kicker { font-size: 11px; }
+.dd-guide h2 { margin: 6px 0 22px; font: 400 27px/1.3 var(--dd-serif); }
+.dd-guide dl { margin: 0; }
+.dd-guide dl > div { display: grid; grid-template-columns: minmax(0, 42%) minmax(0, 1fr); gap: 16px; padding: 9px 0; border-bottom: 1px solid #dce2db24; font-size: 12px; line-height: 1.6; }
+.dd-guide dt { color: var(--dd-white); }
+.dd-guide dd { margin: 0; color: #bfc8c1; }
+.dd-guide dl > .dd-guide-note { display: block; }
+.dd-guide-note dt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.dd-story.dd-guide { padding: 0; }
+.dd-guide > .dd-kicker { padding-top: 24px; margin-inline: 24px; }
+.dd-guide h2 { margin-inline: 24px; }
+.dd-guide dl { margin-inline: 24px; }
+.dd-guide .dd-story-actions { position: sticky; bottom: 0; z-index: 1; margin-top: 16px; padding: 10px 24px; border-top: 1px solid var(--dd-line); background: #0a1211; }
 .dd-pause { position: absolute; z-index: 8; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: start; padding: 8% 12%; background: linear-gradient(90deg, #071010f2 15%, #071010a8, #07101055); pointer-events: auto; overflow: auto; }
 .dd-pause h2 { font: 400 clamp(25px, 4vw, 49px)/1.3 var(--dd-serif); margin: 15px 0 35px; letter-spacing: .05em; }
 .dd-hud { position: absolute; top: 30px; left: 35px; right: 35px; display: flex; justify-content: space-between; align-items: start; z-index: 3; }
@@ -121,18 +135,19 @@
   .dd-hud { left: 20px; right: 20px; top: 22px; }
   .dd-hud .dd-duelist { width: 36%; }
   .dd-hud .dd-duelist strong { font-size: 15px; min-height: 45px; margin: 5px 0 8px; }
-  .dd-hud .dd-kicker { font-size: 7px; }
-  .dd-hud .dd-duel-phase { font-size: 6px; max-width: 70px; margin-inline: 8px; }
-  .dd-hud .dd-duelist small { font-size: 6px; }
+  .dd-hud .dd-kicker { font-size: 10px; }
+  .dd-hud .dd-duel-phase { font-size: 10px; letter-spacing: .06em; max-width: 80px; margin-inline: 8px; }
+  .dd-hud .dd-duelist small { font-size: 10px; }
   .dd-picker { bottom: 20px; width: calc(100% - 32px); padding: 14px 12px; }
-  .dd-picker .dd-picker-heading { font-size: 6px; }
-  .dd-picker .dd-kicker { font-size: 6px; }
+  .dd-picker .dd-picker-heading { font-size: 10px; letter-spacing: .04em; }
+  .dd-picker .dd-kicker { font-size: 10px; letter-spacing: .04em; }
   .dd-picker .dd-moves { gap: 5px; }
   .dd-picker .dd-move { padding: 10px 5px; gap: 6px; }
   .dd-picker .dd-move b { font-size: 17px; }
-  .dd-picker .dd-move small { font-size: 6px; }
+  .dd-picker .dd-move small { font-size: 10px; letter-spacing: 0; }
   .dd-picker .dd-selected-mark { display: none; }
-  .dd-picker .dd-move-index { font-size: 7px; }
+  .dd-picker .dd-move-index { display: none; }
+  .dd-story.dd-guide { left: 50%; right: auto; bottom: 24px; max-height: calc(100% - 48px); }
   .dd-vault { padding: 30px 24px; }
   .dd-vault-item { gap: 15px; padding: 8px 10px; }
   .dd-vault-item b { font-size: 17px; }
@@ -140,17 +155,17 @@
 }
 @media (max-width: 520px) {
   .dd-title { align-items: start; }
-  .dd-title-copy { padding: 55px 28px 100px; width: 100%; }
+  .dd-title-copy { padding: 42px 28px; width: 100%; }
   .dd-title .dd-title-logo { font-size: clamp(53px, 16vw, 76px); }
-  .dd-title .dd-kicker { font-size: 7px; margin-bottom: 25px; }
-  .dd-title-chapter { font-size: 8px; letter-spacing: .15em; }
-  .dd-title .dd-title-lore { font-size: 12px; margin: 24px 0; }
-  .dd-edition { flex-direction: column; left: 28px; bottom: 18px; gap: 3px; font-size: 6px; }
-  .dd-menu :is(button, a) { font-size: 9px; min-height: 45px; }
+  .dd-title .dd-kicker { font-size: 10px; margin-bottom: 25px; }
+  .dd-title-chapter { font-size: 11px; letter-spacing: .12em; }
+  .dd-title .dd-title-lore { font-size: 14px; margin: 24px 0; }
+  .dd-edition { flex-direction: column; gap: 3px; font-size: 10px; }
+  .dd-menu :is(button, a) { font-size: 13px; min-height: 48px; }
   .dd-pause { padding: 35px 28px; }
 }
 @media (max-height: 540px) and (min-width: 741px) {
-  .dd-title-copy { padding-top: 30px; padding-bottom: 65px; }
+  .dd-title-copy { padding-top: 30px; padding-bottom: 24px; }
   .dd-title .dd-kicker, .dd-title .dd-title-lore { display: none; }
   .dd-title .dd-title-logo { font-size: 54px; }
   .dd-title-chapter { margin: 15px 0; }
