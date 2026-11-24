@@ -636,7 +636,7 @@ export function mountCircle(descriptor = ASH_GATE, { hasSeal, hasAshSeal, setExp
     world.style.setProperty('--ash-alert', alert > 0 ? '.32' : (suspicion * .27).toFixed(3));
 
     strikeFrame = approach(strikeFrame, ready || attack ? 1 : 0, 5, dt);
-    const cameraYaw = yaw + angleDelta(yaw, bossBearing) * strikeFrame;
+    const cameraYaw = yaw + angleDelta(yaw, bossBearing + Math.PI) * strikeFrame;
     const [cx, cz] = forward(cameraYaw);
     const dist = 3.28 + 1.05 * strikeFrame;
     const shoulder = (.47 + .66 * strikeFrame) * Math.min(1, camera.aspect / .8);
