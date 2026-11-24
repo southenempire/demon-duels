@@ -14,6 +14,10 @@ export function arenaCardSide(duel, player) {
   return duel.phase === 0 && !duel.p1.equals(player) ? 1 : 0;
 }
 
+export function defaultStake(cards, opponentKind, kindOf = (card) => card.kind) {
+  return cards.find((card) => kindOf(card) !== opponentKind) ?? cards[0];
+}
+
 // Presentation only: never roll randomness or infer a chain result here.
 export function confirmedFight(duel, side = 0) {
   if (duel?.phase !== 3) return null;
