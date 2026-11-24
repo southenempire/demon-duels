@@ -8,13 +8,14 @@ import { createPresence, worldEvent } from './presence.js';
 import { createRenderer } from './render.js';
 import { loadWorldArt } from './environment.js';
 import { sprites } from './sprites.js';
-import { advance, interaction, newRun, throwEmber } from './simulation.js';
+import { advance, advancePit, interaction, newRun, throwEmber } from './simulation.js';
 import { gradeFor, distance } from './stealth.js';
 
 let current;
 const rom = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 const button = (label, action, cls = 'secondary') => '<button type="button" class="button ' + cls + '" data-hunt="' + action + '">' + label + '</button>';
-const keys = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', 'c', 'e', 'q', 'f', ' ', 'escape']);
+const movementKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+const keys = new Set([...movementKeys, 'shift', 'c', 'e', 'q', 'f', ' ', 'escape']);
 const short = (key) => key.slice(0, 4) + '…' + key.slice(-4);
 const intro = [
   ['The Pit', 'Every soul that falls here keeps one thing. Its name.'],
@@ -86,6 +87,10 @@ export function mountWorld(el, { wallet, chain }) {
     query('stick')?.style.setProperty('--stick-x', '0px');
     query('stick')?.style.setProperty('--stick-y', '0px');
   };
+  const movement = () => [
+    Number(down.has('d') || down.has('arrowright')) - Number(down.has('a') || down.has('arrowleft')) + stick.x,
+    Number(down.has('s') || down.has('arrowdown')) - Number(down.has('w') || down.has('arrowup')) + stick.y,
+  ];
 
   function title() {
     scene = 'title';
@@ -159,7 +164,7 @@ export function mountWorld(el, { wallet, chain }) {
 
   function pit(notice = '') {
     if (scene === 'circle') presence.leave();
-    scene = 'pit'; kind = null; el.classList.remove('hunt--circle'); huntAudio.circle(null); chain.surface?.('pit');
+    scene = 'pit'; kind = null; resetInput(); el.classList.remove('hunt--circle'); huntAudio.circle(null); chain.surface?.('pit');
     const progress = wins().length;
     const saved = localStorage.getItem(activeKey);
     el.innerHTML = '<div class="hunt-pit"><div class="hunt-top"><span class="hunt-kicker">DEMON DUELS / HUNTER’S REFUGE</span>' +
@@ -169,7 +174,7 @@ export function mountWorld(el, { wallet, chain }) {
       levels.map((level, i) => '<button data-hunt="circle:' + i + '" type="button" ' + (i > progress ? 'disabled' : '') +
         '><span>' + rom[i] + ' / ' + (i < progress ? 'CLEARED' : i === progress ? 'OPEN' : 'SEALED') +
         '</span><strong>' + level.name + '</strong><small>' + demons[i].name + '</small></button>').join('') +
-      '</div><div class="hunt-refuge"><canvas width="512" height="256" aria-label="Hunters in The Pit"></canvas>' +
+      '</div><div class="hunt-refuge"><p>Move with WASD or the arrow keys to approach another hunter.</p><canvas width="512" height="256" aria-label="Hunters in The Pit"></canvas>' +
       '<button type="button" class="button secondary" data-hunt="pit-challenge" hidden></button></div>' +
       '<section class="hunt-market" aria-label="Open Pit market"><h2>The Bounty Board</h2>' +
       '<p>Every bounty is a demon on the table. Answer it with yours. The winner takes both.</p><div class="hunt-pit-actions">' +
@@ -270,6 +275,9 @@ export function mountWorld(el, { wallet, chain }) {
     const dt = Math.min(0.035, (now - (lastTime || now)) / 1000);
     lastTime = now;
     if (scene === 'pit') {
+      const [dx, dy] = movement();
+      advancePit(pitPose, dx, dy, dt);
+      presence.publish('pit', pitPose, now);
       const peers = presence.inCircle('pit');
       pitRenderer.renderPit(pitPose, peers, now);
       pitPeer = peers.find((peer) => !peer.busy && distance(peer, pitPose) <= TILE * 1.5);
@@ -288,8 +296,7 @@ export function mountWorld(el, { wallet, chain }) {
     }
     query('reveal').hidden = !run.lookoutUntil;
     if (!paused && !striking && now >= pauseBoss) {
-      const dx = Number(down.has('d') || down.has('arrowright')) - Number(down.has('a') || down.has('arrowleft')) + stick.x;
-      const dy = Number(down.has('s') || down.has('arrowdown')) - Number(down.has('w') || down.has('arrowup')) + stick.y;
+      const [dx, dy] = movement();
       const previouslyHidden = run.hunter.hidden;
       const sprint = sprinting || down.has('shift');
       const result = advance(level, run, { dx, dy, sneak: sneaking, sprint, sight: touchSight || down.has('q') }, dt, now);
@@ -380,9 +387,13 @@ export function mountWorld(el, { wallet, chain }) {
     if (suspended || event.altKey || event.ctrlKey || event.metaKey || /INPUT|TEXTAREA|SELECT|BUTTON/.test(event.target.tagName) && event.key === ' ') return;
     if (scene === 'title' && event.key === 'Enter') { event.preventDefault(); act('start'); return; }
     if (scene === 'story' && event.key === 'Escape') { event.preventDefault(); finishStory(); return; }
-    if (scene === 'pit' && event.key.toLowerCase() === 'e' && !event.repeat) { act('pit-challenge'); return; }
-    if (scene !== 'circle') return;
     const key = event.key.toLowerCase();
+    if (scene === 'pit') {
+      if (key === 'e' && !event.repeat) act('pit-challenge');
+      if (movementKeys.includes(key)) { event.preventDefault(); down.add(key); }
+      return;
+    }
+    if (scene !== 'circle') return;
     if (!keys.has(key)) return;
     event.preventDefault();
     down.add(key);

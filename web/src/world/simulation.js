@@ -6,6 +6,17 @@ const spawnWatcher = (config, soundOnly = false) => ({
   angle: Math.atan2(config.path[1].y - config.path[0].y, config.path[1].x - config.path[0].x),
 });
 
+export function advancePit(hunter, dx, dy, dt) {
+  const magnitude = Math.hypot(dx, dy);
+  if (magnitude) {
+    const speed = 4 * TILE * dt / magnitude;
+    hunter.x = clamp(hunter.x + dx * speed, TILE, 15 * TILE);
+    hunter.y = clamp(hunter.y + dy * speed, 2.5 * TILE, 7.5 * TILE);
+    hunter.angle = Math.atan2(dy, dx);
+  }
+  hunter.anim = magnitude ? 'walk' : 'idle';
+}
+
 export function newRun(level, intel = [], synced = false, checkpoint = level.start) {
   return {
     hunter: { ...checkpoint, angle: 0, noise: 0, hidden: false, sight: false, vx: 0, vy: 0, anim: 'idle' },

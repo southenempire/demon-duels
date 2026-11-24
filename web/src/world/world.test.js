@@ -4,7 +4,17 @@ import { levels, TILE } from './levels.js';
 import { canSee, detection, gradeFor, rayDistance } from './stealth.js';
 import { acceptedWin, campaignKey, readWins } from './progress.js';
 import { bossMove } from './bot-profile.js';
-import { advance, interaction, newRun } from './simulation.js';
+import { advance, advancePit, interaction, newRun } from './simulation.js';
+
+test('hunters can approach peers in The Pit without walking out of the refuge', () => {
+  const hunter = { x: 8 * TILE, y: 4 * TILE, angle: Math.PI / 2, anim: 'idle' };
+  advancePit(hunter, 1, 0, 0.25);
+  assert.deepEqual(hunter, { x: 9 * TILE, y: 4 * TILE, angle: 0, anim: 'walk' });
+  advancePit(hunter, 1, -1, 10);
+  assert.deepEqual(hunter, { x: 15 * TILE, y: 2.5 * TILE, angle: -Math.PI / 4, anim: 'walk' });
+  advancePit(hunter, 0, 0, 1);
+  assert.equal(hunter.anim, 'idle');
+});
 
 test('vision respects angle, occlusion and one-tile cover', () => {
   const guard = { x: 0, y: 0, angle: 0, arc: Math.PI / 2, range: 6 * TILE };

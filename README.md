@@ -28,6 +28,14 @@ Devnet cards have no monetary value. An open challenge can be canceled; once bot
 
 The bot is a second devnet guest wallet in the same browser, not a remote player. Use an invite and a separate browser profile for play against someone else.
 
+## Underworld Hunt
+
+Open `?world=1` or choose **Hunt (Underworld)**. Move with WASD, the arrow keys, or the touch stick; use Shift to sprint, C to sneak, Q for Hunter’s Sight, F to throw an ember, and E to interact. A Strike opens the real devnet duel; a practice Strike never unlocks a gate. The world reads the campaign journal but does not write clears. Use `?world=0` for the standalone campaign.
+
+The Pit’s bounty board lists open devnet duels; challenge an owner by staking a card in the arena, or post your own and copy its invite. Live hunters use a separate relay transport: the world publishes `demon-duels:hunter-pose` in tile coordinates, draws `demon-duels:hunters` snapshots, and sends `demon-duels:challenge-hunter` with the nearby hunter’s ID.
+
+Circle geometry lives under `web/src/world/circles/`. Put art slots in the environment manifests under `web/public/art/world/`; the renderer uses the hunter and boss sheets alongside those manifests and falls back when optional art is unavailable. Exploration audio is resolved through `web/public/world/audio/manifest.json`.
+
 ## Develop
 
 ```sh
