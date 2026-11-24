@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ASH_WARDEN, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { ASH_WARDEN, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees, usesWorldKey, worldFrameRuns } from './stealth.js';
 import { isAshGate } from '../route.js';
 import { bossMove } from '../world/bot-profile.js';
 import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
@@ -8,6 +8,23 @@ import { separateStep } from './hunters.js';
 
 const guard = { x: 0, z: 0, yaw: 0, range: 6, halfAngle: .5 };
 const wall = { x: 0, z: -2, w: 1, d: 1 };
+
+test('world time stops in pause, controls and duels while the title can animate', () => {
+  assert.equal(worldFrameRuns('play', true, false), true);
+  assert.equal(worldFrameRuns('title', true, false), true);
+  assert.equal(worldFrameRuns('pause', true, false), false);
+  assert.equal(worldFrameRuns('guide', true, false), false);
+  assert.equal(worldFrameRuns('play', true, true), false);
+  assert.equal(worldFrameRuns('play', false, false), false);
+});
+
+test('Space jumps off the HUD but preserves native button activation', () => {
+  const pause = { closest: (selector) => selector.split(', ').includes('button') ? pause : null };
+  const canvas = { closest: () => null };
+  assert.equal(usesWorldKey({ code: 'Space', target: canvas }), true);
+  assert.equal(usesWorldKey({ code: 'Space', target: pause }), false);
+  assert.equal(usesWorldKey({ code: 'KeyE', target: pause }), true);
+});
 
 test('a patrol returning from pursuit skips waypoints blocked by a pillar', () => {
   const route = [[0, -4], [.2, -4], [2, -1]];

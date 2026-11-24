@@ -18,7 +18,7 @@ import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnloc
 import { storyView, mapView, codexView, campaignResult } from './campaign-view.js';
 import { startPresence } from './presence-live.js';
 import { initialJourney, isAshGate } from './route.js';
-import { worlds } from './worlds.js';
+import { opensWorldHunt, worlds } from './worlds.js';
 import { profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
 import { bossMove } from './world/bot-profile.js';
 import { duelHud, installDialogKeys, movePicker } from './game-ui.js';
@@ -53,6 +53,8 @@ const roomBotKey = (room) => 'demon-duels:room-bot:' + room;
 const ASSET = import.meta.env.BASE_URL + 'art/';
 const sound = new PitSound(import.meta.env.BASE_URL + 'audio/');
 let worldName = null;
+let worldUnavailable = false;
+export function setWorldUnavailable() { worldUnavailable = true; }
 export function setExploring(active, name) {
   if (name) worldName = name;
   sound.unlock(!active && s.sound);
@@ -246,7 +248,7 @@ function controls() {
   if (s.duel?.phase === 3) return '<div class="control"><h2>Reading the settlement…</h2></div>';
   if (s.mode === 'landing') return '<div class="control intro"><div><span class="eyebrow">THE STAKES ARE REAL. THE SOL IS NOT.</span><h2>One demon in. Two demons out.</h2><p>Get a free starter pack and stake one demon against the bot. No wallet extension or real SOL.</p></div><div class="actions">' +
     button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') + button('practice', 'Offchain tutorial', 'secondary', 'spark') +
-    '<a class="button secondary" href="?world=3d">Enter Ash Gate (3D)</a>' +
+    (worldUnavailable ? '' : '<a class="button secondary" href="?world=3d">Enter Ash Gate (3D)</a>') +
     button('enter', 'Open devnet vault', 'text') + '</div></div>';
   if (s.mode === 'practice') return '<div class="control"><div class="control-title"><div><span class="eyebrow">OFFCHAIN PRACTICE · NO REAL STAKES</span><h2>' +
     (s.practiceCards.length ? 'Seal your move' : 'Summon your starter pack') + '</h2></div>' + button(s.returnToMap ? 'return-map' : 'leave', s.returnToMap ? 'Return to map' : 'Exit practice', 'text') + '</div>' +
@@ -650,7 +652,7 @@ export async function ensureBossCard(demonId) {
         const topUp = packFunds - await bot.balance();
         if (topUp > 0) await client.transfer(bot.key, topUp);
       }
-      progress('Opening an Ash Gate rival pack with MagicBlock VRF…');
+      progress('Opening the ' + (returnWorldName() ?? circles[demonId]?.realm ?? 'Ash Gate') + ' rival pack with MagicBlock VRF…');
       await ensurePack(bot, pack, until, progress);
       const cards = (await readCards(keys(bot))).filter((card) => stakeable(card, bot));
       localStorage.setItem(BOSS_GENERATIONS, String(++total));
@@ -823,7 +825,7 @@ async function startQuickDuel() {
       if (s.duel.phase < 3) {
         if (ashGate && s.requestedOpponent !== null && (!s.solo || loadRoomBot(s.room)?.demonId !== s.requestedOpponent)) {
           setRoom(null);
-          throw new Error('You have another open duel. Finish or cancel it from the arena before striking the Warden.');
+          throw new Error('You have another open duel. Finish or cancel it from the arena before striking this guardian.');
         }
         if (s.solo && s.duel.phase === 0) await readyBot();
         return;
@@ -920,7 +922,7 @@ async function action(name) {
   if (name.startsWith('boss:')) {
     const id = Number(name.slice(5));
     if (!Number.isInteger(id) || !circles[id] || circleState(s.campaign, id) === 'locked') return;
-    if (!activeDuel() && !readKey(localStorage.getItem(activeRoomKey)) && Object.hasOwn(worlds, id)) {
+    if (opensWorldHunt(id, { rendererUnavailable: worldUnavailable, hasOpenDuel: activeDuel() || readKey(localStorage.getItem(activeRoomKey)) })) {
       location.href = '?world=3d&circle=' + id;
       return;
     }
@@ -1177,7 +1179,7 @@ function launchRivalDuel(room, join, returnToMap) {
 }
 
 async function rivalReady() {
-  if (guardianFinisher.pending) return { ok: false, reason: 'Claim your Ash Gate seal before challenging a hunter.' };
+  if (guardianFinisher.pending) return { ok: false, reason: 'Claim your guardian seal before challenging a hunter.' };
   assertCurrentGuest();
   if (client !== presenceGuest) return { ok: false, reason: 'Reload to challenge hunters with your recovered guest.' };
   if (s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };

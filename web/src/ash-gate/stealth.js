@@ -1,5 +1,13 @@
 export const ASH_WARDEN = Object.freeze({ opponentKind: 0, mode: 'chain', returnToMap: true });
 
+export function worldFrameRuns(menu, active, duelOpen) {
+  return active && !duelOpen && ['play', 'loading', 'title'].includes(menu);
+}
+
+export function usesWorldKey({ code, target }) {
+  return code !== 'Space' || !target?.closest?.('button, a[href], input, select, textarea, [role="button"]');
+}
+
 export function inside(x, z, { x: cx, z: cz, w, d }, padding = 0) {
   return Math.abs(x - cx) < w / 2 + padding && Math.abs(z - cz) < d / 2 + padding;
 }

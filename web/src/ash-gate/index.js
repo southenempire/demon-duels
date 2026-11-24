@@ -8,7 +8,7 @@ import { figure } from './figures.js';
 import { ashHunters, emit } from './hunters.js';
 import { installModel } from './models.js';
 import { braziers, buildGate, cover, limits, roofs, shade } from './scenery.js';
-import { blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees, usesWorldKey, worldFrameRuns } from './stealth.js';
 import './style.css';
 import '../game-overlays.css';
 
@@ -128,7 +128,7 @@ function patrol(scene, { route, facing, yaw = facing ?? 0, range = 6, halfAngle 
 
 export const mountAshGate = (options) => mountCircle(ASH_GATE, options);
 
-export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAshSeal, setExploring = () => {}, startInPlay = false } = {}) {
+export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAshSeal, setExploring = () => {}, startInPlay = false, onRendererUnavailable } = {}) {
   const { id, name, chapter, opponentKind, spawn, hooks = {}, fog, palette, audio: audioCues = {} } = { ...ASH_GATE, ...descriptor };
   const rules = circleRules(hooks);
   const bossConfig = { ...ASH_GATE.boss, ...descriptor.boss };
@@ -143,7 +143,13 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
 
   const touch = matchMedia('(any-pointer: coarse)').matches;
   let low = touch, sampleTime = 0, sampleFrames = 0;
-  const renderer = new T.WebGLRenderer({ antialias: !touch, powerPreference: 'high-performance' });
+  let renderer;
+  try { renderer = new T.WebGLRenderer({ antialias: !touch, powerPreference: 'high-performance' }); }
+  catch (error) {
+    if (!onRendererUnavailable) throw error;
+    onRendererUnavailable(error);
+    return;
+  }
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = T.PCFShadowMap;
   renderer.toneMapping = T.ACESFilmicToneMapping;
@@ -447,7 +453,7 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
     const elapsed = (now - previous) / 1000;
     const dt = Math.min(elapsed, .5);
     previous = now;
-    if (!active || document.hidden) { sampleTime = sampleFrames = 0; return; }
+    if (document.hidden || !worldFrameRuns(menu, active, duelOpen)) { sampleTime = sampleFrames = 0; return; }
     if (!low && menu === 'play') {
       sampleTime += Math.min(elapsed, .5);
       sampleFrames++;
@@ -473,7 +479,6 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
       renderer.render(scene, camera);
       return;
     }
-    if (menu !== 'play') return;
     if (noticeTime > 0 && (noticeTime -= dt) <= 0) show('');
     block = Math.max(0, block - dt);
     if (crossing) {
@@ -698,7 +703,7 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
       if (!attack) setMenu(menu === 'play' ? 'pause' : 'play');
       return;
     }
-    if (menu !== 'play' || !controls.has(e.code)) return;
+    if (menu !== 'play' || !controls.has(e.code) || !usesWorldKey(e)) return;
     useAudio();
     e.preventDefault();
     keys.add(e.code);
