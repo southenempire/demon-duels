@@ -13,6 +13,9 @@ import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
 import { startPresence } from './presence-live.js';
 import { isAshGate } from './route.js';
+import { prepareBossWin, readCampaign } from './campaign.js';
+import { profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
+import { bossMove } from './world/bot-profile.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
@@ -33,12 +36,14 @@ function assertCurrentGuest() {
 const BOT_GENERATION = 'demon-duels:rival-generation';
 const BOSS_GENERATIONS = 'demon-duels:boss-generations';
 const activeRoomKey = 'demon-duels:active';
+export const hasAshSeal = () => readCampaign(localStorage, client.key).wins.some((win) => win.bossId === 0);
 const botFor = (generation) => new ArenaClient(localKey(generation ? 'rival-' + generation : 'rival'));
 const bossFor = (generation) => new ArenaClient(localKey('boss-' + generation));
 const roomBotKey = (room) => 'demon-duels:room-bot:' + room;
 const ASSET = import.meta.env.BASE_URL + 'art/';
 const effects = new PitEffects();
 const sound = new PitSound(import.meta.env.BASE_URL + 'audio/');
+export const setExploring = (active) => sound.unlock(!active && s.sound);
 const loadedArt = new Map();
 const emittedSettlements = new Set();
 function preloadFighters() {
@@ -92,8 +97,34 @@ function isBoundBossSettlement(detail, duel) {
   } catch { return false; }
 }
 let liveSettlement;
+let ashEncounter = null;
+let pendingAshSeal = null;
+let hostingRival = false;
 const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
-const presentFinisher = () => finishers.play(fightId()).catch(() => {});
+async function presentFinisher() {
+  const duel = fightId();
+  const seal = pendingAshSeal;
+  if (seal?.detail.duel === duel && !seal.started) {
+    seal.started = true;
+    const { opponentKind } = seal.detail;
+    const fallback = window.dispatchEvent(new CustomEvent('demon-duels:finisher', {
+      detail: { opponentKind, grade: seal.grade, duel }, cancelable: true,
+    }));
+    if (!fallback) { await seal.done; return; }
+    await Promise.resolve();
+  }
+  if (seal?.detail.duel === duel && seal.started && !finishers.has(duel)) { await seal.done; return; }
+  await finishers.play(duel).catch(() => {});
+}
+
+window.addEventListener('demon-duels:finisher-done', ({ detail }) => {
+  const seal = pendingAshSeal;
+  if (!seal?.started || detail?.duel !== seal.detail.duel || detail.opponentKind !== seal.detail.opponentKind || fightId() !== detail.duel) return;
+  seal.commit();
+  pendingAshSeal = null;
+  clearSavedRoom(s.room);
+  seal.resolve();
+});
 const fighterKinds = () => [
   s.mode === 'practice' ? s.practiceStake : s.mode === 'landing' ? 0 : s.staked?.kind ?? anyCard()?.kind,
   s.mode === 'practice' ? s.practiceRival : s.mode === 'landing' ? 1 : s.opposing?.kind,
@@ -303,7 +334,10 @@ function draw() {
     icon(s.sound ? 'volume' : 'mute') + '</button><button type="button" class="square help" data-action="rules" aria-label="Duel rules">' + icon('info') + '</button><button type="button" class="button wallet secondary" data-action="wallet" aria-label="Guest wallet and devnet funding">' +
     icon('wallet', 16) + '<span>' + (safeMode() ? short(client.key) : 'Guest wallet') + '</span></button></div></div></header>' +
     '<main><div class="hero"><div class="superline"><span></span> THE UNDERWORLD ARCADE <span></span></div><h1>NO MERCY. <em>JUST DEMONS.</em></h1><p>Stake a demon. Seal a move. <strong>Fight for both.</strong></p></div>' +
-    battlefield() + controls() + networkProgress() + capturedVault() + '<div class="feedback" role="status" aria-live="polite">' + (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice)) + '</div>' + inventory() +
+    battlefield() + controls() + (s.returnToMap && ashEncounter?.tells.length
+      ? '<section class="control"><div><span class="eyebrow">' + esc(ashEncounter.grade.toUpperCase()) +
+        ' / ASH GATE INTEL</span><ul>' + ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '') +
+    networkProgress() + capturedVault() + '<div class="feedback" role="status" aria-live="polite">' + (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice)) + '</div>' + inventory() +
     '<div class="mechanics"><div>' + icon('lock') + '<span><b>PRIVATE MOVES</b><small>MagicBlock Private ER</small></span></div><div>' + icon('spark') +
     '<span><b>VERIFIABLE CRITS</b><small>MagicBlock VRF</small></span></div><div>' + icon('coin') +
     '<span><b>WINNER TAKES BOTH</b><small>Solana card ownership</small></span></div></div></main>' +
@@ -384,7 +418,6 @@ async function refreshRoom() {
     if (room !== s.room || owner !== client) return;
     s.proof = settlement;
     if (previous !== 3) {
-      clearSavedRoom(room);
       await refreshWallet().catch(() => {});
       if (room !== s.room || owner !== client) return;
     }
@@ -393,9 +426,22 @@ async function refreshRoom() {
     if (detail && !emittedSettlements.has(detail.duel)) {
       emittedSettlements.add(detail.duel);
       const boundBoss = isBoundBossSettlement(detail, d);
-      if (ashGate && boundBoss) detail.bossBound = true;
-      const approval = boundBoss && detail.won ? campaignApproval(localStorage, detail) : null;
-      if (boundBoss && (previous !== undefined || approval)) {
+      const profile = boundBoss ? savedProfile(localStorage, room) : null;
+      if (boundBoss && (ashGate || profile)) detail.bossBound = true;
+      const approval = boundBoss && detail.won && !profile ? campaignApproval(localStorage, detail) : null;
+      if (profile && detail.won) {
+        const commit = prepareBossWin(localStorage, owner.key, {
+          bossId: detail.opponentKind, phase: d.phase, player: detail.player, winner: detail.winner,
+          opponent: d.p2.toString(), bot: loadRoomBot(room).bot.key.toString(), opposingKind: detail.opponentKind,
+          duel: detail.duel, mode: detail.mode,
+        });
+        if (commit) {
+          let resolve;
+          const done = new Promise((finish) => { resolve = finish; });
+          pendingAshSeal = { detail, commit, grade: profile.grade, done, resolve, started: false };
+        }
+      }
+      if (boundBoss && (profile ? pendingAshSeal?.detail === detail : previous !== undefined || approval)) {
         liveSettlement = detail;
       }
       try { window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail })); }
@@ -405,6 +451,7 @@ async function refreshRoom() {
         s.playedId = null; s.frame = null;
       }
     }
+    if (pendingAshSeal?.detail.duel !== room.toString()) clearSavedRoom(room);
   }
   if (d.phase === 4) clearSavedRoom(room);
 }
@@ -427,6 +474,8 @@ async function run(label, action, recoveryMessage) {
 
 function setRoom(key) {
   finishers.clear();
+  pendingAshSeal?.resolve();
+  pendingAshSeal = null;
   document.querySelectorAll('.capture-card').forEach((card) => card.remove());
   s.sequence++;
   s.playing = false;
@@ -562,7 +611,9 @@ async function readyBot(prepared) {
     bot ??= botFor(0);
     if (!keyed(s.duel.p2, bot.key)) return;
     await bot.delegate(s.duel);
-    await bot.lock(s.duel, crypto.getRandomValues(new Uint8Array(1))[0] % 3);
+    const profile = savedProfile(localStorage, s.duel.key);
+    const roll = crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
+    await bot.lock(s.duel, bossMove(profile?.opponentKind, profile?.grade, roll));
   }
 }
 
@@ -585,6 +636,7 @@ export async function startDuel(solo, demonId) {
   audio('stake');
   setRoom(duel);
   localStorage.setItem(activeRoomKey, duel.toBase58());
+  if (solo && ashEncounter && ashEncounter.opponentKind === demonId) localStorage.setItem(profileKey(duel), JSON.stringify(ashEncounter));
   if (solo) {
     saveRoomBot(duel, prepared);
     localStorage.setItem('demon-duels:solo:' + duel, '1');
@@ -602,6 +654,8 @@ function restoreRoom() {
   if (!s.room && saved) {
     s.solo = localStorage.getItem('demon-duels:solo:' + saved) === '1';
     setRoom(saved);
+    const profile = s.solo && savedProfile(localStorage, saved);
+    if (profile) { ashEncounter = profile; s.requestedOpponent = profile.opponentKind; s.returnToMap = true; }
   }
 }
 
@@ -675,6 +729,7 @@ async function startQuickDuel() {
         if (s.solo && s.duel.phase === 0) await readyBot();
         return;
       }
+      if (pendingAshSeal?.detail.duel === s.room.toString()) return;
       setRoom(null);
     }
     await prepareGuest(client, progress);
@@ -716,7 +771,7 @@ async function action(name) {
   if (name === 'sound') {
     s.sound = !s.sound;
     sound.unlock(s.sound);
-    localStorage.setItem('demon-duels:sound', s.sound ? 'on' : 'off');
+    window.dispatchEvent(new CustomEvent('demon-duels:mute', { detail: { enabled: s.sound } }));
     audio('seal'); draw(); return;
   }
   if (name === 'rules' || name === 'wallet' || name === 'close') {
@@ -739,9 +794,13 @@ async function action(name) {
   }
   if (s.busy || s.playing) return;
   if (name === 'return-map') {
+    if (pendingAshSeal) await presentFinisher();
+    const savedAsh = s.room && savedProfile(localStorage, s.room);
     const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof };
     setRoom(null); s.mode = 'landing'; s.returnToMap = false; s.requestedOpponent = null; draw();
+    ashEncounter = null;
     window.dispatchEvent(new CustomEvent('demon-duels:return', { detail }));
+    if (!ashGate && savedAsh) location.href = '?world=3d';
     return;
   }
   if (name === 'replay' && roundResult()) {
@@ -883,11 +942,12 @@ async function action(name) {
 }
 
 // Campaign integration: launch a selected boss without coupling the arena to a map.
-export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, room, join = false } = {}) {
-  if (s.busy || s.playing) return false;
+export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade, tells } = {}) {
+  if (s.busy || s.playing || hostingRival) return false;
   if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
   setRoom(null);
+  ashEncounter = ashGate ? profileFor({ mode, opponentKind, grade, tells }) : null;
   s.requestedOpponent = opponentKind; s.returnToMap = returnToMap;
   s.notice = ''; s.solo = false;
   if (mode === 'practice') {
@@ -898,11 +958,16 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
   } else startQuickDuel().catch(() => {});
   return true;
 }
-window.addEventListener('demon-duels:launch', (event) => launchFight(event.detail));
+window.addEventListener('demon-duels:launch', (event) => {
+  if (!launchFight(event.detail)) event.preventDefault();
+});
 
 // Live hunters: a challenge accepted in the world becomes an ordinary open/join PvP duel.
 function launchRivalDuel(room, join, returnToMap) {
-  if (!room) return false;
+  if (!room || pendingAshSeal) return false;
+  const active = readKey(localStorage.getItem(activeRoomKey));
+  if (active && !active.equals(room) && savedProfile(localStorage, active)) return false;
+  ashEncounter = null;
   setRoom(room);
   s.mode = 'chain'; s.solo = false; s.quick = false; s.notice = '';
   s.requestedOpponent = null; s.returnToMap = returnToMap;
@@ -920,9 +985,15 @@ function launchRivalDuel(room, join, returnToMap) {
 }
 
 async function rivalReady() {
+  if (pendingAshSeal) return { ok: false, reason: 'Claim your Ash Gate seal before challenging a hunter.' };
   if (s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
   const active = readKey(localStorage.getItem(activeRoomKey));
+  const profile = active && savedProfile(localStorage, active);
   const open = active && await readDuel(active).catch(() => null);
+  if (profile && (!open || open.phase === 3 && keyed(open.p1, client.key) && keyed(open.winner, client.key)
+      && !readCampaign(localStorage, client.key).wins.some((win) => win.bossId === profile.opponentKind))) {
+    return { ok: false, reason: 'Claim your Ash Gate seal before challenging a hunter.' };
+  }
   if (open && open.phase < 3 && (keyed(open.p1, client.key) || keyed(open.p2, client.key))) {
     return { ok: false, reason: 'Finish or cancel your open duel first.' };
   }
@@ -935,11 +1006,15 @@ async function rivalReady() {
 async function hostRivalDuel(stillWanted) {
   const ready = await rivalReady();
   if (!ready.ok) throw new Error(ready.reason);
+  if (s.busy || s.playing || hostingRival || pendingAshSeal) throw new Error('Finish your current duel first.');
   if (!stillWanted()) throw new Error('The other hunter backed out before you staked.');
-  const { duel } = await client.openDuel(anyCard().key);
-  audio('stake');
-  localStorage.setItem(activeRoomKey, duel.toBase58());
-  return duel.toBase58();
+  hostingRival = true;
+  try {
+    const { duel } = await client.openDuel(anyCard().key);
+    audio('stake');
+    localStorage.setItem(activeRoomKey, duel.toBase58());
+    return duel.toBase58();
+  } finally { hostingRival = false; }
 }
 
 async function verifyRivalDuel(room, challenger) {
@@ -951,6 +1026,11 @@ async function verifyRivalDuel(room, challenger) {
 }
 
 startPresence({ keypair: client.keypair, host: hostRivalDuel, check: rivalReady, verify: verifyRivalDuel });
+window.addEventListener('demon-duels:mute', ({ detail }) => {
+  if (typeof detail?.enabled !== 'boolean') return;
+  s.sound = detail.enabled;
+  localStorage.setItem('demon-duels:sound', s.sound ? 'on' : 'off');
+});
 
 let ignorePointerUntil = 0;
 app.addEventListener('click', (event) => {
@@ -973,6 +1053,8 @@ draw();
 if (import.meta.env.DEV) previewFinisher(params)?.catch(() => {});
 if (s.room) {
   s.solo = localStorage.getItem('demon-duels:solo:' + s.room) === '1';
+  const profile = s.solo && savedProfile(localStorage, s.room);
+  if (profile) { ashEncounter = profile; s.requestedOpponent = profile.opponentKind; s.returnToMap = true; }
   setRoom(s.room);
   run('Opening the duel invite…', async () => { await Promise.all([refreshRoom(), refreshWallet()]); });
 }

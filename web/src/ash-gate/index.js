@@ -1,5 +1,8 @@
 import * as T from 'three';
+import { installHuntAudio } from '../world/audio.js';
+import { huntProfile } from './encounter.js';
 import { figure } from './figures.js';
+import { ashHunters, emit } from './hunters.js';
 import { installModel } from './models.js';
 import { buildGate, cover, limits, roofs, shade } from './scenery.js';
 import { ASH_WARDEN, canStrike, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
@@ -70,7 +73,7 @@ function patrol(scene, route, yaw) {
   };
 }
 
-export function mountAshGate() {
+export function mountAshGate({ hasAshSeal, setExploring }) {
   const arena = document.getElementById('app');
   const world = document.createElement('section');
   world.className = 'ash-gate';
@@ -78,11 +81,13 @@ export function mountAshGate() {
   world.innerHTML = `<div class="ash-shade"></div>
     <div class="ash-title"><p>I &nbsp; / &nbsp; THE UNDERWORLD</p><h1>Ash Gate</h1><span></span><div data-objective>Reach the Warden unseen.</div></div>
     <a class="ash-exit" href="?world=arena">Enter the Pit ↗</a>
+    <button class="ash-audio" type="button" aria-pressed="false">Sound off</button>
     <div class="ash-message" role="status" aria-live="polite"></div>
     <button class="ash-strike" type="button" hidden><kbd>E</kbd> Strike Ash Warden</button>
     <span class="ash-mantle" hidden><kbd>Space</kbd> Climb</span>
+    <button class="ash-strike ash-peer" hidden type="button"><kbd>F</kbd> <span>Challenge hunter</span></button>
     <div class="ash-bottom"><span class="ash-awareness" data-state="clear"><i></i><span>Unseen</span></span>
-    <div class="ash-keys"><span><kbd>WASD</kbd> Move</span><span><kbd>Mouse drag</kbd> Look</span><span><kbd>Shift</kbd> Run</span><span><kbd>C / Ctrl</kbd> Crouch</span><span><kbd>Space</kbd> Climb</span></div></div>`;
+    <div class="ash-keys"><span><kbd>WASD</kbd> Move</span><span><kbd>Mouse drag</kbd> Look</span><span><kbd>Shift</kbd> Run</span><span><kbd>C / Ctrl</kbd> Crouch</span><span><kbd>Space</kbd> Jump / Climb</span></div></div>`;
 
   const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.shadowMap.enabled = true;
@@ -91,6 +96,7 @@ export function mountAshGate() {
   renderer.toneMappingExposure = 1.17;
   world.prepend(renderer.domElement);
   const scene = new T.Scene();
+  const peers = ashHunters(scene);
   scene.background = new T.Color(0x232a32);
   scene.fog = new T.FogExp2(0x232a32, .032);
   const camera = new T.PerspectiveCamera(55, 1, .08, 100);
@@ -118,17 +124,30 @@ export function mountAshGate() {
   const canvas = renderer.domElement;
   const strikeButton = world.querySelector('.ash-strike');
   const mantlePrompt = world.querySelector('.ash-mantle');
+  const peerButton = world.querySelector('.ash-peer');
+  const soundButton = world.querySelector('.ash-audio');
   const message = world.querySelector('.ash-message');
   const objective = world.querySelector('[data-objective]');
   const awareness = world.querySelector('.ash-awareness');
   const keys = new Set();
-  const controls = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC', 'KeyE', 'Space', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight']);
+  const controls = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC', 'KeyE', 'KeyF', 'Space', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight']);
   const canMoveTo = (x, z) => x > limits.left && x < limits.right && z > limits.far && z < limits.near
     && !walls.some((b) => b.h > height + .03 && inside(x, z, b, .28))
     && (outcome === 'won' || Math.hypot(x - boss.x, z - boss.z) >= .74);
   let x = spawn.x, z = spawn.z, facing = 0, yaw = 0, tilt = .16, height = 0, falling = 0, climb = null, ledge = null;
   let active = true, crouch = false, gait = 0, bend = 0, step = 0, alert = 0, attack = 0;
-  let ready = false, pending = false, settlement = null, outcome = null, noticeTime = 0, pointer = null;
+  let ready = false, pending = null, settlement = null, outcome = hasAshSeal() ? 'won' : null, noticeTime = 0, pointer = null;
+  let watched = false, spotted = false, nearbyPeer = null, lastPose = -Infinity, lastFootstep = 0;
+  let audioEnabled = localStorage.getItem('demon-duels:sound') === 'on';
+  const audio = installHuntAudio(import.meta.env.BASE_URL, new AbortController().signal);
+  const cue = (name) => emit('audio', { cue: name, circle: 0 });
+  const useAudio = () => audio.enable(active && audioEnabled);
+  const renderAudio = () => {
+    soundButton.textContent = audioEnabled ? 'Sound on' : 'Sound off';
+    soundButton.setAttribute('aria-pressed', String(audioEnabled));
+  };
+  renderAudio();
+  if (outcome === 'won') { objective.textContent = 'The first flame is yours.'; warden.root.visible = false; }
   let previous = performance.now(), sceneTime = 0;
   let victoryTime = 0;
   const focus = new T.Vector3();
@@ -149,13 +168,43 @@ export function mountAshGate() {
     ready = false;
     facing = Math.atan2(x - boss.x, z - boss.z);
     attack = .001;
+    cue('strike');
     show('You took my name. I’m taking your card.');
   }
-  function beginClimb() {
-    if (!ledge || climb || attack || alert > 0 || falling) return;
+  function jumpOrClimb() {
+    if (climb || attack || alert > 0 || falling) return;
+    cue('leap');
+    if (!ledge) { falling = -5.2; return; }
     const to = ledge;
     climb = { to, x, z, height, t: 0 };
     facing = Math.atan2(x - to.x, z - to.z);
+  }
+  function enterArena(kind) {
+    pending = kind;
+    settlement = null;
+    keys.clear();
+    active = false;
+    peers.leave();
+    audio.circle(null);
+    world.hidden = true;
+    arena.hidden = false;
+    setExploring(false);
+    document.title = arenaTitle;
+    window.scrollTo(0, 0);
+  }
+  function returnToGate() {
+    pending = null;
+    active = true;
+    lastPose = -Infinity;
+    arena.hidden = true;
+    world.hidden = false;
+    audio.circle(0);
+    useAudio();
+    setExploring(true);
+    document.title = gateTitle;
+  }
+  function challenge() {
+    if (active && nearbyPeer) emit('challenge-hunter', { id: nearbyPeer.id });
   }
   function frame(now) {
     requestAnimationFrame(frame);
@@ -168,21 +217,18 @@ export function mountAshGate() {
     if (alert > 0 && (alert -= dt) <= 0) {
       x = spawn.x; z = spawn.z; yaw = facing = height = falling = 0; tilt = .16; crouch = false; climb = null;
       for (const guard of guards) guard.state.suspicion = 0;
+      cue('lose-trail');
       show('Back at the threshold. Use stone and ash for cover.', 3.5);
     }
     if (attack) {
       attack += dt;
       if (attack >= .79) {
         attack = 0;
-        pending = true;
-        settlement = null;
-        keys.clear();
-        active = false;
-        world.hidden = true;
-        arena.hidden = false;
-        document.title = arenaTitle;
-        window.scrollTo(0, 0);
-        window.dispatchEvent(new CustomEvent('demon-duels:launch', { detail: { ...ASH_WARDEN } }));
+        enterArena('boss');
+        const launched = window.dispatchEvent(new CustomEvent('demon-duels:launch', {
+          detail: { ...ASH_WARDEN, ...huntProfile(spotted, watched) }, cancelable: true,
+        }));
+        if (!launched) { returnToGate(); show('Finish your current duel first.', 4); }
         return;
       }
     }
@@ -210,7 +256,7 @@ export function mountAshGate() {
       if (climb.t >= .82) { height = climb.to.h; climb = null; }
     } else {
       const floor = roofs.reduce((top, roof) => inside(x, z, roof) && roof.h <= height + .05 ? Math.max(top, roof.h) : top, 0);
-      falling = height > floor ? falling + dt * 10 : 0;
+      falling = height > floor || falling < 0 ? falling + dt * 11 : 0;
       height = Math.max(floor, height - falling * dt);
       if (height === floor) falling = 0;
     }
@@ -219,7 +265,7 @@ export function mountAshGate() {
     gait = approach(gait, moving ? (sneak ? .39 : running ? 1.14 : .68) : 0, 11, dt);
     bend = approach(bend, sneak && !attack ? 1 : 0, 12, dt);
     step += dt * (moving ? (sneak ? 7 : running ? 12 : 9) : 3);
-    hunter.pose(step, gait, bend, Math.min(1, attack / .79), climb ? Math.min(1, climb.t / .82) : 0);
+    hunter.pose(step, gait, bend, Math.min(1, attack / .79), climb ? Math.min(1, climb.t / .82) : falling ? .27 : 0);
     const hunterClip = attack ? 'Strike' : climb ? 'Climb' : sneak ? (moving ? 'CrouchWalk' : 'Crouch')
       : moving ? (running ? 'Run' : 'Walk') : 'Idle';
     hunter.model?.update(hunterClip, dt, attack ? .79 : climb ? .82 : undefined);
@@ -242,12 +288,24 @@ export function mountAshGate() {
     }
     if (suspicion === 1 && alert <= 0) {
       alert = .95;
+      spotted = true;
       show('Spotted — fall back.');
     }
     ready = !attack && height < .30 && outcome !== 'won' && canStrike(x, z, boss, walls, alert > 0);
     if (strikeButton.hidden === ready) strikeButton.hidden = !ready;
     ledge = !climb && !attack && !falling && alert <= 0 ? mantleTarget(x, z, height, roofs) : null;
     mantlePrompt.hidden = !ledge || ready;
+    nearbyPeer = peers.update(sceneTime, x, z, height);
+    peerButton.hidden = !nearbyPeer || ready || Boolean(ledge) || Boolean(attack || climb || alert);
+    if (nearbyPeer && !peerButton.hidden) peerButton.lastElementChild.textContent = 'Challenge ' + (nearbyPeer.name || 'hunter');
+    if (now - lastPose >= 90) {
+      lastPose = now;
+      peers.publish(x, z, height, facing, moving ? (sneak ? 'sneak' : running ? 'sprint' : 'walk') : 'idle');
+    }
+    if (moving && !falling && sceneTime - lastFootstep > (sneak ? .66 : running ? .24 : .40)) {
+      lastFootstep = sceneTime;
+      cue('step-stone');
+    }
     if (!outcome && !attack) {
       const next = z < -6 ? 'Approach the Warden from the flank.' : 'Reach the Warden unseen.';
       if (objective.textContent !== next) objective.textContent = next;
@@ -256,6 +314,10 @@ export function mountAshGate() {
     if (awareness.dataset.state !== status) {
       awareness.dataset.state = status;
       awareness.lastElementChild.textContent = { alert: 'Spotted', roof: 'Above the patrols', seen: 'Being watched', hidden: 'Hidden in ash', clear: 'Unseen' }[status];
+      emit('world-state', { circle: 0, alert: status === 'alert' ? 'alert' : status === 'seen' ? 'suspicious' : 'unaware' });
+      if (status === 'seen') { watched = true; cue('detect-suspicious'); }
+      if (status === 'alert') cue('detect-alert');
+      if (status === 'hidden') cue('hide');
     }
     world.style.setProperty('--ash-alert', alert > 0 ? '.32' : (suspicion * .27).toFixed(3));
 
@@ -273,16 +335,25 @@ export function mountAshGate() {
   window.addEventListener('blur', () => { keys.clear(); pointer = null; });
   window.addEventListener('keydown', (e) => {
     if (!active || !controls.has(e.code) || e.altKey || e.metaKey) return;
+    useAudio();
     e.preventDefault();
     keys.add(e.code);
-    if (!e.repeat && e.code === 'KeyC') crouch = !crouch;
+    if (!e.repeat && e.code === 'KeyC') { crouch = !crouch; if (crouch) cue('sneak-on'); }
     if (!e.repeat && e.code === 'KeyE') beginStrike();
-    if (!e.repeat && e.code === 'Space') beginClimb();
+    if (!e.repeat && e.code === 'KeyF') challenge();
+    if (!e.repeat && e.code === 'Space') jumpOrClimb();
   });
   window.addEventListener('keyup', (e) => keys.delete(e.code));
   strikeButton.addEventListener('click', beginStrike);
+  peerButton.addEventListener('click', challenge);
+  soundButton.addEventListener('click', () => {
+    audioEnabled = !audioEnabled;
+    useAudio();
+    emit('mute', { enabled: audioEnabled });
+  });
   canvas.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
+    useAudio();
     pointer = { id: e.pointerId, motion: 0 };
     canvas.setPointerCapture(e.pointerId);
   });
@@ -299,21 +370,30 @@ export function mountAshGate() {
     pointer = null;
   });
   canvas.addEventListener('pointercancel', () => { pointer = null; });
+  window.addEventListener('demon-duels:mute', ({ detail }) => {
+    if (typeof detail?.enabled !== 'boolean') return;
+    audioEnabled = detail.enabled;
+    if (active) useAudio();
+    renderAudio();
+  });
+  window.addEventListener('demon-duels:launch', (event) => {
+    if (active && !event.defaultPrevented && event.detail?.mode === 'pvp') enterArena('pvp');
+  });
   window.addEventListener('demon-duels:settled', ({ detail }) => {
-    if (pending && detail?.bossBound && detail.opponentKind === ASH_WARDEN.opponentKind) settlement = detail;
+    if (pending === 'boss' && detail?.bossBound && detail.opponentKind === ASH_WARDEN.opponentKind) settlement = detail;
   });
   window.addEventListener('demon-duels:return', ({ detail }) => {
     if (!pending) return;
+    const encounter = pending;
     const result = outcomeOnReturn(settlement, detail);
     settlement = null;
-    pending = false;
-    active = true;
-    arena.hidden = true;
-    world.hidden = false;
-    document.title = gateTitle;
+    returnToGate();
+    if (encounter !== 'boss') return;
+    watched = spotted = false;
     if (result === 'won') {
       outcome = 'won';
       objective.textContent = 'The first flame is yours.';
+      cue('gate-open');
       show('One rune returns. It remembers you.');
     } else if (result === 'lost') {
       outcome = 'lost';
@@ -324,6 +404,8 @@ export function mountAshGate() {
     }
   });
   arena.hidden = true;
+  setExploring(true);
+  audio.circle(0);
   resize();
   camera.position.set(x + .54, 2.35, z + 3.13);
   requestAnimationFrame(frame);

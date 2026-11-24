@@ -144,7 +144,9 @@ export function installFinishers(target, accept, render) {
       try {
         await render(scene, detail, grade);
       } finally {
-        target.dispatchEvent(new CustomEvent('demon-duels:finisher-done', { detail: { opponentKind: detail.opponentKind } }));
+        const finished = { opponentKind: detail.opponentKind };
+        if (detail.bossBound) finished.duel = detail.duel;
+        target.dispatchEvent(new CustomEvent('demon-duels:finisher-done', { detail: finished }));
       }
     },
   };

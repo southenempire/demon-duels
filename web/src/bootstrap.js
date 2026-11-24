@@ -3,11 +3,11 @@ import { isAshGate } from './route.js';
 
 globalThis.Buffer ??= Buffer;
 const params = new URLSearchParams(location.search);
-import('./main.js').then(async () => {
+import('./main.js').then(async ({ hasAshSeal, setExploring }) => {
   if (!isAshGate(params)) return;
   try {
     const { mountAshGate } = await import('./ash-gate/index.js');
-    mountAshGate();
+    mountAshGate({ hasAshSeal, setExploring });
   } catch (error) {
     const notice = document.createElement('p');
     notice.setAttribute('role', 'status');

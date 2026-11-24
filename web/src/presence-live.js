@@ -167,9 +167,11 @@ export function startPresence({ keypair, host, check, verify, brokers = BROKERS 
 
   function launch(room, join) {
     render();
-    window.dispatchEvent(new CustomEvent('demon-duels:launch', {
+    const launched = window.dispatchEvent(new CustomEvent('demon-duels:launch', {
       detail: { mode: 'pvp', room, join, returnToMap: true, source: 'presence' },
+      cancelable: true,
     }));
+    if (!launched) toast('Finish your current duel or claim your Ash Gate seal first.');
   }
 
   function toast(text) {

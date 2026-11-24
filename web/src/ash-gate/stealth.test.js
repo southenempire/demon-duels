@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ASH_WARDEN, canStrike, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
 import { isAshGate } from '../route.js';
+import { bossMove } from '../world/bot-profile.js';
+import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
 
 const guard = { x: 0, z: 0, yaw: 0, range: 6, halfAngle: .5 };
 const wall = { x: 0, z: -2, w: 1, d: 1 };
@@ -55,4 +57,22 @@ test('Ash Gate is the default without replacing explicit backup or invite URLs',
   for (const query of ['world=2d', 'world=arena', 'room=invite', 'world=3d&room=invite']) {
     assert.equal(isAshGate(new URLSearchParams(query)), false);
   }
+});
+
+test('a graded Ash Warden hunt persists only valid chain intel and weights the house bot', () => {
+  const profile = profileFor({ ...ASH_WARDEN, ...huntProfile(false, false) });
+  assert.equal(profile.grade, 'ghost');
+  assert.equal(profile.tells.length, 2);
+  const store = new Map([[profileKey('warden'), JSON.stringify(profile)]]);
+  assert.deepEqual(savedProfile({ getItem: (key) => store.get(key) }, 'warden'), profile);
+  assert.equal(profileFor({ ...profile, mode: 'pvp' }), null);
+  assert.equal(huntProfile(false, true).grade, 'shadow');
+  assert.equal(huntProfile(true, true).grade, 'exposed');
+  for (const roll of [.01, .30, .59]) assert.equal(bossMove(0, 'ghost', roll), 1);
+  assert.equal(bossMove(0, 'ghost', .60), 0);
+  assert.equal(bossMove(0, 'ghost', .90), 2);
+  assert.equal(bossMove(0, 'shadow', .44), 1);
+  assert.equal(bossMove(0, 'shadow', .45), 0);
+  assert.equal(bossMove(0, 'shadow', .80), 2);
+  assert.deepEqual([0, .34, .67].map((roll) => bossMove(0, 'exposed', roll)), [0, 1, 2]);
 });

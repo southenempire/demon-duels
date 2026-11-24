@@ -104,7 +104,7 @@ function weave() {
   return texture;
 }
 
-export function figure(scene, kind) {
+export function figure(scene, kind, tint) {
   const hunter = kind === 'hunter', boss = kind === 'warden';
   const coat = metal(hunter ? 0x77746a : boss ? 0x332326 : 0x303a37);
   const hood = metal(hunter ? 0xa39b88 : 0x48413f);
@@ -112,7 +112,7 @@ export function figure(scene, kind) {
   const leather = metal(hunter ? 0x543931 : 0x362828);
   const iron = metal(boss ? 0x71453a : 0x6b6965, .43);
   const brass = metal(0x927452, .5);
-  const fabric = new T.MeshStandardMaterial({ color: hunter ? 0x81837c : 0x4b1d18, side: T.DoubleSide, roughness: 1 });
+  const fabric = new T.MeshStandardMaterial({ color: tint ?? (hunter ? 0x81837c : 0x4b1d18), side: T.DoubleSide, roughness: 1 });
   if (hunter) {
     fabric.map = fabric.bumpMap = weave();
     fabric.bumpScale = .014;
