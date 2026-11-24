@@ -1171,6 +1171,7 @@ window.addEventListener('storage', (event) => {
 
 // Live hunters: a challenge accepted in the world becomes an ordinary open/join PvP duel.
 function launchRivalDuel(room, join, returnToMap, source) {
+  if (source === 'market' && !pitUnlocked(readCampaign(localStorage, client.key))) return false;
   const saved = readKey(localStorage.getItem(activeRoomKey));
   if (!room || (saved && !keyed(saved, room)) || (activeDuel() && !keyed(s.room, room))) return false;
   if (source === 'presence' || source === 'market') {

@@ -46,6 +46,7 @@ export function mountWorld(el, { wallet, chain }) {
   let flavor = loadFlavor();
   const save = () => localStorage.setItem(worldKey(player), JSON.stringify(flavor));
   const wins = () => readWins(localStorage, player);
+  const marketOpen = () => wins().length === levels.length;
   const audio = (cue, pos) => worldEvent('audio', { cue, circle: kind, ...(pos ? { pos: { x: pos.x / TILE, y: pos.y / TILE } } : {}) });
   let scene = 'title';
   let kind = null;
@@ -139,10 +140,11 @@ export function mountWorld(el, { wallet, chain }) {
     const ledger = query('ledger');
     if (!board || !ledger) return;
     bountyRooms = [];
-    board.textContent = 'Reading open devnet duels…';
+    const open = marketOpen();
+    board.textContent = open ? 'Reading open devnet duels…' : 'Six chains. Six guardians. The board stays shut until they fall.';
     ledger.textContent = 'Reading recent settlements…';
     await Promise.all([
-      Promise.resolve().then(() => chain.market()).then((rows) => {
+      open && Promise.resolve().then(() => chain.market()).then((rows) => {
         if (!board.isConnected || suspended) return;
         bountyRooms = rows.map(({ room }) => room);
         board.innerHTML = rows.length ? rows.map(({ owner, kind }, i) =>
@@ -179,8 +181,9 @@ export function mountWorld(el, { wallet, chain }) {
       '<button type="button" class="button secondary" data-hunt="pit-challenge" hidden></button></div>' +
       '<section class="hunt-market" aria-label="Open Pit market"><h2>The Bounty Board</h2>' +
       '<p>Every bounty is a demon on the table. Answer it with yours. The winner takes both.</p><div class="hunt-pit-actions">' +
-      button('Post a bounty', 'post', 'primary') + button('Challenge a friend', 'friend') + button('Refresh board and ledger', 'market', 'text') +
-      '</div><p class="hunt-notice" data-hunt-notice role="status"></p><div data-hunt-bounties>Refresh to show open devnet duels.</div>' +
+      (marketOpen() ? button('Post a bounty', 'post', 'primary') + button('Challenge a friend', 'friend') : '') + button('Refresh board and ledger', 'market', 'text') +
+      '</div><p class="hunt-notice" data-hunt-notice role="status"></p><div data-hunt-bounties>' +
+      (marketOpen() ? 'Refresh to show open devnet duels.' : 'Six chains. Six guardians. The board stays shut until they fall.') + '</div>' +
       '<h2>The Hunter Ledger</h2><p>Duels are settled onchain. Grades are local and unverified.</p><div data-hunt-ledger>Refresh to show recent settlements.</div></section></div>';
     pitRenderer = createRenderer(el.querySelector('canvas'), asset, art);
     pitPeer = null;
@@ -364,11 +367,11 @@ export function mountWorld(el, { wallet, chain }) {
     } else if (action === 'story-next' && ++introIndex < chapter.lines.length) story();
     else if (action === 'story-next' || action === 'story-skip') finishStory();
     else if (action === 'vault' || action === 'resume') chain[action]();
-    else if (action === 'post') chain.post();
+    else if (action === 'post' && marketOpen()) chain.post();
     else if (action === 'friend') Promise.resolve().then(chain.friend).then(message, () => message('Could not copy the open duel invite.'));
     else if (action === 'market') loadPitBoard();
     else if (action === 'pit-challenge' && pitPeer) worldEvent('challenge-hunter', { id: pitPeer.id });
-    else if (action?.startsWith('bounty:')) {
+    else if (action?.startsWith('bounty:') && marketOpen()) {
       const room = bountyRooms[Number(action.slice(7))];
       if (room && !window.dispatchEvent(new CustomEvent('demon-duels:launch', {
         cancelable: true, detail: { source: 'market', mode: 'pvp', room, join: false, returnToMap: true },
