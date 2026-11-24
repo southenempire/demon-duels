@@ -68,6 +68,7 @@ const s = {
 s.circle = Math.min(s.campaign.wins.length, circles.length - 1);
 const short = (key) => key?.toString().slice(0, 4) + '…' + key?.toString().slice(-4);
 const keyed = (value, key) => Boolean(value && key && value.equals(key));
+const MOVE_WAITING = 'Your move is sealed. Waiting for your opponent.';
 function clearSavedRoom(room) {
   if (localStorage.getItem(activeRoomKey) === room?.toString()) localStorage.removeItem(activeRoomKey);
 }
@@ -153,7 +154,7 @@ function battlefield() {
   const [player, opponent] = fighterKinds().map((kind, side) => ({
     label: side ? (s.mode === 'practice' || s.solo || Number.isInteger(s.requestedOpponent) ? 'GUARDIAN' : 'CHALLENGER') :
       s.duel && s.duel.phase !== 0 && !participant() ? 'PLAYER ONE' : 'HUNTER',
-    name: demons[kind]?.name || 'Awaiting stake',
+    name: demons[kind ?? (side ? s.requestedOpponent : null)]?.name || 'Awaiting stake',
     card: demons[kind]?.type,
     detail: frame ? moves[result.moves[side]].name + (frame.attacks > side ? ' / ' + result.score[side] + ' POWER' : '') :
       side === 0 && moveLocked() ? moves[s.move].name + ' / SEALED' : (phase === 'seal' || phase === 'crit') && s.mode !== 'practice' ? 'HIDDEN' : '',
@@ -216,7 +217,7 @@ function resultPanel() {
     '</span><h2>' + title + '</h2><div class="damage">' + line + '</div></div><div class="actions">' +
     (s.result && !s.returnToMap ? button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') : '') +
     button('replay', 'Replay fight', 'text') + button('duel-receipt', 'Details', 'text') +
-    button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow') + '</div></div>';
+    (ashGate && s.returnToMap ? '' : button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow')) + '</div></div>';
 }
 
 function resultReceipt(both) {
@@ -249,7 +250,7 @@ function controls() {
     (participant() && Date.now() >= s.duel.deadline ? button('refund', 'Release both stakes', 'secondary') : '') + '</div>';
   if (s.duel?.phase === 1) {
     if (!participant()) return '<div class="control"><h2>Duel in progress</h2><p>Both players staked. Their moves stay hidden until reveal.</p></div>';
-    return '<div class="control"><div class="control-title"><div><span class="eyebrow">02 / MAGICBLOCK PRIVATE ER</span><h2>' + (moveLocked() ? 'Your move is sealed.' : 'Seal your move') + '</h2></div>' +
+    return '<div class="control" data-chain-moves><div class="control-title"><div><span class="eyebrow">02 / MAGICBLOCK PRIVATE ER</span><h2>' + (moveLocked() ? 'Your move is sealed.' : 'Seal your move') + '</h2></div>' +
       (moveLocked() ? button('resolve', 'Check for reveal', 'secondary', 'lock') : '') + '</div>' +
       (moveLocked() ? '<p>Only your wallet can read your move until both are locked.</p>' : (s.retrySeal !== null
         ? button('move:' + s.retrySeal, 'Retry ' + moves[s.retrySeal].name, 'primary', 'lock') : moveSelector())) +
@@ -264,9 +265,9 @@ function controls() {
     '<p>Open a fresh guest wallet with a free starter pack. Your previous wallet and campaign progress stay in this browser.</p></div><div class="actions">' +
     button('recover-guest', 'Get a fresh starter pack', 'primary', 'box') + '</div></div>';
   if (s.quick && !s.room) return '<div class="control"><div><span class="eyebrow">SOLANA DEVNET / QUICK DUEL</span><h2>' +
-    (s.busy ? 'Preparing your duel…' : 'Quick duel paused') + '</h2><p>' +
+    (s.busy ? 'Preparing your duel…' : 'Resume duel setup') + '</h2><p>' +
     (s.busy ? 'Setting up a guest wallet, starter cards and a bot opponent.' : 'Retry setup, open your vault, or play the offchain tutorial.') + '</p></div>' +
-    (s.busy ? '' : '<div class="actions">' + button('quick-duel', 'Retry quick duel', 'primary') + button('enter', 'Open devnet vault') +
+    (s.busy ? '' : '<div class="actions">' + button('quick-duel', 'Resume setup', 'primary') + button('enter', 'Open devnet vault') +
       button('practice', 'Offchain tutorial', 'text') + '</div>') + '</div>';
   const card = anyCard();
   if (!card && s.owned.length) return '<div class="control"><div><h2>All demons are staked</h2><p>Finish or cancel your active duel to use your cards again.</p></div></div>';
@@ -359,7 +360,7 @@ function modal() {
 
 function feedback() {
   return '<div class="feedback" role="status" aria-live="polite">' +
-    (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice)) + '</div>';
+    (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice === MOVE_WAITING && s.duel?.phase !== 1 ? '' : s.notice)) + '</div>';
 }
 
 function duelScreen() {
@@ -380,7 +381,7 @@ function duelScreen() {
       (vault ? '' : intel) + networkProgress() + vault + '</div></main>';
 }
 
-let dialogReturnAction;
+let dialogReturnAction, pickableRoom;
 function draw() {
   const page = campaignPage();
   const fallbackScroll = app.querySelector('.duel-text-only')?.scrollTop;
@@ -409,6 +410,9 @@ function draw() {
     (previous || (s.modal ? app.querySelector('.modal .close') : null))?.focus({ preventScroll: true });
   }
   syncDuelView();
+  const pickable = s.duel?.phase === 1 && participant() && !moveLocked() && !s.busy ? s.duel.key.toString() : null;
+  if (pickable && pickable !== pickableRoom) app.querySelector('[data-chain-moves]')?.scrollIntoView({ block: 'nearest' });
+  pickableRoom = pickable;
   if (fallbackScroll) {
     const fallback = app.querySelector('.duel-text-only');
     if (fallback) fallback.scrollTop = fallbackScroll;
@@ -478,6 +482,7 @@ async function refreshRoom() {
   if (room !== s.room || owner !== client) return;
   if (!d) throw new Error('This duel link does not point to a live room.');
   s.duel = d;
+  if (d.phase === 3 && s.notice === MOVE_WAITING) s.notice = '';
   const side = arenaCardSide(d, client.key);
   if (!s.staked || !s.opposing) {
     const cards = await Promise.all([side ? d.card2 : d.card1, side ? d.card1 : d.card2]
@@ -593,7 +598,8 @@ async function prepareBot() {
   let card = cards[0];
   if (await bot.balance() < 0.02) await client.transfer(bot.key, 0.03);
   if (!card) {
-    await ensurePack(bot, pack);
+    progress('Opening the bot’s MagicBlock VRF starter pack…');
+    await ensurePack(bot, pack, until, progress);
     card = (await bot.inventory()).find((item) => keyed(item.lock, ZERO));
   }
   if (!card) throw new Error('The bot’s vault is not ready. Retry to prepare a card.');
@@ -630,9 +636,10 @@ export async function ensureBossCard(demonId) {
         const topUp = packFunds - await bot.balance();
         if (topUp > 0) await client.transfer(bot.key, topUp);
       }
-      localStorage.setItem(BOSS_GENERATIONS, String(++total));
-      await ensurePack(bot, pack);
+      progress('Opening an Ash Gate rival pack with MagicBlock VRF…');
+      await ensurePack(bot, pack, until, progress);
       const cards = (await readCards(keys(bot))).filter((card) => stakeable(card, bot));
+      localStorage.setItem(BOSS_GENERATIONS, String(++total));
       return { bot, generation, cards };
     },
     async fund(bot) {
@@ -692,7 +699,11 @@ async function readyBot(prepared) {
 }
 
 export async function startDuel(solo, demonId) {
-  const card = anyCard();
+  const selected = anyCard();
+  const card = solo && ashEncounter?.opponentKind === demonId && selected?.kind === demonId
+    ? s.owned.find((item) => item.kind !== demonId && keyed(item.lock, ZERO))
+    : selected;
+  if (selected && !card) throw new Error('Stake a demon other than the guardian. This guest vault has no other unstaked demon.');
   if (!card) throw new Error('Choose an unstaked demon first.');
   if (await client.balance() < (solo && demonId === undefined ? 0.037 : 0.006)) {
     s.modal = 'wallet';
@@ -826,7 +837,7 @@ async function resolveChain() {
       await client.reveal(duel);
     } catch (error) {
       if (/move.*first|MoveMissing|Custom.*6006/i.test(String(error.message))) {
-        s.notice = 'Your move is sealed. Waiting for your opponent.';
+        if (s.room && keyed(s.room, duel.key) && s.duel?.phase === 1) s.notice = MOVE_WAITING;
         return;
       }
       throw error;
@@ -1231,7 +1242,9 @@ setInterval(() => {
   if (!elapsed || !s.waitSince) return;
   const seconds = Math.floor((Date.now() - s.waitSince) / 1000);
   elapsed.textContent = seconds + 's';
-  if (seconds >= 45) app.querySelector('[data-delay-hint]').textContent = 'Devnet is slow. Keep this tab open; check for reveal again if needed.';
+  if (seconds >= 45) app.querySelector('[data-delay-hint]').textContent = s.room
+    ? 'Devnet is slow. Keep this tab open; check for reveal again if needed.'
+    : 'Devnet is slow. Keep this tab open; setup continues before any card is staked.';
 }, 1000);
 setInterval(async () => {
   if (!safeMode() || s.busy || polling || document.hidden) return;
