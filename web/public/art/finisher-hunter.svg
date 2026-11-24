@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 320">
+  <defs>
+    <linearGradient id="cloak" x2="1" y2="1">
+      <stop stop-color="#45414f"/><stop offset=".36" stop-color="#1b1b28"/><stop offset="1" stop-color="#090911"/>
+    </linearGradient>
+    <linearGradient id="steel" x2=".8" y2="1">
+      <stop stop-color="#faf5e8"/><stop offset=".5" stop-color="#918b9c"/><stop offset="1" stop-color="#3e394f"/>
+    </linearGradient>
+  </defs>
+  <path fill="#080810" stroke="#423a4d" stroke-width="2" d="m158 215 48-4 33 46 57 24-1 11h-75l-50-39-43 22-15 16H56l8-12 30-15 27-39Z"/>
+  <path fill="url(#cloak)" stroke="#655260" stroke-width="2" d="M173 99q-39 8-61 42l-39 49-62 55 54 1-38 22 69-11 52-20 31-45 32-17 15-44Z"/>
+  <path fill="#302536" d="m168 139-53 78-72 32 47-32 34-55Zm4 35-31 49-34 17 40-45Z"/>
+  <path fill="#7d374a" d="M171 112q-17 32-57 34l-27-5-21 16 46 4q46-3 73-31l15-5Z"/>
+  <path fill="url(#cloak)" stroke="#88707b" stroke-width="2" d="M160 110q-9-28 5-48 12-20 44-25l30 37-23 6-2 33-22 14Z"/>
+  <path fill="#85818a" d="m209 42 28 31-24-2-25 25-1-20Z"/>
+  <path fill="#090910" d="m232 75-17 6-3 27-16 11-11-23 27-24Z"/>
+  <path fill="#e8d7a8" d="m213 84 13-4-8 7Z"/>
+  <path fill="url(#cloak)" stroke="#79616d" stroke-width="2" d="m194 127 24-11 30 30 40-20 12 13-52 32-44-17Z"/>
+  <path fill="url(#steel)" stroke="#f0ddcf" stroke-width="1.4" d="m286 123 71-32-44 41-27 10Z"/>
+  <path fill="#160f1a" stroke="#b98c77" stroke-width="1.7" d="m281 127 12-7 8 14-15 9-7-5Z"/>
+  <path fill="#a78c81" d="m156 180 48-18 3 8-52 20Z"/>
+  <path fill="#d3ae88" d="m178 173 10-4 4 9-11 4Z"/>
+</svg>

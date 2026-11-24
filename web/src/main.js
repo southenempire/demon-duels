@@ -1,5 +1,6 @@
 import './style.css';
 import './arena.css';
+import './finishers/style.css';
 import { PublicKey } from '@solana/web3.js';
 import { ArenaClient, PROGRAM, ZERO, addressExplorer, cardKey, explorer, localKey, packKey, proof, readCard, readCards, readDuel, readRound, until, sleep } from './chain.js';
 import { icon } from './icons.js';
@@ -9,6 +10,7 @@ import { characters, characterArt } from './characters.js';
 import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason } from './fight.js';
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
+import { campaignApproval, previewFinisher, settlementCinematics } from './finishers/index.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
@@ -60,8 +62,12 @@ const mySide = () => keyed(s.duel?.p2, client.key) ? 1 : 0;
 const participant = () => keyed(s.duel?.p1, client.key) || keyed(s.duel?.p2, client.key);
 const moveLocked = () => s.move !== null;
 
-const roundResult = () => s.result || confirmedFight(s.duel, mySide());
+const roundResult = () => s.result || (bossEncounter() && !emittedSettlements.has(fightId()) ? null : confirmedFight(s.duel, mySide()));
 const fightId = () => s.result ? 'practice:' + s.resultId : s.duel?.key?.toString();
+const bossEncounter = () => s.mode === 'chain' && s.solo && Number.isInteger(s.requestedOpponent) && participant();
+let liveSettlement;
+const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
+const presentFinisher = () => finishers.play(fightId()).catch(() => {});
 const fighterKinds = () => [
   s.mode === 'practice' ? s.practiceStake : s.mode === 'landing' ? 0 : s.staked?.kind ?? anyCard()?.kind,
   s.mode === 'practice' ? s.practiceRival : s.mode === 'landing' ? 1 : s.opposing?.kind,
@@ -290,6 +296,10 @@ async function playFight() {
   await preloadFighters();
   for (const frame of fightTimeline(result)) {
     if (sequence !== s.sequence) return;
+    if (frame.stage === 'spoils') {
+      await presentFinisher();
+      if (sequence !== s.sequence) return;
+    }
     s.frame = frame;
     if (frame.sound && !(s.duel && !participant() && (frame.sound === 'victory' || frame.sound === 'defeat'))) audio(frame.sound);
     if (frame.stage === 'windup') audio(moves[result.moves[frame.attacker]].name.toLowerCase());
@@ -324,7 +334,6 @@ async function refreshRoom() {
       .map((key) => keyed(key, ZERO) ? null : readCard(key)));
   }
   if (d.phase === 3) {
-    if (previous === undefined) { s.playedId = d.key.toString(); s.frame = { stage: 'finish', attacks: 2 }; }
     s.proof ||= await proof(d.key, 'Demon Duels: winner').catch(() => null);
     if (previous !== 3) {
       localStorage.removeItem(activeRoomKey);
@@ -333,7 +342,16 @@ async function refreshRoom() {
     const detail = confirmedSettlement(d, client.key, s.opposing?.kind ?? null, s.proof);
     if (detail && !emittedSettlements.has(detail.duel)) {
       emittedSettlements.add(detail.duel);
-      window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail }));
+      const approval = detail.won ? campaignApproval(localStorage, detail) : null;
+      if ((previous !== undefined || approval) && bossEncounter() && detail.duel === fightId() && detail.opponentKind === s.requestedOpponent) {
+        liveSettlement = detail;
+      }
+      try { window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail })); }
+      finally { liveSettlement = undefined; }
+      if (finishers.has(detail.duel) && approval && !approval()) finishers.clear();
+    }
+    if (previous === undefined && !finishers.has(d.key.toString())) {
+      s.playedId = d.key.toString(); s.frame = { stage: 'finish', attacks: 2 };
     }
   }
 }
@@ -355,6 +373,7 @@ async function run(label, action) {
 }
 
 function setRoom(key) {
+  finishers.clear();
   document.querySelectorAll('.capture-card').forEach((card) => card.remove());
   s.sequence++;
   s.playing = false;
@@ -602,7 +621,10 @@ async function action(name) {
   }
   if (name === 'skip' && s.playing) {
     document.querySelectorAll('.capture-card').forEach((card) => card.remove());
-    s.sequence++; s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); return;
+    const sequence = ++s.sequence;
+    await presentFinisher();
+    if (sequence !== s.sequence) return;
+    s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); return;
   }
   if (s.busy || s.playing) return;
   if (name === 'return-map') {
@@ -755,6 +777,7 @@ document.addEventListener('keydown', (event) => {
   }
 });
 draw();
+if (import.meta.env.DEV) previewFinisher(params)?.catch(() => {});
 if (s.room) {
   s.solo = localStorage.getItem('demon-duels:solo:' + s.room) === '1';
   setRoom(s.room);
