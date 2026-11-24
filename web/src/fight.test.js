@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { arenaCardSide, confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
+import { arenaCardSide, confirmedFight, confirmedSettlement, defaultStake, fightReason, privateMoveRetryMessage, sealedMoveNotice } from './fight.js';
 import { bossHeight, bossModel } from './duel3d/fighter.js';
 import { meleeActions, meleeTimeline } from './duel3d/timeline.js';
 import { characters, characterArt } from './characters.js';
@@ -11,6 +11,20 @@ const p1 = { equals: (other) => other === p1 };
 const p2 = { equals: (other) => other === p2 };
 const duel = { key: 'confirmed-room', phase: 3, p1, p2, winner: p2, moves: [0, 1], crits: [false, true], scores: [3, 4] };
 
+test('only the waiting participant sees the sealed move notice, and only while their room is staked', () => {
+  const staked = { ...duel, phase: 1 };
+  for (const player of [p1, p2]) {
+    assert.equal(sealedMoveNotice(staked, player, duel.key), 'Your move is sealed. Waiting for your opponent.');
+    assert.equal(sealedMoveNotice(staked, player, null), '');
+    assert.equal(sealedMoveNotice(staked, player, 'old-room'), '');
+    for (const phase of [0, 2, 3, 4]) {
+      assert.equal(sealedMoveNotice({ ...duel, phase }, player, duel.key), '');
+    }
+  }
+  assert.equal(sealedMoveNotice(staked, {}, duel.key), '');
+  assert.equal(sealedMoveNotice(duel, {}, duel.key), '');
+});
+
 test('open invites put the host stake on the opposing side until the invitee joins', () => {
   const empty = { equals: (other) => other === empty };
   const open = { ...duel, p2: empty, phase: 0 };
@@ -18,6 +32,18 @@ test('open invites put the host stake on the opposing side until the invitee joi
   assert.equal(arenaCardSide(open, p2), 1);
   assert.equal(arenaCardSide(duel, p2), 1);
   assert.equal(arenaCardSide(duel, {}), 0);
+});
+
+test('guardian encounters default to a different owned card but allow same-kind stakes when there is no alternative', () => {
+  for (const boss of demons.keys()) {
+    const owned = [{ kind: boss }, { kind: (boss + 1) % demons.length }];
+    assert.equal(defaultStake(owned, boss), owned[1]);
+    assert.equal(defaultStake(owned.slice(0, 1), boss), owned[0]);
+    assert.equal(defaultStake(owned), owned[0]);
+    const practice = owned.map(({ kind }) => kind);
+    assert.equal(defaultStake(practice, boss, (kind) => kind), practice[1]);
+  }
+  assert.equal(defaultStake([], 0), undefined);
 });
 
 test('3D boss models map to their demon IDs and leave other bosses procedural', () => {
