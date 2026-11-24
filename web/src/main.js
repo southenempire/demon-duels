@@ -1,16 +1,16 @@
 import './style.css';
-import './arena.css';
 import './finishers/style.css';
+import './arena.css';
 import { PublicKey } from '@solana/web3.js';
 import { ArenaClient, PROGRAM, ZERO, addressExplorer, cardKey, explorer, localKey, packKey, proof, readCard, readCards, readDuel, readRound, until, sleep } from './chain.js';
 import { icon } from './icons.js';
 import { botGeneration, ensurePack, prepareGuest, stockBossCard } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
 import { characters, characterArt } from './characters.js';
+import { campaignApproval, previewFinisher, settlementCinematics } from './finishers/index.js';
 import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason } from './fight.js';
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
-import { campaignApproval, previewFinisher, settlementCinematics } from './finishers/index.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
@@ -334,6 +334,7 @@ async function refreshRoom() {
       .map((key) => keyed(key, ZERO) ? null : readCard(key)));
   }
   if (d.phase === 3) {
+    if (previous === undefined) { s.playedId = d.key.toString(); s.frame = { stage: 'finish', attacks: 2 }; }
     s.proof ||= await proof(d.key, 'Demon Duels: winner').catch(() => null);
     if (previous !== 3) {
       localStorage.removeItem(activeRoomKey);
@@ -349,9 +350,9 @@ async function refreshRoom() {
       try { window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail })); }
       finally { liveSettlement = undefined; }
       if (finishers.has(detail.duel) && approval && !approval()) finishers.clear();
-    }
-    if (previous === undefined && !finishers.has(d.key.toString())) {
-      s.playedId = d.key.toString(); s.frame = { stage: 'finish', attacks: 2 };
+      if (previous === undefined && finishers.has(detail.duel)) {
+        s.playedId = null; s.frame = null;
+      }
     }
   }
 }
