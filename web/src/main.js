@@ -116,19 +116,21 @@ function isBoundBossSettlement(detail, duel) {
   } catch { return false; }
 }
 let liveSettlement;
-let pendingFinisher, liveFinisherDone, stealthGrade = 'shadow';
+let liveFinisherDone, stealthGrade = 'shadow';
+const pendingFinishers = new Map();
 function startFinisher() {
-  if (!pendingFinisher || pendingFinisher.request || pendingFinisher.settlement.duel !== fightId()) return;
-  const { duel, opponentKind } = pendingFinisher.settlement;
-  const request = { opponentKind, grade: stealthGrade, duel };
+  const pendingFinisher = pendingFinishers.get(fightId());
+  if (!pendingFinisher || pendingFinisher.request) return;
+  const { duel, bossId: opponentKind } = pendingFinisher.result;
+  const request = { opponentKind, grade: pendingFinisher.grade, duel };
   pendingFinisher.request = request;
   window.dispatchEvent(new CustomEvent('demon-duels:finisher', { detail: request }));
 }
 
 function completeFinisher() {
   startFinisher();
-  const request = pendingFinisher?.request;
-  if (!request || request.duel !== fightId()) return;
+  const request = pendingFinishers.get(fightId())?.request;
+  if (!request) return;
   liveFinisherDone = request;
   try { window.dispatchEvent(new CustomEvent('demon-duels:finisher-done', { detail: request })); }
   finally { liveFinisherDone = undefined; }
@@ -455,11 +457,10 @@ async function refreshRoom() {
       if (isBoundBossSettlement(detail, d)) liveSettlement = detail;
       try { window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail })); }
       finally { liveSettlement = undefined; }
-      if (previous === undefined && pendingFinisher?.settlement === detail) {
-        s.playedId = null; s.frame = null;
-      }
     }
-    if (pendingFinisher?.settlement.duel !== d.key.toString()) clearSavedRoom(room);
+    if (pendingFinishers.has(d.key.toString())) {
+      if (previous === undefined) { s.playedId = null; s.frame = null; }
+    } else clearSavedRoom(room);
   }
   if (d.phase === 4) clearSavedRoom(room);
 }
@@ -481,7 +482,6 @@ async function run(label, action, recoveryMessage) {
 }
 
 function setRoom(key) {
-  pendingFinisher = undefined;
   document.querySelectorAll('.capture-card').forEach((card) => card.remove());
   s.sequence++;
   s.playing = false;
@@ -1032,12 +1032,14 @@ window.addEventListener('demon-duels:settled', (event) => {
   const result = { bossId, phase: d.phase, player: client.key.toString(), winner: d.winner.toString(),
     opponent: (mySide() ? d.p1 : d.p2).toString(), bot: savedBot.bot.key.toString(), opposingKind: s.opposing?.kind,
     duel: d.key.toString(), mode: event.detail.mode };
-  pendingFinisher = { settlement: event.detail, result };
+  pendingFinishers.set(result.duel, { result, grade: stealthGrade });
 });
 window.addEventListener('demon-duels:finisher-done', ({ detail }) => {
-  if (!pendingFinisher || detail !== liveFinisherDone || detail !== pendingFinisher.request) return;
+  if (!detail || detail !== liveFinisherDone || detail.duel !== fightId()) return;
+  const pendingFinisher = pendingFinishers.get(detail.duel);
+  if (!pendingFinisher || detail !== pendingFinisher.request) return;
   s.campaign = persistBossWin(localStorage, client.key, pendingFinisher.result);
-  pendingFinisher = undefined;
+  pendingFinishers.delete(detail.duel);
   clearSavedRoom(s.room);
 });
 window.addEventListener('storage', (event) => {
