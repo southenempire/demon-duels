@@ -22,7 +22,7 @@ async function enterAshGate() {
   const circle = resolveWorldCircle(params, getWorldCampaign());
   const [descriptor, { mountCircle }] = await Promise.all([worlds[circle](), import('./ash-gate/index.js')]);
   try {
-    mountCircle(descriptor, { hasSeal: () => getWorldCampaign().wins.some((win) => win.bossId === descriptor.opponentKind), setExploring, startInPlay: true });
+    mountCircle(descriptor, { getCampaign: getWorldCampaign, setExploring, startInPlay: true });
   } catch (error) {
     const notice = document.createElement('p');
     notice.setAttribute('role', 'status');
