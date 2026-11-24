@@ -664,7 +664,7 @@ async function action(name) {
     s.journey = 'arena'; s.mode = 'chain';
     await run('Resuming your saved duel…', async () => {
       const saved = readKey(localStorage.getItem(activeRoomKey));
-      if (saved && !keyed(s.room, saved)) { setRoom(null); restoreRoom(); }
+      if (!activeDuel() && saved && !keyed(s.room, saved)) { setRoom(null); restoreRoom(); }
       await Promise.all([refreshRoom(), refreshWallet()]);
     }); return;
   }
