@@ -44,9 +44,27 @@ test('pack setup only retries an existing unopened pack', async () => {
   assert.equal(waits, 2);
 });
 
-test('an active cooldown does not wait for another request or submit a new pack', async () => {
+test('an active cooldown follows the existing request without opening a new pack', async () => {
   const guest = { pack: async () => ({ opened: false }), retryPack: async () => null };
-  await assert.rejects(ensurePack(guest, undefined, () => assert.fail('unexpected wait')), /retry is already pending/);
+  const messages = [];
+  let waits = 0;
+  await ensurePack(guest, undefined, async () => { waits++; }, (message) => messages.push(message));
+  assert.equal(waits, 1);
+  assert.match(messages[0], /pending/);
+});
+
+test('a starter-pack timeout resumes on the same owner and retries once', async () => {
+  const calls = [];
+  const owner = {
+    pack: async () => ({ opened: false }),
+    requestPack: async () => { calls.push('request'); },
+    retryPack: async () => { calls.push('retry'); return 'signature'; },
+  };
+  await ensurePack(owner, null, async (poll, timeout) => {
+    calls.push(timeout);
+    if (timeout === 60000) throw new Error('The network is still processing. Retry to resume.');
+  }, (message) => assert.match(message, /renewed/));
+  assert.deepEqual(calls, ['request', 60000, 'retry', 120000]);
 });
 
 test('existing rooms with no stored generation still use the original bot', () => {

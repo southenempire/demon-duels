@@ -29,3 +29,24 @@ body:has(.ash-gate:not([hidden]))::after { display: none; }
 }
 .ash-overlay { position: absolute; inset: 0; pointer-events: none; }
 .ash-controls { background: #071010a8; pointer-events: auto; }
+.ash-title-shell { position: fixed; inset: 0; background: radial-gradient(ellipse at 70% 42%, #41302c, #111819 55%, #090c0e); }
+.ash-title-shell button, .ash-title-shell a, .ash-gate .dd-ui button { min-width: 44px; min-height: 44px; }
+.ash-gate .dd3d-hud :is(button, small, .dd-kicker, .dd-key-hints, kbd, .dd-awareness, .dd-context-prompt, .dd-objective p, .dd-world-message) { font-size: 12px; }
+.ash-gate .dd-hud-actions { gap: 3px; }
+.ash-gate .dd-hud-actions button { padding-inline: 8px; }
+.ash-gate .dd-key-hints { gap: 6px 10px; flex-wrap: wrap; }
+.ash-touch .dd-key-hints { display: none; }
+.ash-touch .dd-awareness { bottom: max(135px, calc(env(safe-area-inset-bottom) + 125px)); }
+.ash-touch .dd-context-prompt { bottom: max(156px, calc(env(safe-area-inset-bottom) + 145px)); }
+.ash-touch-controls { pointer-events: none; position: absolute; inset: 0; z-index: 5; }
+.ash-joystick, .ash-touch-actions button { pointer-events: auto; touch-action: none; }
+.ash-joystick { position: absolute; width: 94px; height: 94px; bottom: max(20px, env(safe-area-inset-bottom)); left: max(16px, env(safe-area-inset-left)); border: 1px solid #d9d2b96b; background: #141919aa; display: grid; place-items: center; border-radius: 50%; }
+.ash-joystick i { width: 34px; height: 34px; background: #d9d2b9a0; border: 1px solid #efe6ca; border-radius: 50%; pointer-events: none; }
+.ash-touch-actions { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); display: grid; justify-items: end; gap: 6px; }
+.ash-touch-actions button { min-width: 70px; min-height: 44px; color: #fcf3da; background: #191a19dd; border: 1px solid #d9d2b986; font: 13px monospace; }
+.ash-touch-actions button[aria-pressed="true"] { background: #514236; }
+.ash-fade { position: absolute; inset: 0; background: #030407; pointer-events: none; opacity: 0; z-index: 6; }
+.ash-captured-card { position: absolute; inset: 0 auto auto 0; width: 110px; max-height: 150px; object-fit: cover; border: 1px solid #e7bc87; border-radius: 4px; z-index: 7; pointer-events: none; }
+.ash-gate .dd-awareness::after { content: ""; position: absolute; top: calc(100% + 4px); left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, currentColor calc(var(--ash-suspicion, 0) * 100%), #ded1ba36 0); }
+.ash-nameplate { position: absolute; z-index: 2; transform: translate(-50%, -100%); white-space: nowrap; color: #d8e6e9; background: #10191cba; border: 1px solid #bdd0d268; padding: 4px 7px; font: 12px monospace; pointer-events: none; }
+.ash-nameplate.is-target { color: #fff1c6; border-color: #e0b079; background: #312413ed; }

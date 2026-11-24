@@ -20,7 +20,8 @@ import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnloc
 import { storyView, mapView, codexView, campaignResult } from './campaign-view.js';
 import { startPresence } from './presence-live.js';
 import { initialJourney, isAshGate } from './route.js';
-import { profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
+import { opensWorldHunt, worlds } from './worlds.js';
+import { blocksHuntReturn, profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
 import { bossMove } from './world/bot-profile.js';
 import { duelHud, installDialogKeys, movePicker } from './game-ui.js';
 import './game-ui.css';
@@ -47,13 +48,23 @@ function assertCurrentGuest() {
 const BOT_GENERATION = 'demon-duels:rival-generation';
 const BOSS_GENERATIONS = 'demon-duels:boss-generations';
 const activeRoomKey = 'demon-duels:active';
-export const hasAshSeal = () => readCampaign(localStorage, client.key).wins.some((win) => win.bossId === 0);
+export const getWorldCampaign = () => s.campaign;
+export const hasAshSeal = () => getWorldCampaign().wins.some((win) => win.bossId === 0);
 const botFor = (generation) => new ArenaClient(localKey(generation ? 'rival-' + generation : 'rival'));
 const bossFor = (generation) => new ArenaClient(localKey('boss-' + generation));
 const roomBotKey = (room) => 'demon-duels:room-bot:' + room;
 const ASSET = import.meta.env.BASE_URL + 'art/';
 const sound = new PitSound(import.meta.env.BASE_URL + 'audio/');
-export const setExploring = (active) => sound.unlock(!active && s.sound);
+let worldName = null;
+let worldUnavailable = false;
+export function setWorldUnavailable() {
+  worldUnavailable = true;
+  draw();
+}
+export function setExploring(active, name) {
+  if (name) worldName = name;
+  sound.unlock(!active && s.sound);
+}
 const emittedSettlements = new Set();
 const s = {
   mode: params.has('room') ? 'chain' : 'landing',
@@ -110,7 +121,7 @@ function campaignPage() {
 
 function bossOutcome() {
   const boss = campaignBoss();
-  if (ashGate || boss === null || s.duel?.phase !== 3 || !emittedSettlements.has(fightId()) || !participant() || s.playing || guardianFinisher.pending) return '';
+  if (worldName || boss === null || s.duel?.phase !== 3 || !emittedSettlements.has(fightId()) || !participant() || s.playing || guardianFinisher.pending) return '';
   return campaignResult(boss, keyed(s.duel.winner, client.key), s.campaign, button);
 }
 
@@ -128,6 +139,10 @@ function isBoundBossSettlement(detail, duel) {
 }
 let liveSettlement;
 let ashEncounter = null;
+const returnWorldName = () => ashEncounter?.worldName ?? worldName;
+const worldReturnBlocked = (profile) => blocksHuntReturn({
+  worldMounted: Boolean(worldName), profile, unsettled: activeDuel() || checkingBossSettlement(),
+});
 let hostingRival = false;
 const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
 const guardianFinisher = bossFinisher(window, finishers, (campaign, duel) => {
@@ -158,7 +173,7 @@ function battlefield() {
   const [player, opponent] = fighterKinds().map((kind, side) => ({
     label: side ? (s.mode === 'practice' || s.solo || Number.isInteger(s.requestedOpponent) ? 'GUARDIAN' : 'CHALLENGER') :
       s.duel && s.duel.phase !== 0 && !participant() ? 'PLAYER ONE' : 'HUNTER',
-    name: demons[kind]?.name || 'Awaiting stake',
+    name: demons[kind ?? (side ? s.requestedOpponent : null)]?.name || 'Awaiting stake',
     card: demons[kind]?.type,
     detail: frame ? moves[result.moves[side]].name + (frame.attacks > side ? ' / ' + result.score[side] + ' POWER' : '') :
       side === 0 && moveLocked() ? moves[s.move].name + ' / SEALED' : (phase === 'seal' || phase === 'crit') && s.mode !== 'practice' ? 'HIDDEN' : '',
@@ -221,7 +236,7 @@ function resultPanel() {
     '</span><h2>' + title + '</h2><div class="damage">' + line + '</div></div><div class="actions">' +
     (s.result && !s.returnToMap ? button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') : '') +
     button('replay', 'Replay fight', 'text') + button('duel-receipt', 'Details', 'text') +
-    button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow') + '</div></div>';
+    (returnWorldName() && s.returnToMap ? '' : button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow')) + '</div></div>';
 }
 
 function resultReceipt(both) {
@@ -242,7 +257,7 @@ function controls() {
   if (s.duel?.phase === 3) return '<div class="control"><h2>Reading the settlement…</h2></div>';
   if (s.mode === 'landing') return '<div class="control intro"><div><span class="eyebrow">THE STAKES ARE REAL. THE SOL IS NOT.</span><h2>One demon in. Two demons out.</h2><p>Get a free starter pack and stake one demon against the bot. No wallet extension or real SOL.</p></div><div class="actions">' +
     button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') + button('practice', 'Offchain tutorial', 'secondary', 'spark') +
-    '<a class="button secondary" href="?world=3d">Enter Ash Gate (3D)</a>' +
+    (worldUnavailable ? '' : '<a class="button secondary" href="?world=3d">Enter Ash Gate (3D)</a>') +
     button('enter', 'Open devnet vault', 'text') + '</div></div>';
   if (s.mode === 'practice') return '<div class="control"><div class="control-title"><div><span class="eyebrow">OFFCHAIN PRACTICE · NO REAL STAKES</span><h2>' +
     (s.practiceCards.length ? 'Seal your move' : 'Summon your starter pack') + '</h2></div>' + button(s.returnToMap ? 'return-map' : 'leave', s.returnToMap ? 'Return to map' : 'Exit practice', 'text') + '</div>' +
@@ -254,7 +269,7 @@ function controls() {
     (participant() && Date.now() >= s.duel.deadline ? button('refund', 'Release both stakes', 'secondary') : '') + '</div>';
   if (s.duel?.phase === 1) {
     if (!participant()) return '<div class="control"><h2>Duel in progress</h2><p>Both players staked. Their moves stay hidden until reveal.</p></div>';
-    return '<div class="control"><div class="control-title"><div><span class="eyebrow">02 / MAGICBLOCK PRIVATE ER</span><h2>' + (moveLocked() ? 'Your move is sealed.' : 'Seal your move') + '</h2></div>' +
+    return '<div class="control" data-chain-moves><div class="control-title"><div><span class="eyebrow">02 / MAGICBLOCK PRIVATE ER</span><h2>' + (moveLocked() ? 'Your move is sealed.' : 'Seal your move') + '</h2></div>' +
       (moveLocked() ? button('resolve', 'Check for reveal', 'secondary', 'lock') : '') + '</div>' +
       (moveLocked() ? '<p>Only your wallet can read your move until both are locked.</p>' : (s.retrySeal !== null
         ? button('move:' + s.retrySeal, 'Retry ' + moves[s.retrySeal].name, 'primary', 'lock') : moveSelector())) +
@@ -269,9 +284,9 @@ function controls() {
     '<p>Open a fresh guest wallet with a free starter pack. Your previous wallet and campaign progress stay in this browser.</p></div><div class="actions">' +
     button('recover-guest', 'Get a fresh starter pack', 'primary', 'box') + '</div></div>';
   if (s.quick && !s.room) return '<div class="control"><div><span class="eyebrow">SOLANA DEVNET / QUICK DUEL</span><h2>' +
-    (s.busy ? 'Preparing your duel…' : 'Quick duel paused') + '</h2><p>' +
+    (s.busy ? 'Preparing your duel…' : 'Resume duel setup') + '</h2><p>' +
     (s.busy ? 'Setting up a guest wallet, starter cards and a bot opponent.' : 'Retry setup, open your vault, or play the offchain tutorial.') + '</p></div>' +
-    (s.busy ? '' : '<div class="actions">' + button('quick-duel', 'Retry quick duel', 'primary') + button('enter', 'Open devnet vault') +
+    (s.busy ? '' : '<div class="actions">' + button('quick-duel', 'Resume setup', 'primary') + button('enter', 'Open devnet vault') +
       button('practice', 'Offchain tutorial', 'text') + '</div>') + '</div>';
   const card = anyCard();
   if (!card && s.owned.length) return '<div class="control"><div><h2>All demons are staked</h2><p>Finish or cancel your active duel to use your cards again.</p></div></div>';
@@ -283,7 +298,7 @@ function controls() {
   return '<div class="control"><div><span class="eyebrow">01 / ONCHAIN CARD ESCROW</span><h2>' + (s.duel?.phase === 0 ? 'Match the stake' : 'Choose your challenger') +
     '</h2><p>' + (s.duel?.phase === 0 ? 'Pick a demon from your vault and join this duel.' : 'Select one card. The victor keeps both staked demons.') +
     '</p></div><div class="actions">' + (s.duel?.phase === 0 ? button('join', 'Stake & join', 'primary', 'blade') :
-      (campaignBoss() !== null ? button('bot', 'Face ' + demons[campaignBoss()].name, 'primary', 'blade') :
+      (campaignBoss() !== null ? button('bot', 'Stake & face ' + demons[campaignBoss()].name, 'primary', 'blade') :
         button('bot', 'Duel the bot', 'primary', 'blade') + button('create', 'Invite a friend', 'secondary', 'people'))) + '</div></div>';
 }
 
@@ -373,12 +388,15 @@ function feedback() {
 
 function duelScreen() {
   const vault = capturedVault();
+  const destination = returnWorldName();
   const intel = s.returnToMap && ashEncounter?.tells.length ?
     '<section class="control"><div><span class="eyebrow">' + esc(ashEncounter.grade.toUpperCase()) +
-    ' / ASH GATE INTEL</span><ul>' + ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '';
+    ' / ' + esc((destination ?? circles[ashEncounter.circle]?.realm ?? 'Guardian').toUpperCase()) + ' INTEL</span><ul>' +
+    ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '';
   return '<main class="duel-screen">' + battlefield() +
     '<nav class="duel-tools" aria-label="Duel options">' +
-      (ashGate && s.returnToMap ? button('return-map', 'Return to Ash Gate', 'secondary', 'arrow') :
+      (s.returnToMap && worldReturnBlocked(ashEncounter) ? '' :
+        destination && s.returnToMap ? button('return-map', 'Return to ' + esc(destination), 'secondary', 'arrow') :
         button('map', 'Map', 'secondary', 'arrow')) +
       '<button type="button" class="button secondary" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
       icon(s.sound ? 'volume' : 'mute', 16) + '</button>' +
@@ -389,7 +407,7 @@ function duelScreen() {
       (vault ? '' : intel) + networkProgress() + vault + '</div></main>';
 }
 
-let dialogReturnAction;
+let dialogReturnAction, pickableRoom;
 function draw() {
   const page = campaignPage();
   const fallbackScroll = app.querySelector('.duel-text-only')?.scrollTop;
@@ -418,6 +436,9 @@ function draw() {
     (previous || (s.modal ? app.querySelector('.modal .close') : null))?.focus({ preventScroll: true });
   }
   syncDuelView();
+  const pickable = s.duel?.phase === 1 && participant() && !moveLocked() && !s.busy ? s.duel.key.toString() : null;
+  if (pickable && pickable !== pickableRoom) app.querySelector('[data-chain-moves]')?.scrollIntoView({ block: 'nearest' });
+  pickableRoom = pickable;
   if (fallbackScroll) {
     const fallback = app.querySelector('.duel-text-only');
     if (fallback) fallback.scrollTop = fallbackScroll;
@@ -604,7 +625,8 @@ async function prepareBot() {
   let card = cards[0];
   if (await bot.balance() < 0.02) await client.transfer(bot.key, 0.03);
   if (!card) {
-    await ensurePack(bot, pack);
+    progress('Opening the bot’s MagicBlock VRF starter pack…');
+    await ensurePack(bot, pack, until, progress);
     card = (await bot.inventory()).find((item) => keyed(item.lock, ZERO));
   }
   if (!card) throw new Error('The bot’s vault is not ready. Retry to prepare a card.');
@@ -641,9 +663,10 @@ export async function ensureBossCard(demonId) {
         const topUp = packFunds - await bot.balance();
         if (topUp > 0) await client.transfer(bot.key, topUp);
       }
-      localStorage.setItem(BOSS_GENERATIONS, String(++total));
-      await ensurePack(bot, pack);
+      progress('Opening the ' + (returnWorldName() ?? circles[demonId]?.realm ?? 'Ash Gate') + ' rival pack with MagicBlock VRF…');
+      await ensurePack(bot, pack, until, progress);
       const cards = (await readCards(keys(bot))).filter((card) => stakeable(card, bot));
+      localStorage.setItem(BOSS_GENERATIONS, String(++total));
       return { bot, generation, cards };
     },
     async fund(bot) {
@@ -814,7 +837,7 @@ async function startQuickDuel() {
       if (s.duel.phase < 3) {
         if (ashGate && s.requestedOpponent !== null && (!s.solo || loadRoomBot(s.room)?.demonId !== s.requestedOpponent)) {
           setRoom(null);
-          throw new Error('You have another open duel. Finish or cancel it from the arena before striking the Warden.');
+          throw new Error('You have another open duel. Finish or cancel it from the arena before striking this guardian.');
         }
         if (s.solo && s.duel.phase === 0) await readyBot();
         return;
@@ -825,7 +848,8 @@ async function startQuickDuel() {
     await prepareGuest(client, progress);
     await refreshWallet();
     if (!anyCard()) throw new Error('This guest vault has no unstaked cards.');
-    await startDuel(true, s.requestedOpponent ?? undefined);
+    if (ashEncounter) s.quick = false;
+    else await startDuel(true, s.requestedOpponent ?? undefined);
   });
 }
 
@@ -917,6 +941,10 @@ async function action(name) {
   if (name.startsWith('boss:')) {
     const id = Number(name.slice(5));
     if (!Number.isInteger(id) || !circles[id] || circleState(s.campaign, id) === 'locked') return;
+    if (opensWorldHunt(id, { rendererUnavailable: worldUnavailable, hasOpenDuel: activeDuel() || readKey(localStorage.getItem(activeRoomKey)) })) {
+      location.href = '?world=3d&circle=' + id;
+      return;
+    }
     window.dispatchEvent(new CustomEvent('demon-duels:launch', { detail: { opponentKind: id, mode: 'chain', returnToMap: true } }));
     return;
   }
@@ -929,18 +957,20 @@ async function action(name) {
   }
   if (name === 'return-map') {
     if (guardianFinisher.pending) await presentFinisher();
-    const savedAsh = s.room && savedProfile(localStorage, s.room);
-    const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof };
+    const savedWorld = s.room && savedProfile(localStorage, s.room);
+    if (worldReturnBlocked(savedWorld)) return;
+    const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof,
+      circle: savedWorld?.circle ?? ashEncounter?.circle };
     if (activeDuel() || checkingBossSettlement()) {
       showMap();
-      if (!ashGate) return;
+      if (!worldName && !savedWorld) return;
     } else {
       setRoom(null); s.mode = 'landing'; s.returnToMap = false; s.requestedOpponent = null;
       ashEncounter = null;
       showMap();
     }
     window.dispatchEvent(new CustomEvent('demon-duels:return', { detail }));
-    if (!ashGate && savedAsh) location.href = '?world=3d';
+    if (!worldName && savedWorld) location.href = '?world=3d&circle=' + savedWorld.circle;
     return;
   }
   if (name === 'replay' && roundResult()) {
@@ -1091,11 +1121,13 @@ async function action(name) {
 
 // Campaign integration: launch a selected boss without coupling the arena to a map.
 export function launchFight(options = {}) {
-  const { opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade, tells } = options;
+  const { opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade, tells, circle } = options;
   if (combatTutorial.active || s.busy || s.playing || hostingRival || guardianFinisher.pending) return false;
   if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
-  const hunt = ashGate ? profileFor({ mode, opponentKind, grade, tells }) : null;
+  const profile = ashGate ? profileFor({ mode, opponentKind, grade, tells, circle, worldName }) : null;
+  const hunt = profile && Object.hasOwn(worlds, profile.circle) && circleState(s.campaign, profile.circle) !== 'locked' ? profile : null;
+  if (circle !== undefined && !hunt) return false;
   const deferLaunch = () => combatTutorial.defer(mode, () => launchFight(options),
     () => cancelTutorialLaunch(window, returnToMap));
   if (activeDuel()) {
@@ -1176,7 +1208,7 @@ function launchRivalDuel(room, join, returnToMap) {
 }
 
 async function rivalReady() {
-  if (guardianFinisher.pending) return { ok: false, reason: 'Claim your Ash Gate seal before challenging a hunter.' };
+  if (guardianFinisher.pending) return { ok: false, reason: 'Claim your guardian seal before challenging a hunter.' };
   assertCurrentGuest();
   if (client !== presenceGuest) return { ok: false, reason: 'Reload to challenge hunters with your recovered guest.' };
   if (combatTutorial.active || s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
@@ -1268,7 +1300,9 @@ setInterval(() => {
   if (!elapsed || !s.waitSince) return;
   const seconds = Math.floor((Date.now() - s.waitSince) / 1000);
   elapsed.textContent = seconds + 's';
-  if (seconds >= 45) app.querySelector('[data-delay-hint]').textContent = 'Devnet is slow. Keep this tab open; check for reveal again if needed.';
+  if (seconds >= 45) app.querySelector('[data-delay-hint]').textContent = s.room
+    ? 'Devnet is slow. Keep this tab open; check for reveal again if needed.'
+    : 'Devnet is slow. Keep this tab open; setup continues before any card is staked.';
 }, 1000);
 setInterval(async () => {
   if (combatTutorial.active || !safeMode() || s.busy || polling || document.hidden) return;

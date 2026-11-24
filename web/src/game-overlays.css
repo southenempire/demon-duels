@@ -36,12 +36,13 @@
 .dd-load-track.is-determinate i { animation: none; }
 @keyframes dd-load { to { transform: translateX(150%); } }
 .dd3d-hud { position: absolute; inset: 0; z-index: 3; overflow: hidden; }
-.dd-vitals { position: absolute; top: max(26px, env(safe-area-inset-top)); left: max(28px, env(safe-area-inset-left)); width: min(240px, 40%); }
+.dd-world-summary { position: absolute; top: max(26px, env(safe-area-inset-top)); left: max(28px, env(safe-area-inset-left)); width: min(300px, 60%); }
+.dd-vitals { max-width: 240px; }
 .dd-vitals h1 { font: 400 32px/1.4 var(--dd-serif); color: var(--dd-white); letter-spacing: .01em; margin: 3px 0 10px; }
 .dd-health { height: 5px; width: 100%; background: #101817b3; border: 1px solid #d3ddca4d; transform: skewX(-18deg); overflow: hidden; }
 .dd-health i { display: block; height: 100%; background: #dfe5d7; transition: width .2s ease; }
 .dd-vitals > small { display: block; margin-top: 9px; font: 7px var(--dd-mono); letter-spacing: .13em; color: var(--dd-dim); }
-.dd-objective { position: absolute; top: 165px; left: max(28px, env(safe-area-inset-left)); max-width: min(300px, 60%); padding-left: 16px; border-left: 2px solid #b34a48; }
+.dd-objective { margin-top: 24px; padding-left: 16px; border-left: 2px solid #b34a48; }
 .dd-objective p { font: 13px/1.7 var(--dd-serif); margin-top: 5px; }
 .dd-hud-actions { position: absolute; top: max(28px, env(safe-area-inset-top)); right: max(28px, env(safe-area-inset-right)); display: grid; justify-items: end; gap: 9px; }
 .dd-hud-actions button, .dd-hud-actions a { padding: 6px 0 6px 14px; border: 0; border-bottom: 1px solid var(--dd-line); background: #0b121155; text-decoration: none; color: var(--dd-white); font: 8px/1.8 var(--dd-mono); letter-spacing: .08em; }
@@ -101,11 +102,11 @@
 .dd-vault-sigil { width: 72px; text-align: center; font: 35px var(--dd-serif); color: #a4b19e; }
 .dd-empty { color: var(--dd-dim); }
 @media (max-width: 740px) {
-  .dd-vitals { top: 22px; left: 20px; width: 42%; }
+  .dd-world-summary { top: 22px; left: 20px; width: min(300px, 65%); }
+  .dd-vitals { max-width: min(240px, 42vw); }
   .dd-vitals h1 { font-size: 25px; }
   .dd-vitals .dd-kicker { font-size: 7px; }
   .dd-vitals > small { font-size: 6px; }
-  .dd-objective { top: 145px; left: 20px; max-width: 65%; }
   .dd-objective .dd-kicker { font-size: 7px; }
   .dd-objective p { font-size: 11px; }
   .dd-hud-actions { top: 22px; right: 20px; }

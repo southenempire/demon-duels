@@ -208,7 +208,7 @@ export function figure(scene, kind, tint) {
   }
   if (boss) root.scale.setScalar(1.48);
 
-  function pose(time, speed = 0, crouch = 0, strike = 0, climbing = 0) {
+  function pose(time, speed = 0, crouch = 0, strike = 0, climbing = 0, block = 0) {
     const swing = Math.sin(time) * speed, attack = Math.sin(strike * Math.PI), mantle = Math.sin(climbing * Math.PI);
     body.position.y = -.34 * crouch + Math.abs(swing) * .043 + Math.sin(time * .45) * .012;
     body.rotation.x = -.20 * crouch - speed * .09 - attack * .23 - mantle * .16;
@@ -217,7 +217,7 @@ export function figure(scene, kind, tint) {
     cloth.rotation.z = swing * .08;
     for (let i = 0; i < 2; i++) {
       const stride = swing * (i ? 1 : -1);
-      arms[i].rotation.x = -stride * .61 - crouch * .46 - (i ? attack * 1.66 : 0) - mantle * (i ? 2.4 : 2.81);
+      arms[i].rotation.x = -stride * .61 - crouch * .46 - (i ? attack * 1.66 + Math.sin(block * Math.PI) * 1.5 : 0) - mantle * (i ? 2.4 : 2.81);
       arms[i].rotation.z = (i ? 1 : -1) * (.16 + (i ? attack * .48 : 0));
       legs[i].rotation.x = stride * .60 - crouch * .57 - mantle * (i ? .51 : .89);
       knees[i].rotation.x = Math.max(0, -stride * .59) + crouch * .90 + mantle * .62;
@@ -225,5 +225,17 @@ export function figure(scene, kind, tint) {
     if (hiddenBlade) hiddenBlade.position.y = -.39 - .25 * attack;
   }
 
-  return { root, body, pose };
+  function dispose() {
+    const geometries = new Set(), materials = new Set();
+    body.traverse(({ geometry, material }) => {
+      if (geometry && geometry !== cube && geometry !== sphere) geometries.add(geometry);
+      if (material) materials.add(material);
+    });
+    for (const geometry of geometries) geometry.dispose();
+    for (const material of materials) material.dispose();
+    fabric.map?.dispose();
+    root.removeFromParent();
+  }
+
+  return { root, body, pose, dispose };
 }
