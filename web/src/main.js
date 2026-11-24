@@ -1,22 +1,25 @@
 import './style.css';
 import './finishers/style.css';
-import { matchesBossStake, previewFinisher } from './finishers/index.js';
+import { bossFinisher, matchesBossStake, previewFinisher, settlementCinematics } from './finishers/index.js';
 import './arena.css';
 import { PublicKey } from '@solana/web3.js';
 import { ArenaClient, PROGRAM, ZERO, addressExplorer, cardKey, explorer, localKey, packKey, proof, readCard, readCards, readDuel, readRound, until, sleep } from './chain.js';
 import { icon } from './icons.js';
 import { botGeneration, ensurePack, prepareGuest, recoverGuestPack, stockBossCard } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
-import { characters, characterArt } from './characters.js';
+import { characters } from './characters.js';
 import { arenaCardSide, confirmedFight, confirmedSettlement, fightReason, privateMoveRetryMessage } from './fight.js';
 import { mount as mountDuel } from './duel3d/index.js';
 import { bossHeight } from './duel3d/fighter.js';
 import { meleeTimeline } from './duel3d/timeline.js';
 import './duel3d/style.css';
 import { PitSound } from './sound.js';
-import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin, carryCampaign } from './campaign.js';
+import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, prepareBossWin, carryCampaign } from './campaign.js';
 import { storyView, mapView, codexView, campaignResult } from './campaign-view.js';
 import { startPresence } from './presence-live.js';
+import { initialJourney, isAshGate } from './route.js';
+import { profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
+import { bossMove } from './world/bot-profile.js';
 import { duelHud, installDialogKeys, movePicker } from './game-ui.js';
 import './game-ui.css';
 import './game-overlays.css';
@@ -24,6 +27,7 @@ import './game-overlays.css';
 const app = document.getElementById('app');
 installDialogKeys(app);
 const params = new URLSearchParams(location.search);
+const ashGate = isAshGate(params);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
 const PLAYER_GENERATION = 'demon-duels:player-generation';
 const playerFor = (generation, options) => {
@@ -40,15 +44,17 @@ function assertCurrentGuest() {
 const BOT_GENERATION = 'demon-duels:rival-generation';
 const BOSS_GENERATIONS = 'demon-duels:boss-generations';
 const activeRoomKey = 'demon-duels:active';
+export const hasAshSeal = () => readCampaign(localStorage, client.key).wins.some((win) => win.bossId === 0);
 const botFor = (generation) => new ArenaClient(localKey(generation ? 'rival-' + generation : 'rival'));
 const bossFor = (generation) => new ArenaClient(localKey('boss-' + generation));
 const roomBotKey = (room) => 'demon-duels:room-bot:' + room;
 const ASSET = import.meta.env.BASE_URL + 'art/';
 const sound = new PitSound(import.meta.env.BASE_URL + 'audio/');
+export const setExploring = (active) => sound.unlock(!active && s.sound);
 const emittedSettlements = new Set();
 const s = {
   mode: params.has('room') ? 'chain' : 'landing',
-  journey: params.has('room') ? 'arena' : localStorage.getItem('demon-duels:story-seen') ? 'map' : 'story',
+  journey: initialJourney(params, localStorage.getItem('demon-duels:story-seen')),
   campaign: readCampaign(localStorage, client.key), circle: 0,
   balance: null, owned: [], selected: null, practiceCards: [], practiceStake: 0, practiceRival: 1,
   result: null, move: null, duel: null, busy: null, notice: '', modal: null, quick: false,
@@ -63,7 +69,7 @@ s.circle = Math.min(s.campaign.wins.length, circles.length - 1);
 const short = (key) => key?.toString().slice(0, 4) + '…' + key?.toString().slice(-4);
 const keyed = (value, key) => Boolean(value && key && value.equals(key));
 function clearSavedRoom(room) {
-  if (localStorage.getItem(activeRoomKey) === room?.toBase58()) localStorage.removeItem(activeRoomKey);
+  if (localStorage.getItem(activeRoomKey) === room?.toString()) localStorage.removeItem(activeRoomKey);
 }
 const anyCard = () => s.owned.find((card) => keyed(card.key, s.selected) && keyed(card.lock, ZERO)) ??
   s.owned.find((card) => keyed(card.lock, ZERO));
@@ -80,6 +86,7 @@ const participant = () => keyed(s.duel?.p1, client.key) || keyed(s.duel?.p2, cli
 const moveLocked = () => s.move !== null;
 const activeDuel = () => Boolean(s.room && (!s.duel || s.duel.phase < 3 && participant()));
 const campaignBoss = () => s.mode === 'chain' && s.returnToMap && Number.isInteger(s.requestedOpponent) ? s.requestedOpponent : null;
+const roomBoss = (room) => localStorage.getItem(encounterKey(room)) ?? String(savedProfile(localStorage, room)?.opponentKind ?? '');
 
 function showMap() {
   localStorage.setItem('demon-duels:story-seen', '1');
@@ -98,13 +105,14 @@ function campaignPage() {
 
 function bossOutcome() {
   const boss = campaignBoss();
-  if (boss === null || s.duel?.phase !== 3 || !participant() || s.playing) return '';
+  if (ashGate || boss === null || s.duel?.phase !== 3 || !emittedSettlements.has(fightId()) || !participant() || s.playing || guardianFinisher.pending) return '';
   return campaignResult(boss, keyed(s.duel.winner, client.key), s.campaign, button);
 }
 
 const roundResult = () => s.result || (bossEncounter() && !emittedSettlements.has(fightId()) ? null : confirmedFight(s.duel, mySide()));
 const fightId = () => s.result ? 'practice:' + s.resultId : s.duel?.key?.toString();
 const bossEncounter = () => s.mode === 'chain' && s.solo && Number.isInteger(s.requestedOpponent) && participant();
+const checkingBossSettlement = () => bossEncounter() && s.duel?.phase === 3 && !emittedSettlements.has(fightId());
 function isBoundBossSettlement(detail, duel) {
   if (!bossEncounter() || !keyed(duel.p1, client.key)) return false;
   try {
@@ -114,25 +122,14 @@ function isBoundBossSettlement(detail, duel) {
   } catch { return false; }
 }
 let liveSettlement;
-let liveFinisherDone, stealthGrade = 'shadow';
-const pendingFinishers = new Map();
-function startFinisher() {
-  const pendingFinisher = pendingFinishers.get(fightId());
-  if (!pendingFinisher || pendingFinisher.request) return;
-  const { duel, bossId: opponentKind } = pendingFinisher.result;
-  const request = { opponentKind, grade: pendingFinisher.grade, duel };
-  pendingFinisher.request = request;
-  window.dispatchEvent(new CustomEvent('demon-duels:finisher', { detail: request }));
-}
-
-function completeFinisher() {
-  startFinisher();
-  const request = pendingFinishers.get(fightId())?.request;
-  if (!request) return;
-  liveFinisherDone = request;
-  try { window.dispatchEvent(new CustomEvent('demon-duels:finisher-done', { detail: request })); }
-  finally { liveFinisherDone = undefined; }
-}
+let ashEncounter = null;
+let hostingRival = false;
+const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
+const guardianFinisher = bossFinisher(window, finishers, (campaign, duel) => {
+  s.campaign = campaign;
+  clearSavedRoom(duel);
+});
+const presentFinisher = () => guardianFinisher.play(guardianFinisher.pending?.duel ?? fightId());
 const fighterKinds = () => [
   s.mode === 'practice' ? s.practiceStake : s.mode === 'landing' ? 0 : s.staked?.kind ?? anyCard()?.kind,
   s.mode === 'practice' ? s.practiceRival : s.mode === 'landing' ? 1 : s.opposing?.kind,
@@ -240,6 +237,7 @@ function controls() {
   if (s.duel?.phase === 3) return '<div class="control"><h2>Reading the settlement…</h2></div>';
   if (s.mode === 'landing') return '<div class="control intro"><div><span class="eyebrow">THE STAKES ARE REAL. THE SOL IS NOT.</span><h2>One demon in. Two demons out.</h2><p>Get a free starter pack and stake one demon against the bot. No wallet extension or real SOL.</p></div><div class="actions">' +
     button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') + button('practice', 'Offchain tutorial', 'secondary', 'spark') +
+    '<a class="button secondary" href="?world=3d">Enter Ash Gate (3D)</a>' +
     button('enter', 'Open devnet vault', 'text') + '</div></div>';
   if (s.mode === 'practice') return '<div class="control"><div class="control-title"><div><span class="eyebrow">OFFCHAIN PRACTICE · NO REAL STAKES</span><h2>' +
     (s.practiceCards.length ? 'Seal your move' : 'Summon your starter pack') + '</h2></div>' + button(s.returnToMap ? 'return-map' : 'leave', s.returnToMap ? 'Return to map' : 'Exit practice', 'text') + '</div>' +
@@ -366,16 +364,20 @@ function feedback() {
 
 function duelScreen() {
   const vault = capturedVault();
+  const intel = s.returnToMap && ashEncounter?.tells.length ?
+    '<section class="control"><div><span class="eyebrow">' + esc(ashEncounter.grade.toUpperCase()) +
+    ' / ASH GATE INTEL</span><ul>' + ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '';
   return '<main class="duel-screen">' + battlefield() +
     '<nav class="duel-tools" aria-label="Duel options">' +
-      button('map', 'Map', 'secondary', 'arrow') +
+      (ashGate && s.returnToMap ? button('return-map', 'Return to Ash Gate', 'secondary', 'arrow') :
+        button('map', 'Map', 'secondary', 'arrow')) +
       '<button type="button" class="button secondary" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
       icon(s.sound ? 'volume' : 'mute', 16) + '</button>' +
       button('rules', 'Rules', 'secondary') +
       (safeMode() ? button('wallet', 'Wallet', 'secondary', 'wallet') : '') +
     '</nav><p class="duel-no-webgl" hidden>3D combat is unavailable. You can still play and see the duel result.</p>' +
     '<div class="duel-panels' + (vault ? ' is-result' : '') + '">' + feedback() + stakePicker() + controls() +
-      networkProgress() + vault + '</div></main>';
+      (vault ? '' : intel) + networkProgress() + vault + '</div></main>';
 }
 
 let dialogReturnAction;
@@ -432,13 +434,12 @@ async function playFight() {
   s.frame = { stage: 'reveal', attacks: 0 };
   draw();
   if (!duelView) {
-    completeFinisher();
+    await guardianFinisher.play(fightId());
+    if (sequence !== s.sequence) return;
     s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); return;
   }
   for (const frame of meleeTimeline(result)) {
     if (sequence !== s.sequence) return;
-    if (frame.stage === 'counter') startFinisher();
-    if (frame.stage === 'spoils') completeFinisher();
     s.frame = frame;
     if (frame.sound && !(s.duel && !participant() && (frame.sound === 'victory' || frame.sound === 'defeat'))) audio(frame.sound);
     if (frame.stage === 'finish' && !s.result && participant() && result.winner === 0) audio('transfer');
@@ -447,6 +448,8 @@ async function playFight() {
     if (frame.stage === 'spoils') animateCapture();
     await sleep(reduced ? Math.min(frame.duration, 1150) : frame.duration);
   }
+  if (sequence !== s.sequence) return;
+  await guardianFinisher.play(fightId());
   if (sequence !== s.sequence) return;
   s.playing = false;
   draw();
@@ -495,13 +498,28 @@ async function refreshRoom() {
     const detail = settled && !s.solo ? { ...settled, mode: 'pvp' } : settled;
     if (detail && !emittedSettlements.has(detail.duel)) {
       emittedSettlements.add(detail.duel);
-      if (isBoundBossSettlement(detail, d)) liveSettlement = detail;
+      const boundBoss = isBoundBossSettlement(detail, d);
+      const profile = boundBoss ? savedProfile(localStorage, room) : null;
+      if (boundBoss) detail.bossBound = true;
+      if (boundBoss && detail.won && roomBoss(room) === String(detail.opponentKind)) {
+        const commit = prepareBossWin(localStorage, owner.key, {
+          bossId: detail.opponentKind, phase: d.phase, player: detail.player, winner: detail.winner,
+          opponent: d.p2.toString(), bot: loadRoomBot(room).bot.key.toString(), opposingKind: detail.opponentKind,
+          duel: detail.duel, mode: detail.mode,
+        });
+        if (commit) guardianFinisher.queue(detail, profile?.grade ?? 'shadow', commit);
+      }
+      if (boundBoss && (guardianFinisher.pending === detail || !detail.won && previous !== undefined)) {
+        liveSettlement = detail;
+      }
       try { window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail })); }
       finally { liveSettlement = undefined; }
+      if (guardianFinisher.pending === detail && s.journey !== 'arena') await presentFinisher();
+      else if (previous === undefined && finishers.has(detail.duel)) {
+        s.playedId = null; s.frame = null;
+      }
     }
-    if (pendingFinishers.has(d.key.toString())) {
-      if (previous === undefined) { s.playedId = null; s.frame = null; }
-    } else clearSavedRoom(room);
+    if (guardianFinisher.pending?.duel !== room.toString()) clearSavedRoom(room);
   }
   if (d.phase === 4) clearSavedRoom(room);
 }
@@ -523,6 +541,7 @@ async function run(label, action, recoveryMessage) {
 }
 
 function setRoom(key) {
+  guardianFinisher.roomChanged();
   document.querySelectorAll('.capture-card').forEach((card) => card.remove());
   s.sequence++;
   s.playing = false;
@@ -537,8 +556,8 @@ function setRoom(key) {
   s.retrySeal = null;
   const url = new URL(location.href);
   if (key) {
-    const savedBoss = localStorage.getItem(encounterKey(key));
-    if (savedBoss !== null && circles[Number(savedBoss)]) {
+    const savedBoss = roomBoss(key);
+    if (savedBoss !== '' && circles[Number(savedBoss)]) {
       s.requestedOpponent = Number(savedBoss);
       s.returnToMap = true;
     } else {
@@ -666,7 +685,9 @@ async function readyBot(prepared) {
     bot ??= botFor(0);
     if (!keyed(s.duel.p2, bot.key)) return;
     await bot.delegate(s.duel);
-    await bot.lock(s.duel, crypto.getRandomValues(new Uint8Array(1))[0] % 3);
+    const profile = savedProfile(localStorage, s.duel.key);
+    const roll = crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
+    await bot.lock(s.duel, bossMove(profile?.opponentKind, profile?.grade, roll));
   }
 }
 
@@ -690,6 +711,7 @@ export async function startDuel(solo, demonId) {
   if (solo && demonId === campaignBoss()) localStorage.setItem(encounterKey(duel), String(demonId));
   setRoom(duel);
   localStorage.setItem(activeRoomKey, duel.toBase58());
+  if (solo && ashEncounter && ashEncounter.opponentKind === demonId) localStorage.setItem(profileKey(duel), JSON.stringify(ashEncounter));
   if (solo) {
     saveRoomBot(duel, prepared);
     localStorage.setItem('demon-duels:solo:' + duel, '1');
@@ -708,6 +730,8 @@ function restoreRoom() {
     s.solo = localStorage.getItem('demon-duels:solo:' + saved) === '1';
     s.mode = 'chain';
     setRoom(saved);
+    const profile = s.solo && savedProfile(localStorage, saved);
+    if (profile) { ashEncounter = profile; s.requestedOpponent = profile.opponentKind; s.returnToMap = true; }
   }
 }
 
@@ -776,9 +800,14 @@ async function startQuickDuel() {
     if (s.room) {
       await Promise.all([refreshRoom(), refreshWallet()]);
       if (s.duel.phase < 3) {
+        if (ashGate && s.requestedOpponent !== null && (!s.solo || loadRoomBot(s.room)?.demonId !== s.requestedOpponent)) {
+          setRoom(null);
+          throw new Error('You have another open duel. Finish or cancel it from the arena before striking the Warden.');
+        }
         if (s.solo && s.duel.phase === 0) await readyBot();
         return;
       }
+      if (guardianFinisher.pending?.duel === s.room.toString()) return;
       setRoom(null);
     }
     await prepareGuest(client, progress);
@@ -819,7 +848,7 @@ async function action(name) {
   if (name === 'sound') {
     s.sound = !s.sound;
     sound.unlock(s.sound);
-    localStorage.setItem('demon-duels:sound', s.sound ? 'on' : 'off');
+    window.dispatchEvent(new CustomEvent('demon-duels:mute', { detail: { enabled: s.sound } }));
     audio('seal'); draw(); return;
   }
   if (name === 'rules' || name === 'wallet' || name === 'close' || (name === 'duel-receipt' && !s.playing && roundResult())) {
@@ -835,8 +864,9 @@ async function action(name) {
   }
   if (name === 'skip' && s.playing) {
     document.querySelectorAll('.capture-card').forEach((card) => card.remove());
-    s.sequence++;
-    completeFinisher();
+    const sequence = ++s.sequence;
+    await guardianFinisher.play(fightId());
+    if (sequence !== s.sequence) return;
     s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); return;
   }
   if (s.busy || s.playing) return;
@@ -873,15 +903,25 @@ async function action(name) {
   }
   if (name === 'campaign-return') {
     s.modal = null;
-    if (activeDuel()) { showMap(); return; }
+    if (guardianFinisher.pending) await presentFinisher();
+    if (activeDuel() || checkingBossSettlement()) { showMap(); return; }
     setRoom(null); s.requestedOpponent = null; s.returnToMap = false;
     showMap(); return;
   }
   if (name === 'return-map') {
+    if (guardianFinisher.pending) await presentFinisher();
+    const savedAsh = s.room && savedProfile(localStorage, s.room);
     const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof };
-    if (activeDuel()) { showMap(); return; }
-    setRoom(null); s.mode = 'landing'; s.returnToMap = false; s.requestedOpponent = null; showMap();
+    if (activeDuel() || checkingBossSettlement()) {
+      showMap();
+      if (!ashGate) return;
+    } else {
+      setRoom(null); s.mode = 'landing'; s.returnToMap = false; s.requestedOpponent = null;
+      ashEncounter = null;
+      showMap();
+    }
     window.dispatchEvent(new CustomEvent('demon-duels:return', { detail }));
+    if (!ashGate && savedAsh) location.href = '?world=3d';
     return;
   }
   if (name === 'replay' && roundResult()) {
@@ -1027,24 +1067,28 @@ async function action(name) {
 }
 
 // Campaign integration: launch a selected boss without coupling the arena to a map.
-export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade } = {}) {
-  if (s.busy || s.playing) return false;
+export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade, tells } = {}) {
+  if (s.busy || s.playing || hostingRival || guardianFinisher.pending) return false;
   if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
+  const hunt = ashGate ? profileFor({ mode, opponentKind, grade, tells }) : null;
   if (activeDuel()) {
-    if (mode === 'chain' && localStorage.getItem(encounterKey(s.room)) === String(opponentKind)) {
-      s.journey = 'arena'; s.mode = 'chain'; draw(); return true;
+    if (mode === 'chain' && roomBoss(s.room) === String(opponentKind)) {
+      s.journey = 'arena'; s.mode = 'chain';
+      if (hunt) startQuickDuel().catch(() => {});
+      else draw();
+      return true;
     }
     s.notice = 'Finish or cancel your current duel before challenging another guardian.'; draw(); return false;
   }
   const saved = readKey(localStorage.getItem(activeRoomKey));
-  if (mode === 'chain' && saved && localStorage.getItem(encounterKey(saved)) !== String(opponentKind)) {
+  if (mode === 'chain' && saved && roomBoss(saved) !== String(opponentKind)) {
     s.notice = 'Resume or finish your saved duel before challenging this guardian.'; draw(); return false;
   }
   if (mode === 'chain' && circleState(s.campaign, opponentKind) === 'locked') return false;
   s.journey = 'arena';
   setRoom(null);
-  stealthGrade = ['ghost', 'shadow', 'exposed'].includes(grade) ? grade : 'shadow';
+  ashEncounter = hunt;
   s.requestedOpponent = opponentKind; s.returnToMap = returnToMap;
   s.notice = ''; s.solo = false;
   if (mode === 'practice') {
@@ -1052,7 +1096,8 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
     if (!s.practiceCards.length) s.practiceCards = practicePack();
     s.practiceStake = s.practiceCards[0]; s.practiceRival = opponentKind;
     draw();
-  } else {
+  } else if (hunt) startQuickDuel().catch(() => {});
+  else {
     s.mode = 'chain'; s.quick = false;
     run('Preparing your guardian encounter…', async () => {
       restoreRoom();
@@ -1067,26 +1112,6 @@ window.addEventListener('demon-duels:launch', (event) => {
   if (!launchFight(event.detail)) event.preventDefault();
 });
 window.addEventListener('demon-duels:return', showMap);
-window.addEventListener('demon-duels:settled', (event) => {
-  const d = s.duel;
-  const bossId = campaignBoss();
-  if (event.detail !== liveSettlement || event.detail?.mode !== 'chain' || !event.detail.won || event.detail.player !== client.key.toString() ||
-    !d || bossId === null || localStorage.getItem(encounterKey(d.key)) !== String(bossId) || event.detail.duel !== d.key.toString()) return;
-  const savedBot = loadRoomBot(d.key);
-  if (!savedBot || savedBot.demonId !== bossId || circleState(readCampaign(localStorage, client.key), bossId) !== 'available') return;
-  const result = { bossId, phase: d.phase, player: client.key.toString(), winner: d.winner.toString(),
-    opponent: (mySide() ? d.p1 : d.p2).toString(), bot: savedBot.bot.key.toString(), opposingKind: s.opposing?.kind,
-    duel: d.key.toString(), mode: event.detail.mode };
-  pendingFinishers.set(result.duel, { result, grade: stealthGrade });
-});
-window.addEventListener('demon-duels:finisher-done', ({ detail }) => {
-  if (!detail || detail !== liveFinisherDone || detail.duel !== fightId()) return;
-  const pendingFinisher = pendingFinishers.get(detail.duel);
-  if (!pendingFinisher || detail !== pendingFinisher.request) return;
-  s.campaign = persistBossWin(localStorage, client.key, pendingFinisher.result);
-  pendingFinishers.delete(detail.duel);
-  clearSavedRoom(s.room);
-});
 window.addEventListener('storage', (event) => {
   if (event.key !== campaignKey(client.key)) return;
   s.campaign = readCampaign(localStorage, client.key);
@@ -1101,6 +1126,7 @@ function launchRivalDuel(room, join, returnToMap) {
     s.notice = 'Resume or finish your saved duel before opening another hunter duel.';
     draw(); return false;
   }
+  ashEncounter = null;
   setRoom(room);
   s.journey = 'arena';
   s.mode = 'chain'; s.solo = false; s.quick = false; s.notice = '';
@@ -1119,11 +1145,17 @@ function launchRivalDuel(room, join, returnToMap) {
 }
 
 async function rivalReady() {
+  if (guardianFinisher.pending) return { ok: false, reason: 'Claim your Ash Gate seal before challenging a hunter.' };
   assertCurrentGuest();
   if (client !== presenceGuest) return { ok: false, reason: 'Reload to challenge hunters with your recovered guest.' };
   if (s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
   const active = readKey(localStorage.getItem(activeRoomKey));
+  const boss = active && roomBoss(active);
   const open = active && await readDuel(active).catch(() => null);
+  if (boss && (!open || open.phase === 3 && keyed(open.p1, client.key) && keyed(open.winner, client.key)
+      && !readCampaign(localStorage, client.key).wins.some((win) => win.bossId === Number(boss)))) {
+    return { ok: false, reason: 'Claim your guardian seal before challenging a hunter.' };
+  }
   if (open && open.phase < 3 && (keyed(open.p1, client.key) || keyed(open.p2, client.key))) {
     return { ok: false, reason: 'Finish or cancel your open duel first.' };
   }
@@ -1137,12 +1169,16 @@ async function rivalReady() {
 async function hostRivalDuel(stillWanted) {
   const ready = await rivalReady();
   if (!ready.ok) throw new Error(ready.reason);
+  if (s.busy || s.playing || hostingRival || guardianFinisher.pending) throw new Error('Finish your current duel first.');
   if (!stillWanted()) throw new Error('The other hunter backed out before you staked.');
   assertCurrentGuest();
-  const { duel } = await client.openDuel(anyCard().key);
-  audio('stake');
-  localStorage.setItem(activeRoomKey, duel.toBase58());
-  return duel.toBase58();
+  hostingRival = true;
+  try {
+    const { duel } = await client.openDuel(anyCard().key);
+    audio('stake');
+    localStorage.setItem(activeRoomKey, duel.toBase58());
+    return duel.toBase58();
+  } finally { hostingRival = false; }
 }
 
 async function verifyRivalDuel(room, challenger) {
@@ -1155,6 +1191,11 @@ async function verifyRivalDuel(room, challenger) {
 
 const presenceGuest = client;
 startPresence({ keypair: presenceGuest.keypair, host: hostRivalDuel, check: rivalReady, verify: verifyRivalDuel });
+window.addEventListener('demon-duels:mute', ({ detail }) => {
+  if (typeof detail?.enabled !== 'boolean') return;
+  s.sound = detail.enabled;
+  localStorage.setItem('demon-duels:sound', s.sound ? 'on' : 'off');
+});
 
 let ignorePointerUntil = 0;
 app.addEventListener('click', (event) => {
@@ -1179,6 +1220,8 @@ draw();
 if (import.meta.env.DEV) previewFinisher(params)?.catch(() => {});
 if (s.room) {
   s.solo = localStorage.getItem('demon-duels:solo:' + s.room) === '1';
+  const profile = s.solo && savedProfile(localStorage, s.room);
+  if (profile) { ashEncounter = profile; s.requestedOpponent = profile.opponentKind; s.returnToMap = true; }
   setRoom(s.room);
   run('Opening the duel invite…', async () => { await Promise.all([refreshRoom(), refreshWallet()]); });
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { campaignApproval, installFinishers, matchesBossStake } from './index.js';
+import { bossFinisher, campaignApproval, installFinishers, matchesBossStake } from './index.js';
 import { finisherScene } from './scenes.js';
 import { demons } from '../rules.js';
 
@@ -66,6 +66,37 @@ test('fallback defaults to Shadow and a failed render still signals completion',
   emit(target, 'settled', win);
   await assert.rejects(finishers.play(win.duel), /render unavailable/);
   assert.deepEqual(signals, [{ opponentKind: 2 }]);
+});
+
+test('a late guardian win keeps its original finisher and seal across room changes', async () => {
+  const target = new EventTarget();
+  const detail = { ...win, opponentKind: 0, bossBound: true };
+  const order = [];
+  let close;
+  const finishers = installFinishers(target, (settled) => settled === detail, async (_scene, settled, grade) => {
+    assert.equal(settled, detail);
+    order.push(grade);
+    await new Promise((resolve) => { close = resolve; });
+  });
+  const guardian = bossFinisher(target, finishers, (campaign, duel) => order.push([campaign, duel]));
+  guardian.roomChanged();
+  guardian.queue(detail, 'ghost', () => 'new seal');
+  emit(target, 'settled', detail);
+  guardian.roomChanged();
+  emit(target, 'finisher-done', detail);
+  assert.deepEqual(order, []);
+  const playback = guardian.play(detail.duel);
+  await Promise.resolve();
+  assert.deepEqual(order, ['ghost']);
+  guardian.roomChanged();
+  emit(target, 'finisher-done', { ...detail, duel: 'next-room' });
+  assert.equal(guardian.pending, detail);
+  close();
+  await playback;
+  assert.equal(guardian.pending, undefined);
+  assert.deepEqual(order, ['ghost', ['new seal', detail.duel]]);
+  await guardian.play(detail.duel);
+  assert.equal(order.length, 2);
 });
 
 test('bound campaign wins require a fresh journal entry for the same boss and duel', () => {

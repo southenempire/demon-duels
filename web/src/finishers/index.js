@@ -113,6 +113,46 @@ export function matchesBossStake(detail, requestedKind, room, opponent, card, bi
     binding.player === opponent && binding.card === card;
 }
 
+export function bossFinisher(target, finishers, onCommit) {
+  let pending;
+  target.addEventListener('demon-duels:finisher-done', ({ detail }) => {
+    const seal = pending;
+    if (!seal?.started || detail?.duel !== seal.detail.duel || detail.opponentKind !== seal.detail.opponentKind) return;
+    onCommit(seal.commit(), seal.detail.duel);
+    pending = undefined;
+    seal.resolve();
+  });
+  return {
+    get pending() { return pending?.detail; },
+    queue(detail, grade, commit) {
+      let resolve;
+      const done = new Promise((finish) => { resolve = finish; });
+      pending = { detail, grade, commit, done, resolve, started: false };
+    },
+    roomChanged() {
+      if (!pending) finishers.clear();
+    },
+    async play(duel) {
+      const seal = pending;
+      if (!seal || seal.detail.duel !== duel) {
+        await finishers.play(duel).catch(() => {});
+        return;
+      }
+      if (!seal.started) {
+        seal.started = true;
+        const fallback = target.dispatchEvent(new CustomEvent('demon-duels:finisher', {
+          detail: { opponentKind: seal.detail.opponentKind, grade: seal.grade, duel }, cancelable: true,
+        }));
+        if (fallback) {
+          await Promise.resolve();
+          await finishers.play(duel).catch(() => {});
+        }
+      }
+      await seal.done;
+    },
+  };
+}
+
 export function installFinishers(target, accept, render) {
   const seen = new Set();
   let pending, request;
@@ -144,7 +184,9 @@ export function installFinishers(target, accept, render) {
       try {
         await render(scene, detail, grade);
       } finally {
-        target.dispatchEvent(new CustomEvent('demon-duels:finisher-done', { detail: { opponentKind: detail.opponentKind } }));
+        const finished = { opponentKind: detail.opponentKind };
+        if (detail.bossBound) finished.duel = detail.duel;
+        target.dispatchEvent(new CustomEvent('demon-duels:finisher-done', { detail: finished }));
       }
     },
   };
