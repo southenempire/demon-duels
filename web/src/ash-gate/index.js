@@ -119,13 +119,13 @@ function patrol(scene, { route, facing, yaw = facing ?? 0, range = 6, halfAngle 
 
 export const mountAshGate = (options) => mountCircle(ASH_GATE, options);
 
-export function mountCircle(descriptor = ASH_GATE, { hasSeal, hasAshSeal, setExploring = () => {}, startInPlay = false } = {}) {
+export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAshSeal, setExploring = () => {}, startInPlay = false } = {}) {
   const { id, name, chapter, opponentKind, spawn, hooks = {}, fog, palette, audio: audioCues = {} } = { ...ASH_GATE, ...descriptor };
   const rules = circleRules(hooks);
   const bossConfig = { ...ASH_GATE.boss, ...descriptor.boss };
   const bossName = descriptor.bossName ?? bossConfig.name ?? demons[opponentKind]?.name ?? 'Guardian';
   const copy = descriptor.copy ?? descriptor.messages ?? {};
-  const earnedSeal = hasSeal ?? hasAshSeal ?? (() => false);
+  const earnedSeal = hasSeal ?? hasAshSeal ?? (() => getCampaign?.().wins.some((win) => win.bossId === opponentKind) ?? false);
   const arena = document.getElementById('app');
   const world = document.createElement('section');
   world.className = 'ash-gate';
@@ -288,7 +288,7 @@ export function mountCircle(descriptor = ASH_GATE, { hasSeal, hasAshSeal, setExp
         crouchButton.setAttribute('aria-pressed', crouch);
       }
       html = worldHud({
-        location: name, chapter, objective, seals: Number(seal),
+        location: name, chapter, objective, seals: getCampaign?.().wins.length ?? Number(seal),
         awareness: status === 'seen' ? 'suspicious' : status === 'alert' ? 'alert' : 'clear',
         prompt, message: notice || (wardenSees ? (copy.seen ?? copy.approach ?? 'He sees you — circle behind.') : status === 'roof'
           ? (copy.roof ?? 'Above the patrols') : status === 'hidden' ? (copy.hidden ?? 'Hidden in ash') : ''),
@@ -375,7 +375,7 @@ export function mountCircle(descriptor = ASH_GATE, { hasSeal, hasAshSeal, setExp
     audio.circle(null);
     world.hidden = true;
     arena.hidden = false;
-    setExploring(false);
+    setExploring(false, name);
     document.title = arenaTitle;
     window.scrollTo(0, 0);
   }
@@ -388,7 +388,7 @@ export function mountCircle(descriptor = ASH_GATE, { hasSeal, hasAshSeal, setExp
     fade.style.opacity = 0;
     audio.circle(menu === 'play' ? id : null);
     useAudio();
-    setExploring(true);
+    setExploring(true, name);
     document.title = gateTitle;
     focusCanvas();
     startRendering();
@@ -772,7 +772,7 @@ export function mountCircle(descriptor = ASH_GATE, { hasSeal, hasAshSeal, setExp
     }
   });
   arena.hidden = true;
-  setExploring(true);
+  setExploring(true, name);
   renderOverlay();
   Promise.race([models, new Promise((resolve) => setTimeout(resolve, 2600))])
     .then(() => setMenu(startInPlay ? 'play' : 'title'));

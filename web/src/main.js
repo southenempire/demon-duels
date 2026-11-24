@@ -45,14 +45,18 @@ function assertCurrentGuest() {
 const BOT_GENERATION = 'demon-duels:rival-generation';
 const BOSS_GENERATIONS = 'demon-duels:boss-generations';
 const activeRoomKey = 'demon-duels:active';
-export const getWorldCampaign = () => readCampaign(localStorage, client.key);
+export const getWorldCampaign = () => s.campaign;
 export const hasAshSeal = () => getWorldCampaign().wins.some((win) => win.bossId === 0);
 const botFor = (generation) => new ArenaClient(localKey(generation ? 'rival-' + generation : 'rival'));
 const bossFor = (generation) => new ArenaClient(localKey('boss-' + generation));
 const roomBotKey = (room) => 'demon-duels:room-bot:' + room;
 const ASSET = import.meta.env.BASE_URL + 'art/';
 const sound = new PitSound(import.meta.env.BASE_URL + 'audio/');
-export const setExploring = (active) => sound.unlock(!active && s.sound);
+let worldName = 'Ash Gate';
+export function setExploring(active, name) {
+  if (name) worldName = name;
+  sound.unlock(!active && s.sound);
+}
 const emittedSettlements = new Set();
 const s = {
   mode: params.has('room') ? 'chain' : 'landing',
@@ -374,7 +378,7 @@ function duelScreen() {
     ' / ASH GATE INTEL</span><ul>' + ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '';
   return '<main class="duel-screen">' + battlefield() +
     '<nav class="duel-tools" aria-label="Duel options">' +
-      (ashGate && s.returnToMap ? button('return-map', 'Return to Ash Gate', 'secondary', 'arrow') :
+      (ashGate && s.returnToMap ? button('return-map', 'Return to ' + esc(worldName), 'secondary', 'arrow') :
         button('map', 'Map', 'secondary', 'arrow')) +
       '<button type="button" class="button secondary" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
       icon(s.sound ? 'volume' : 'mute', 16) + '</button>' +

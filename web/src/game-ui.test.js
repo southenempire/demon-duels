@@ -81,6 +81,11 @@ test('overlay text cannot inject markup or attributes, and title leaves art to t
   assert.doesNotMatch(titleScreen(), /title-hunter|title-landscape|<img|<canvas/);
 });
 
+test('the world HUD places the campaign seal count before the objective', () => {
+  const html = worldHud({ location: 'Gloam', seals: 5, objective: 'Find the Gloam Shade' });
+  assert.match(html, /dd-world-summary.*5 \/ 6 SEALS BROKEN.*dd-objective.*Find the Gloam Shade.*<nav/s);
+});
+
 test('Ash Gate HUD exposes delegated actions and escapes the live hunter name', () => {
   const hunt = (prompt) => worldHud({ objective: 'Find the Warden', awareness: 'suspicious', hunters: 2, prompt });
   const strike = hunt({ key: 'E', label: 'Strike Ash Warden' });
