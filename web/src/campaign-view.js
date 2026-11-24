@@ -73,5 +73,5 @@ export function encounterHeading(id, button) {
 export function campaignResult(id, won, progress, button) {
   const next = id + 1;
   return '<section class="campaign-reward ' + (won ? 'won' : '') + '"><span class="eyebrow">' + (won ? 'GUARDIAN CONQUERED / SEAL BROKEN' : 'THE DESCENT IS NOT OVER') + '</span><h2>' + (won ? demons[id].name + ' claimed.' : 'Rise. Return. Reclaim.') + '</h2><p>' + (won ? circles[id].victory : 'Your staked card went to the guardian. Your broken seals remain. Choose another card from your vault and try again.') + '</p><div class="actions">' +
-    button('campaign-return', won && pitUnlocked(progress) ? 'Enter the open pit' : won && next === progress.wins.length ? 'Continue the descent' : 'Return to the map', 'primary', 'arrow') + '</div></section>';
+    button(won && pitUnlocked(progress) ? 'pit' : 'campaign-return', won && pitUnlocked(progress) ? 'Enter the open pit' : won && next === progress.wins.length ? 'Continue the descent' : 'Return to the map', 'primary', 'arrow') + '</div></section>';
 }

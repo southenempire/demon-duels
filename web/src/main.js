@@ -676,7 +676,6 @@ async function action(name) {
   if (name === 'campaign-return') {
     if (activeDuel()) { showMap(); return; }
     setRoom(null); s.requestedOpponent = null; s.returnToMap = false;
-    if (pitUnlocked(s.campaign)) { await action('pit'); return; }
     showMap(); return;
   }
   if (name === 'return-map') {
