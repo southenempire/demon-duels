@@ -754,6 +754,9 @@ export function mountCircle(descriptor = ASH_GATE, { hasSeal, hasAshSeal, setExp
   window.addEventListener('demon-duels:finisher-done', ({ detail }) => {
     if (active && detail?.opponentKind === opponentKind && detail.duel) showVictory();
   });
+  window.addEventListener('demon-duels:duel3d-close', ({ detail }) => {
+    if (pending && detail?.tutorialCancelled) returnToGate();
+  });
   window.addEventListener('demon-duels:return', ({ detail }) => {
     if (!pending) return;
     const encounter = pending;
