@@ -2,6 +2,7 @@ const box = (x, z, w, d, h = 0) => ({ x, z, w, d, h });
 
 export const spawn = { x: 0, y: 0, z: 13.4 };
 export const bossPosition = { x: 0, y: 0, z: -10.7 };
+export const limits = { left: -12, right: 12, far: -16, near: 16 };
 
 export const basins = [
   box(-5.6, 3.8, 9.4, 13.4),
@@ -53,7 +54,8 @@ const contains = ({ x, z }, rect) =>
 export const inWater = (pos) => (pos.y ?? pos.height ?? 0) < .12 &&
   basins.some((basin) => contains(pos, basin)) && !causeways.some((path) => contains(pos, path));
 export const speedAt = (pos) => inWater(pos) ? .5 : 1;
-export const concealedAt = (pos) => Boolean(pos.crouched ?? pos.crouch ?? pos.sneak) && inWater(pos);
+export const concealedAt = (pos, { crouched }) => pos.y > 2.35 ||
+  crouched && (inWater(pos) || coverZones.some((zone) => contains(pos, zone)));
 
 export const FOG_RANGE = 3;
 const FOG_CYCLE = 15;

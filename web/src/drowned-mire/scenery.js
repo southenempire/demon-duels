@@ -1,8 +1,7 @@
-import * as T from 'three';
 import { batchStonework, box as placeBox } from '../ash-gate/figures.js';
-import { basins, causeways, colliders, coverZones, fogDensity, inWater, mireTime, perimeter, roofs } from './layout.js';
+import { basins, causeways, colliders, coverZones, fogDensity, inWater, limits, mireTime, perimeter, roofs } from './layout.js';
 
-export function scenery(scene) {
+export function scenery(T, scene) {
   let seed = 3023;
   const rand = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 2 ** 32);
   const stone = [0x303f3d, 0x3b4e48, 0x44514a, 0x354645].map((color) =>
@@ -140,10 +139,8 @@ export function scenery(scene) {
   scene.add(moon);
 
   batchStonework(scene);
-  const beforeRender = scene.onBeforeRender;
-  scene.onBeforeRender = (...args) => {
-    beforeRender.call(scene, ...args);
+  function animate() {
     if (scene.fog?.isFogExp2) scene.fog.density = fogDensity(mireTime());
-  };
-  return { colliders, ledges: roofs, roofs, coverZones };
+  }
+  return { colliders, ledges: roofs, roofs, coverZones, animate, limits };
 }
