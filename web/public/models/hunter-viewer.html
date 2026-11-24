@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demon Duels — Hunter rig viewer</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { color-scheme: dark; font: 15px/1.45 system-ui; color: #ede1d4; background: #100f13; }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  main { max-width: 1260px; margin: auto; padding: 24px 30px; }
+  .eyebrow { color: #dc8a83; text-transform: uppercase; letter-spacing: .22em; font-size: .74rem; font-weight: 700; }
+  h1 { font: 400 clamp(2.1rem, 4vw, 3.4rem)/1 Georgia, serif; margin: 5px 0 13px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 20px; }
+  .stage { position: relative; overflow: hidden; height: clamp(460px, 74vh, 850px); background: #1d1b23; border: 1px solid #4d393a; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .pose { position: absolute; bottom: 18px; left: 20px; margin: 0; color: #f8e8d6; font: 2rem Georgia, serif; pointer-events: none; text-shadow: 0 1px 6px #0c0a11; }
+  aside { align-self: start; padding: 17px; border-top: 1px solid #5b4040; background: #1b171d; }
+  h2 { margin: 0 0 9px; font: 1.3rem Georgia, serif; }
+  #clips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  button { background: #2b2229; border: 1px solid #594249; color: inherit; padding: 7px; font: inherit; cursor: pointer; }
+  button:hover { background: #44313a; }
+  button[aria-pressed="true"] { background: #783945; border-color: #de898b; color: #fff2e2; }
+  .playback { display: flex; gap: 6px; margin: 16px 0 9px; }
+  .playback button { flex: 1; }
+  input { width: 100%; accent-color: #d78a83; }
+  .help, #status { font-size: .78rem; color: #c5b2ae; margin-bottom: 0; }
+  @media (max-width: 760px) {
+    main { padding: 14px; }
+    .layout { grid-template-columns: 1fr; }
+    .stage { height: 56vh; min-height: 360px; }
+  }
+</style>
+<script type="importmap">
+  {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"}}
+</script>
+<main>
+  <div class="eyebrow">Demon Duels / Ash Gate / Character study</div>
+  <h1>The Hooded Hunter</h1>
+  <div class="layout">
+    <section class="stage" aria-label="Interactive 3D preview">
+      <canvas></canvas>
+      <p class="pose" id="pose"></p>
+    </section>
+    <aside aria-label="Animation controls">
+      <h2>Animation library</h2>
+      <div id="clips"></div>
+      <div class="playback">
+        <button type="button" id="play" disabled>Pause</button>
+        <button type="button" id="replay" disabled>Replay</button>
+      </div>
+      <input id="time" type="range" aria-label="Pose time" min="0" max="1" step="0.001" value="0" disabled>
+      <p class="help">Drag to orbit · Scroll to zoom · Scrub to hold a pose</p>
+      <p id="status" role="status">Loading Hunter GLB…</p>
+    </aside>
+  </div>
+</main>
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+  const status = document.querySelector('#status');
+  try {
+    const canvas = document.querySelector('canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.24;
+    renderer.shadowMap.enabled = true;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x211d26);
+    scene.fog = new THREE.FogExp2(0x211d26, .13);
+    const camera = new THREE.PerspectiveCamera(34, 1, .05, 30);
+    camera.position.set(2.35, 1.58, 3.52);
+    const orbit = new OrbitControls(camera, canvas);
+    orbit.target.set(0, 1.055, 0);
+    orbit.minDistance = 2;
+    orbit.maxDistance = 8;
+    orbit.update();
+
+    scene.add(new THREE.HemisphereLight(0xc2c9e6, 0x603c40, 1.65));
+    const key = new THREE.DirectionalLight(0xffe1c4, 3.25);
+    key.position.set(-2, 3.5, 3);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.camera.left = key.shadow.camera.bottom = -1.6;
+    key.shadow.camera.right = key.shadow.camera.top = 1.6;
+    key.shadow.normalBias = .018;
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(0xff8974, 2.8);
+    rim.position.set(2, 2.7, -3);
+    scene.add(rim);
+    const fill = new THREE.DirectionalLight(0xa6b2ff, 1.05);
+    fill.position.set(3, 1.7, 2);
+    scene.add(fill);
+
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(36, 36),
+      new THREE.MeshStandardMaterial({ color: 0x242029, roughness: .92 }));
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -.013;
+    floor.receiveShadow = true;
+    scene.add(floor);
+    const dais = new THREE.Mesh(new THREE.CylinderGeometry(.92, .96, .025, 64),
+      new THREE.MeshStandardMaterial({ color: 0x372c34, roughness: .92 }));
+    dais.position.y = -.0125;
+    dais.receiveShadow = true;
+    scene.add(dais);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(.874, .880, 64),
+      new THREE.MeshBasicMaterial({ color: 0x946568 }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = .001;
+    scene.add(ring);
+
+    new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    }).observe(document.querySelector('.stage'));
+
+    const { scene: hunter, animations } = await new GLTFLoader().loadAsync(new URL('./hunter.glb', import.meta.url).href);
+    hunter.traverse(object => {
+      if (object.isSkinnedMesh) {
+        object.castShadow = true;
+        object.receiveShadow = true;
+        object.frustumCulled = false;
+      }
+    });
+    scene.add(hunter);
+    const mixer = new THREE.AnimationMixer(hunter);
+    const loops = new Set(['Idle', 'Guard', 'Walk', 'Run', 'Crouch', 'CrouchWalk', 'Climb']);
+    const clips = document.querySelector('#clips');
+    const pose = document.querySelector('#pose');
+    const play = document.querySelector('#play');
+    const replay = document.querySelector('#replay');
+    const time = document.querySelector('#time');
+    const actions = new Map();
+    let action;
+    let previousTime;
+
+    function setPaused(paused) {
+      action.paused = paused;
+      play.textContent = paused ? 'Play' : 'Pause';
+    }
+
+    function select(name) {
+      action?.stop();
+      action = actions.get(name);
+      action.reset().play();
+      setPaused(false);
+      pose.textContent = name;
+      for (const button of clips.children) {
+        button.setAttribute('aria-pressed', String(button.dataset.clip === name));
+      }
+    }
+
+    for (const clip of animations) {
+      const clipAction = mixer.clipAction(clip);
+      if (!loops.has(clip.name)) {
+        clipAction.setLoop(THREE.LoopOnce, 1);
+        clipAction.clampWhenFinished = true;
+      }
+      actions.set(clip.name, clipAction);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = clip.name;
+      button.dataset.clip = clip.name;
+      button.addEventListener('click', () => select(clip.name));
+      clips.append(button);
+    }
+    mixer.addEventListener('finished', ({ action: finished }) => {
+      if (action === finished) setPaused(true);
+    });
+    play.addEventListener('click', () => {
+      if (action.paused && action.time >= action.getClip().duration) select(action.getClip().name);
+      else setPaused(!action.paused);
+    });
+    replay.addEventListener('click', () => select(action.getClip().name));
+    function seek(fraction) {
+      setPaused(true);
+      action.time = fraction * action.getClip().duration;
+      mixer.update(0);
+    }
+    time.addEventListener('input', () => seek(time.valueAsNumber));
+    const query = new URLSearchParams(location.search);
+    select(actions.has(query.get('clip')) ? query.get('clip') : 'Idle');
+    if (query.has('pose') && Number.isFinite(Number(query.get('pose')))) {
+      seek(THREE.MathUtils.clamp(Number(query.get('pose')), 0, 1));
+    }
+    play.disabled = replay.disabled = time.disabled = false;
+
+    renderer.setAnimationLoop(now => {
+      mixer.update(previousTime === undefined ? 0 : Math.min(.05, (now - previousTime) / 1000));
+      previousTime = now;
+      time.value = action.time / action.getClip().duration;
+      time.setAttribute('aria-valuetext', `${action.time.toFixed(2)} seconds`);
+      renderer.render(scene, camera);
+    });
+    status.textContent = `${animations.length} clips loaded · 1.85 m scale`;
+  } catch (error) {
+    status.textContent = `Could not load the Hunter: ${error.message}`;
+    throw error;
+  }
+</script>
+</html>
