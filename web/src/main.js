@@ -570,6 +570,7 @@ function restoreRoom() {
   const saved = readKey(localStorage.getItem(activeRoomKey));
   if (!s.room && saved) {
     s.solo = localStorage.getItem('demon-duels:solo:' + saved) === '1';
+    s.mode = 'chain';
     setRoom(saved);
   }
 }
