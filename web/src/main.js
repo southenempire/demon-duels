@@ -14,7 +14,10 @@ const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
 const PLAYER_GENERATION = 'demon-duels:player-generation';
-const playerFor = (generation) => new ArenaClient(localKey(generation ? 'player-' + generation : 'player'));
+const playerFor = (generation, options) => {
+  const key = localKey(generation ? 'player-' + generation : 'player', options);
+  return key && new ArenaClient(key);
+};
 let playerGeneration = botGeneration(localStorage.getItem(PLAYER_GENERATION));
 let client = playerFor(playerGeneration);
 function assertCurrentGuest() {
@@ -262,7 +265,8 @@ function modal() {
       '<div class="wallet-address"><code>' + client.key + '</code><button type="button" class="square" data-action="copy-wallet" aria-label="Copy wallet address">' + icon('copy') + '</button></div>' +
       '<p>Balance: <strong>' + (s.balance === null ? 'checking…' : s.balance.toFixed(3) + ' devnet SOL') + '</strong>. Around 0.05 SOL is enough to get started.</p>' +
       ((s.busy || s.notice) ? '<p role="status">' + esc(s.busy || s.notice) + '</p>' : '') +
-      '<div class="actions">' + button('faucet', 'Try quick airdrop', 'primary', 'spark') + '<a class="button secondary" href="https://faucet.solana.com" target="_blank" rel="noreferrer">Solana faucet ' + icon('outside', 15) + '</a>' + button('wallet-refresh', 'Refresh balance', 'text') + '</div>'
+      '<div class="actions">' + button('faucet', 'Try quick airdrop', 'primary', 'spark') + '<a class="button secondary" href="https://faucet.solana.com" target="_blank" rel="noreferrer">Solana faucet ' + icon('outside', 15) + '</a>' + button('wallet-refresh', 'Refresh balance', 'text') +
+      (playerGeneration > 0 ? button('recover-sol', 'Move SOL from previous guests', 'text') : '') + '</div>'
     :
       '<ol><li><b>Stake.</b> Open a free starter pack, then each player stakes one owned card.</li><li><b>Seal.</b> Rend beats Ward. Ward beats Hex. Hex beats Rend. The private rollup hides both moves until they are locked.</li><li><b>Settle.</b> Each move starts with 2 damage. Advantage adds 1; a 25% crit adds 2. VRF breaks ties; the winner gets both cards on devnet.</li></ol>' +
       '<p>Devnet cards have no monetary value. The practice mode uses no blockchain.</p>') + '</section></div>';
@@ -778,6 +782,21 @@ async function action(name) {
     }); return;
   }
   if (name === 'wallet-refresh') { await run('Refreshing wallet…', refreshWallet); return; }
+  if (name === 'recover-sol') {
+    await run('Checking previous guest balances…', async () => {
+      let moved = 0;
+      try {
+        for (let generation = playerGeneration - 1; generation >= 0; generation--) {
+          assertCurrentGuest();
+          const previous = playerFor(generation, { create: false });
+          if (await previous?.moveRemainingSol(client.key)) moved++;
+        }
+        s.notice = moved ? 'Previous guest devnet SOL moved here.' : 'No previous guest balance can cover a transfer fee.';
+      } finally {
+        await refreshWallet().catch(() => {});
+      }
+    }); return;
+  }
   if (name === 'bot' || name === 'create') {
     const solo = name === 'bot';
     await run(solo ? 'Staking a card on Solana…' : 'Creating your duel…',
