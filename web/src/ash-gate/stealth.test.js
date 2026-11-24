@@ -1,13 +1,82 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ASH_WARDEN, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { ASH_WARDEN, blocksRadiusStep, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, movementAxis, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees, usesWorldKey, worldFrameRuns } from './stealth.js';
 import { isAshGate } from '../route.js';
 import { bossMove } from '../world/bot-profile.js';
-import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
+import { blocksHuntReturn, huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
 import { separateStep } from './hunters.js';
 
 const guard = { x: 0, z: 0, yaw: 0, range: 6, halfAngle: .5 };
 const wall = { x: 0, z: -2, w: 1, d: 1 };
+
+test('world time stops in pause, controls and duels while the title can animate', () => {
+  assert.equal(worldFrameRuns('play', true, false), true);
+  assert.equal(worldFrameRuns('title', true, false), true);
+  assert.equal(worldFrameRuns('pause', true, false), false);
+  assert.equal(worldFrameRuns('guide', true, false), false);
+  assert.equal(worldFrameRuns('play', true, true), false);
+  assert.equal(worldFrameRuns('play', false, false), false);
+});
+
+test('Space jumps off the HUD but preserves native button activation', () => {
+  const pause = { closest: (selector) => selector.split(', ').includes('button') ? pause : null };
+  const canvas = { closest: () => null };
+  assert.equal(usesWorldKey({ code: 'Space', target: canvas }), true);
+  assert.equal(usesWorldKey({ code: 'Space', target: pause }), false);
+  assert.equal(usesWorldKey({ code: 'KeyE', target: pause }), true);
+});
+
+test('arrows mirror WASD without doubling movement or taking over form controls', () => {
+  const axes = (...codes) => {
+    const keys = new Set(codes);
+    return [movementAxis(keys, 'forward', 'backward'), movementAxis(keys, 'right', 'left')];
+  };
+  assert.deepEqual(axes('ArrowUp', 'ArrowRight'), [1, 1]);
+  assert.deepEqual(axes('ArrowDown', 'ArrowLeft'), [-1, -1]);
+  assert.deepEqual(axes('KeyS', 'KeyA'), [-1, -1]);
+  assert.deepEqual(axes('ArrowUp', 'KeyW', 'ArrowRight', 'KeyD'), [1, 1]);
+  assert.deepEqual(axes('ArrowUp', 'KeyS'), [0, 0]);
+  const input = { closest: (selector) => selector.split(', ').includes('input') ? input : null };
+  assert.equal(usesWorldKey({ code: 'ArrowLeft', target: input }), false);
+  assert.equal(usesWorldKey({ code: 'ArrowUp', target: { isContentEditable: true } }), false);
+  assert.equal(usesWorldKey({ code: 'ArrowUp', target: { closest: () => null } }), true);
+});
+
+test('a patrol returning from pursuit skips waypoints blocked by a pillar', () => {
+  const route = [[0, -4], [.2, -4], [2, -1]];
+  assert.equal(nextPatrolWaypoint(route, 0, { x: 0, z: -1 }, [wall], () => true), 2);
+});
+
+test('bosses stand by default, or follow and pause at configured patrol points', () => {
+  const boss = { x: 0, z: 0 };
+  assert.equal(bossPatrol()(boss, 10), null);
+  assert.deepEqual(boss, { x: 0, z: 0 });
+  const walk = bossPatrol({ points: [{ x: 0, z: -1 }, { x: 1, z: -1 }], speed: 2, pause: 1 });
+  assert.equal(walk(boss, .5), 0);
+  assert.deepEqual(boss, { x: 0, z: -1 });
+  assert.equal(walk(boss, .75), null);
+  assert.equal(walk(boss, .5), -Math.PI / 2);
+  assert.deepEqual(boss, { x: .5, z: -1 });
+});
+
+test('a hunter falling off an edge can walk out of collider padding but not into the ledge', () => {
+  assert.equal(blocksStep(.6, -2, .7, -2, wall), false);
+  assert.equal(blocksStep(.6, -2, .6, -1.9, wall), false);
+  assert.equal(blocksStep(.6, -2, .55, -2, wall), true);
+  assert.equal(blocksStep(.6, -2, .45, -2, wall), true);
+  assert.equal(blocksStep(.8, -2, .7, -2, wall), true);
+  assert.equal(blocksStep(.1, -2, .2, -2, wall), false);
+  assert.equal(blocksStep(.2, -2, .1, -2, wall), true);
+});
+
+test('a hunter overlapping a returning guardian can walk out but cannot approach it', () => {
+  const center = { x: 0, z: -2 };
+  assert.equal(blocksRadiusStep(0, -2, .15, -2, center, .74), false);
+  assert.equal(blocksRadiusStep(.2, -2, .35, -2, center, .74), false);
+  assert.equal(blocksRadiusStep(.2, -2, .05, -2, center, .74), true);
+  assert.equal(blocksRadiusStep(.8, -2, .65, -2, center, .74), true);
+  assert.equal(blocksRadiusStep(.65, -2, .8, -2, center, .74), false);
+});
 
 test('patrol sight respects facing, range, stone and hiding in ash', () => {
   assert.equal(sees(guard, 0, -4, [], false), true);
@@ -50,6 +119,19 @@ test('ice preserves momentum on release while ordinary terrain stops immediately
   assert.equal(dampVelocity(4, 0, 1, .1), 0);
   assert.ok(dampVelocity(4, 0, .1, .1) > 2);
   assert.equal(circleRules({ tractionAt: () => -2 }).tractionAt({}), 0);
+});
+
+test('investigation hooks can filter by guard position and still accept time-only callbacks', () => {
+  const target = { pos: { x: 0, z: -1 }, until: 5 };
+  const rules = circleRules({
+    investigateTargets: (time, { x, z }) =>
+      time < target.until && Math.hypot(target.pos.x - x, target.pos.z - z) < 2 ? [target] : [],
+  });
+  assert.deepEqual(rules.investigateTargets(1, guard), [target]);
+  assert.deepEqual(rules.investigateTargets(1, { ...guard, x: 6 }), []);
+  assert.deepEqual(rules.investigateTargets(5, guard), []);
+  assert.deepEqual(circleRules({ investigateTargets: (time) => time === 1 ? [target] : [] }).investigateTargets(1, guard), [target]);
+  assert.deepEqual(circleRules().investigateTargets(1, guard), []);
 });
 
 test('the same bound chain duel must settle before the map credits its result', () => {
@@ -104,6 +186,14 @@ test('nearby hunters deflect forward movement without blocking it or affecting a
   assert.deepEqual(separateStep(0, 0, 3, 0, -.1, [peer]), [0, -.1]);
 });
 
+test('a restored guardian duel stays open until the stake is settled or refunded', () => {
+  const profile = { circle: 3 };
+  assert.equal(blocksHuntReturn({ worldMounted: false, profile, unsettled: true }), true);
+  assert.equal(blocksHuntReturn({ worldMounted: false, profile, unsettled: false }), false);
+  assert.equal(blocksHuntReturn({ worldMounted: true, profile, unsettled: true }), false);
+  assert.equal(blocksHuntReturn({ worldMounted: false, profile: null, unsettled: true }), false);
+});
+
 test('a graded Ash Warden hunt persists only valid chain intel and weights the house bot', () => {
   const profile = profileFor({ ...ASH_WARDEN, ...huntProfile(false, false) });
   assert.equal(profile.grade, 'ghost');
@@ -111,8 +201,9 @@ test('a graded Ash Warden hunt persists only valid chain intel and weights the h
   const store = new Map([[profileKey('warden'), JSON.stringify(profile)]]);
   assert.deepEqual(savedProfile({ getItem: (key) => store.get(key) }, 'warden'), profile);
   assert.equal(profileFor({ ...profile, mode: 'pvp' }), null);
-  const mire = profileFor({ ...ASH_WARDEN, opponentKind: 3, circle: 3, ...huntProfile(true, false) });
+  const mire = profileFor({ ...ASH_WARDEN, opponentKind: 3, circle: 3, worldName: 'Drowned Mire', ...huntProfile(true, false) });
   assert.equal(mire.opponentKind, 3);
+  assert.equal(mire.worldName, 'Drowned Mire');
   store.set(profileKey('mire'), JSON.stringify(mire));
   assert.deepEqual(savedProfile({ getItem: (key) => store.get(key) }, 'mire'), mire);
   assert.equal(huntProfile(false, true).grade, 'shadow');
