@@ -291,7 +291,7 @@ async function playFight() {
     s.frame = frame;
     if (frame.sound && !(s.duel && !participant() && (frame.sound === 'victory' || frame.sound === 'defeat'))) audio(frame.sound);
     if (frame.stage === 'windup') audio(moves[result.moves[frame.attacker]].name.toLowerCase());
-    if (frame.stage === 'finish' && !s.result) audio('transfer');
+    if (frame.stage === 'finish' && !s.result && participant() && result.winner === 0) audio('transfer');
     draw();
     if (frame.stage === 'strike') effects.burst(frame.attacker, result.crits[frame.attacker], demons[fighterKinds()[frame.attacker]]?.glow || '#ffbd5c');
     if (frame.stage === 'spoils') animateCapture();
