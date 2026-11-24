@@ -12,8 +12,11 @@ import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightR
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
 import { startPresence } from './presence-live.js';
+import { installDialogKeys, titleScreen } from './game-ui.js';
+import './game-ui.css';
 
 const app = document.getElementById('app');
+installDialogKeys(app);
 const params = new URLSearchParams(location.search);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
 const PLAYER_GENERATION = 'demon-duels:player-generation';
@@ -294,12 +297,13 @@ function draw() {
   const focus = document.activeElement?.dataset?.action;
   const hadDialog = Boolean(app.querySelector('[role=dialog]'));
   const kind = s.mode === 'practice' ? 'PRACTICE MODE' : 'SOLANA DEVNET';
+  app.dataset.screen = s.mode === 'landing' ? 'title' : 'arena';
   app.innerHTML = '<header><div class="nav"><button type="button" class="wordmark" data-action="home"><img src="' + ASSET + 'sigil.svg" alt=""><span>DEMON<span>DUELS</span></span></button><div class="nav-right">' +
     statusText(kind) + '<button type="button" class="square sound" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
     icon(s.sound ? 'volume' : 'mute') + '</button><button type="button" class="square help" data-action="rules" aria-label="Duel rules">' + icon('info') + '</button><button type="button" class="button wallet secondary" data-action="wallet" aria-label="Guest wallet and devnet funding">' +
     icon('wallet', 16) + '<span>' + (safeMode() ? short(client.key) : 'Guest wallet') + '</span></button></div></div></header>' +
-    '<main><div class="hero"><div class="superline"><span></span> THE UNDERWORLD ARCADE <span></span></div><h1>NO MERCY. <em>JUST DEMONS.</em></h1><p>Stake a demon. Seal a move. <strong>Fight for both.</strong></p></div>' +
-    battlefield() + controls() + networkProgress() + capturedVault() + '<div class="feedback" role="status" aria-live="polite">' + (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice)) + '</div>' + inventory() +
+    '<main>' + (s.mode === 'landing' ? titleScreen({ actions: button('quick-duel', 'Enter the pit', 'primary', 'blade') + button('practice', 'Training grounds', 'text') + button('enter', 'Demon vault', 'text') }) :
+    '<div class="hero"><div class="superline">THE PIT / ' + kind + '</div><h1>THE <em>SEALED HAND</em></h1><p>One demon staked. <strong>Winner takes both.</strong></p></div>' + battlefield() + controls() + networkProgress() + capturedVault()) + '<div class="feedback" role="status" aria-live="polite">' + (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice)) + '</div>' + inventory() +
     '<div class="mechanics"><div>' + icon('lock') + '<span><b>PRIVATE MOVES</b><small>MagicBlock Private ER</small></span></div><div>' + icon('spark') +
     '<span><b>VERIFIABLE CRITS</b><small>MagicBlock VRF</small></span></div><div>' + icon('coin') +
     '<span><b>WINNER TAKES BOTH</b><small>Solana card ownership</small></span></div></div></main>' +
