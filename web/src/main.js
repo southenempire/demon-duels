@@ -67,7 +67,7 @@ const fighterKinds = () => [
 
 function battlefield() {
   const result = roundResult();
-  const frame = s.frame;
+  const frame = result ? s.frame : null;
   const finished = frame?.stage === 'finish' || frame?.stage === 'spoils';
   const reveal = Boolean(result && frame);
   const kinds = fighterKinds();
@@ -458,6 +458,7 @@ function restoreRoom() {
 }
 
 async function startQuickDuel() {
+  if (s.mode === 'practice') setRoom(null);
   s.mode = 'chain';
   s.quick = true;
   s.result = null;
