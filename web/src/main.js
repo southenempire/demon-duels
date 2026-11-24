@@ -21,7 +21,7 @@ import { storyView, mapView, codexView, campaignResult } from './campaign-view.j
 import { startPresence } from './presence-live.js';
 import { initialJourney, isAshGate } from './route.js';
 import { opensWorldHunt, worlds } from './worlds.js';
-import { profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
+import { blocksHuntReturn, profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
 import { bossMove } from './world/bot-profile.js';
 import { duelHud, installDialogKeys, movePicker } from './game-ui.js';
 import './game-ui.css';
@@ -140,6 +140,9 @@ function isBoundBossSettlement(detail, duel) {
 let liveSettlement;
 let ashEncounter = null;
 const returnWorldName = () => ashEncounter?.worldName ?? worldName;
+const worldReturnBlocked = (profile) => blocksHuntReturn({
+  worldMounted: Boolean(worldName), profile, unsettled: activeDuel() || checkingBossSettlement(),
+});
 let hostingRival = false;
 const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
 const guardianFinisher = bossFinisher(window, finishers, (campaign, duel) => {
@@ -392,7 +395,8 @@ function duelScreen() {
     ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '';
   return '<main class="duel-screen">' + battlefield() +
     '<nav class="duel-tools" aria-label="Duel options">' +
-      (destination && s.returnToMap ? button('return-map', 'Return to ' + esc(destination), 'secondary', 'arrow') :
+      (s.returnToMap && worldReturnBlocked(ashEncounter) ? '' :
+        destination && s.returnToMap ? button('return-map', 'Return to ' + esc(destination), 'secondary', 'arrow') :
         button('map', 'Map', 'secondary', 'arrow')) +
       '<button type="button" class="button secondary" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
       icon(s.sound ? 'volume' : 'mute', 16) + '</button>' +
@@ -954,6 +958,7 @@ async function action(name) {
   if (name === 'return-map') {
     if (guardianFinisher.pending) await presentFinisher();
     const savedWorld = s.room && savedProfile(localStorage, s.room);
+    if (worldReturnBlocked(savedWorld)) return;
     const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof,
       circle: savedWorld?.circle ?? ashEncounter?.circle };
     if (activeDuel() || checkingBossSettlement()) {

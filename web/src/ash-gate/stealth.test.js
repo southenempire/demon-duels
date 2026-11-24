@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { ASH_WARDEN, blocksRadiusStep, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, movementAxis, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees, usesWorldKey, worldFrameRuns } from './stealth.js';
 import { isAshGate } from '../route.js';
 import { bossMove } from '../world/bot-profile.js';
-import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
+import { blocksHuntReturn, huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
 import { separateStep } from './hunters.js';
 
 const guard = { x: 0, z: 0, yaw: 0, range: 6, halfAngle: .5 };
@@ -184,6 +184,14 @@ test('nearby hunters deflect forward movement without blocking it or affecting a
   assert.notEqual(dx, 0);
   assert.equal(dz, -.1);
   assert.deepEqual(separateStep(0, 0, 3, 0, -.1, [peer]), [0, -.1]);
+});
+
+test('a restored guardian duel stays open until the stake is settled or refunded', () => {
+  const profile = { circle: 3 };
+  assert.equal(blocksHuntReturn({ worldMounted: false, profile, unsettled: true }), true);
+  assert.equal(blocksHuntReturn({ worldMounted: false, profile, unsettled: false }), false);
+  assert.equal(blocksHuntReturn({ worldMounted: true, profile, unsettled: true }), false);
+  assert.equal(blocksHuntReturn({ worldMounted: false, profile: null, unsettled: true }), false);
 });
 
 test('a graded Ash Warden hunt persists only valid chain intel and weights the house bot', () => {
