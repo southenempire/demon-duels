@@ -1,0 +1,197 @@
+{
+  "version": 1,
+  "title": "Demon Duels \u2014 Roster Art v1",
+  "format": "RGBA PNG; straight alpha; sRGB",
+  "frameSize": {
+    "w": 512,
+    "h": 512
+  },
+  "pivot": {
+    "x": 224,
+    "y": 472
+  },
+  "normalizedPivot": {
+    "x": 0.4375,
+    "y": 0.921875
+  },
+  "facing": "right",
+  "artType": "Five distinct keyed combat poses per fighter, not hand-drawn in-between animation.",
+  "layout": "atlas.png is 3 columns \u00d7 2 rows; idle, attack, hit, crit, defeat, portrait in row-major order.",
+  "rendering": "Draw at the pivot. Flip the opponent around the same pivot, not the image center. Optional CRT scanlines belong on the scene, not the sprite.",
+  "animations": {
+    "idle": {
+      "poses": [
+        "idle"
+      ],
+      "holdMs": 900,
+      "loop": true
+    },
+    "attack": {
+      "poses": [
+        "idle",
+        "attack",
+        "idle"
+      ],
+      "durationsMs": [
+        90,
+        150,
+        160
+      ],
+      "impactAtMs": 90,
+      "loop": false
+    },
+    "hit": {
+      "poses": [
+        "hit",
+        "idle"
+      ],
+      "durationsMs": [
+        170,
+        120
+      ],
+      "loop": false
+    },
+    "crit": {
+      "poses": [
+        "idle",
+        "crit",
+        "attack",
+        "idle"
+      ],
+      "durationsMs": [
+        130,
+        220,
+        100,
+        180
+      ],
+      "impactAtMs": 130,
+      "loop": false
+    },
+    "defeat": {
+      "poses": [
+        "hit",
+        "defeat"
+      ],
+      "durationsMs": [
+        140,
+        null
+      ],
+      "loop": false
+    }
+  },
+  "characters": [
+    {
+      "id": "ash-warden",
+      "demonId": 0,
+      "displayId": "01",
+      "name": "Ash Warden",
+      "affinity": "Infernal",
+      "accent": "#ff782d",
+      "atlas": "ash-warden/atlas.png",
+      "atlasData": "ash-warden/atlas.json",
+      "portrait": "ash-warden/portrait.png",
+      "poses": {
+        "idle": "ash-warden/idle.png",
+        "attack": "ash-warden/attack.png",
+        "hit": "ash-warden/hit.png",
+        "crit": "ash-warden/crit.png",
+        "defeat": "ash-warden/defeat.png"
+      }
+    },
+    {
+      "id": "void-wraith",
+      "demonId": 1,
+      "displayId": "02",
+      "name": "Void Wraith",
+      "affinity": "Abyssal",
+      "accent": "#ba83ff",
+      "atlas": "void-wraith/atlas.png",
+      "atlasData": "void-wraith/atlas.json",
+      "portrait": "void-wraith/portrait.png",
+      "poses": {
+        "idle": "void-wraith/idle.png",
+        "attack": "void-wraith/attack.png",
+        "hit": "void-wraith/hit.png",
+        "crit": "void-wraith/crit.png",
+        "defeat": "void-wraith/defeat.png"
+      }
+    },
+    {
+      "id": "marrow-king",
+      "demonId": 2,
+      "displayId": "03",
+      "name": "Marrow King",
+      "affinity": "Boneborn",
+      "accent": "#ebbf71",
+      "atlas": "marrow-king/atlas.png",
+      "atlasData": "marrow-king/atlas.json",
+      "portrait": "marrow-king/portrait.png",
+      "poses": {
+        "idle": "marrow-king/idle.png",
+        "attack": "marrow-king/attack.png",
+        "hit": "marrow-king/hit.png",
+        "crit": "marrow-king/crit.png",
+        "defeat": "marrow-king/defeat.png"
+      }
+    },
+    {
+      "id": "mire-phantom",
+      "demonId": 3,
+      "displayId": "04",
+      "name": "Mire Phantom",
+      "affinity": "Venomous",
+      "accent": "#bded40",
+      "atlas": "mire-phantom/atlas.png",
+      "atlasData": "mire-phantom/atlas.json",
+      "portrait": "mire-phantom/portrait.png",
+      "poses": {
+        "idle": "mire-phantom/idle.png",
+        "attack": "mire-phantom/attack.png",
+        "hit": "mire-phantom/hit.png",
+        "crit": "mire-phantom/crit.png",
+        "defeat": "mire-phantom/defeat.png"
+      }
+    },
+    {
+      "id": "frost-herald",
+      "demonId": 4,
+      "displayId": "05",
+      "name": "Frost Herald",
+      "affinity": "Glacial",
+      "accent": "#79baff",
+      "atlas": "frost-herald/atlas.png",
+      "atlasData": "frost-herald/atlas.json",
+      "portrait": "frost-herald/portrait.png",
+      "poses": {
+        "idle": "frost-herald/idle.png",
+        "attack": "frost-herald/attack.png",
+        "hit": "frost-herald/hit.png",
+        "crit": "frost-herald/crit.png",
+        "defeat": "frost-herald/defeat.png"
+      }
+    },
+    {
+      "id": "gloam-shade",
+      "demonId": 5,
+      "displayId": "06",
+      "name": "Gloam Shade",
+      "affinity": "Spectral",
+      "accent": "#66e9ef",
+      "atlas": "gloam-shade/atlas.png",
+      "atlasData": "gloam-shade/atlas.json",
+      "portrait": "gloam-shade/portrait.png",
+      "poses": {
+        "idle": "gloam-shade/idle.png",
+        "attack": "gloam-shade/attack.png",
+        "hit": "gloam-shade/hit.png",
+        "crit": "gloam-shade/crit.png",
+        "defeat": "gloam-shade/defeat.png"
+      }
+    }
+  ],
+  "rosterVerification": {
+    "source": "https://characteristics-producer-devel-excuse.trycloudflare.com/assets/main-BL5NF-mm.js",
+    "method": "Names and type labels compared in exact six-entry live client roster order; zero-based IDs match the array indices.",
+    "verifiedAt": "2026-11-24"
+  }
+}
