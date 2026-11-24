@@ -85,14 +85,15 @@ test('only snow steps leave visible investigation targets that each expire after
   assert.equal(prints.count, 0);
 });
 
-test('snow east of the spawn buttress leaves a print but cannot strand a patrol', () => {
+test('thralls investigate reachable west-side prints but not the blocked tracks east of spawn', () => {
   const scene = new T.Scene();
   const { colliders } = circle.scenery(T, scene);
   const blocked = { x: 4, z: 12.9 };
-  const reachable = { x: -4.1, z: 5 };
+  const reachable = { x: -4.9, z: 7 };
   const canWalkTo = ([x, z], pos) => obstruction(x, z, pos.x, pos.z, colliders, .12) === 1;
   const waypoints = circle.patrols.flatMap(({ route }) => route);
   assert.equal(surfaceAt(blocked), 'snow');
+  assert.equal(surfaceAt(reachable), 'snow');
   assert.ok(waypoints.some((point) => !canWalkTo(point, blocked)));
   assert.ok(waypoints.every((point) => canWalkTo(point, reachable)));
 

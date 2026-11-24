@@ -1,4 +1,4 @@
-import { coverZones, herald, inInvestigationLane, inside, spawn, surfaceAt } from './layout.js';
+import { canInvestigate, coverZones, herald, inside, spawn, surfaceAt } from './layout.js';
 import { buildSpire } from './scenery.js';
 import { createTracks } from './tracks.js';
 
@@ -20,7 +20,7 @@ const story = {
 
 const tracks = createTracks();
 let drawTracks, showIntel;
-let drawnTail, drawnLength = 0;
+let drawnTail, drawnLength = 0, targets = [];
 
 export const FROST_HERALD = {
   id: 4,
@@ -62,6 +62,7 @@ export const FROST_HERALD = {
     showIntel = read;
     drawnTail = undefined;
     drawnLength = 0;
+    targets = [];
     return geometry;
   },
   hooks: {
@@ -95,8 +96,10 @@ export const FROST_HERALD = {
         drawTracks?.(active);
         drawnTail = tail;
         drawnLength = active.length;
+        targets = active.filter(({ pos }) => canInvestigate(pos, FROST_HERALD.patrols))
+          .map(({ pos, until }) => ({ pos, until }));
       }
-      return active.filter(({ pos }) => inInvestigationLane(pos)).map(({ pos, until }) => ({ pos, until }));
+      return targets;
     },
   },
 };

@@ -1,3 +1,5 @@
+import { obstruction } from '../../ash-gate/stealth.js';
+
 export const bounds = { left: -10.8, right: 10.8, far: -15, near: 16 };
 export const spawn = { x: 1.3, z: 12.9 };
 export const herald = { x: 1.4, z: -10.6 };
@@ -68,8 +70,19 @@ export const surfaceAt = (pos) => {
   return ice.some((area) => inside(pos, area)) ? 'ice' : 'snow';
 };
 
-export function inInvestigationLane({ x, z }) {
-  // Targets are shared by all thralls. This convex snow lane clears each patrol loop.
-  const along = (z - 4.8) / 1.7;
-  return along >= 0 && along <= 1 && x >= -4.38 - .44 * along && x <= -3.6 - .97 * along;
+const sideOf = (ax, az, bx, bz, x, z) => (bx - ax) * (z - az) - (bz - az) * (x - ax);
+
+export function canInvestigate({ x, z }, patrols) {
+  const clear = (ax, az, bx, bz) => obstruction(ax, az, bx, bz, colliders, .12) === 1;
+  // Every thrall sees the same targets, including while walking between waypoints.
+  return patrols.every(({ route }) => route.every(([ax, az], i) => {
+    const [bx, bz] = route[(i + 1) % route.length];
+    if (!clear(ax, az, x, z) || !clear(ax, az, bx, bz)) return false;
+    const turn = Math.sign(sideOf(ax, az, bx, bz, x, z));
+    // Once all three edges are clear, only a collider enclosed by the triangle can block it.
+    return !turn || !colliders.some((wall) =>
+      turn * sideOf(ax, az, bx, bz, wall.x, wall.z) > 0 &&
+      turn * sideOf(bx, bz, x, z, wall.x, wall.z) > 0 &&
+      turn * sideOf(x, z, ax, az, wall.x, wall.z) > 0);
+  }));
 }
