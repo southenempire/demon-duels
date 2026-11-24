@@ -11,8 +11,10 @@ import { characters, characterArt } from './characters.js';
 import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason, privateMoveRetryMessage } from './fight.js';
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
+import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin, carryCampaign } from './campaign.js';
+import { storyView, mapView, codexView, journeyNav, encounterHeading, campaignResult } from './campaign-view.js';
 import { startPresence } from './presence-live.js';
-import { installDialogKeys, titleScreen } from './game-ui.js';
+import { installDialogKeys } from './game-ui.js';
 import './game-ui.css';
 
 const app = document.getElementById('app');
@@ -53,6 +55,8 @@ function preloadFighters() {
 }
 const s = {
   mode: params.has('room') ? 'chain' : 'landing',
+  journey: params.has('room') ? 'arena' : localStorage.getItem('demon-duels:story-seen') ? 'map' : 'story',
+  campaign: readCampaign(localStorage, client.key), circle: 0,
   balance: null, owned: [], selected: null, practiceCards: [], practiceStake: 0, practiceRival: 1,
   result: null, move: null, duel: null, busy: null, notice: '', modal: null, quick: false,
   sound: localStorage.getItem('demon-duels:sound') === 'on',
@@ -62,6 +66,7 @@ const s = {
   retrySeal: null,
   requestedOpponent: null, returnToMap: false,
 };
+s.circle = Math.min(s.campaign.wins.length, circles.length - 1);
 const short = (key) => key?.toString().slice(0, 4) + '…' + key?.toString().slice(-4);
 const keyed = (value, key) => Boolean(value && key && value.equals(key));
 function clearSavedRoom(room) {
@@ -80,6 +85,36 @@ const safeMode = () => s.mode === 'chain';
 const mySide = () => keyed(s.duel?.p2, client.key) ? 1 : 0;
 const participant = () => keyed(s.duel?.p1, client.key) || keyed(s.duel?.p2, client.key);
 const moveLocked = () => s.move !== null;
+const activeDuel = () => Boolean(s.room && (!s.duel || s.duel.phase < 3 && participant()));
+const campaignBoss = () => s.mode === 'chain' && s.returnToMap && Number.isInteger(s.requestedOpponent) ? s.requestedOpponent : null;
+
+function showMap() {
+  localStorage.setItem('demon-duels:story-seen', '1');
+  s.journey = 'map';
+  s.circle = Math.min(s.campaign.wins.length, circles.length - 1);
+  s.notice = '';
+  draw();
+}
+
+function campaignPage() {
+  if (s.journey === 'story') return storyView(button);
+  if (s.journey === 'map') return mapView(s.campaign, s.circle, button, activeDuel() || Boolean(readKey(localStorage.getItem(activeRoomKey))));
+  if (s.journey === 'codex') return codexView(s.campaign);
+  return null;
+}
+
+function arenaHeading() {
+  const boss = campaignBoss();
+  if (boss !== null) return encounterHeading(boss, button);
+  return journeyNav(s.mode === 'practice' ? 'practice' : 'pit', s.campaign) +
+    '<div class="hero"><div class="superline"><span></span> ' + (s.mode === 'practice' ? 'OFFCHAIN TUTORIAL' : 'THE OPEN PIT') + ' <span></span></div><h1>NO MERCY. <em>JUST DEMONS.</em></h1><p>Stake a demon. Seal a move. <strong>Fight for both.</strong></p></div>';
+}
+
+function bossOutcome() {
+  const boss = campaignBoss();
+  if (boss === null || s.duel?.phase !== 3 || !participant() || s.playing) return '';
+  return campaignResult(boss, keyed(s.duel.winner, client.key), s.campaign, button);
+}
 
 const roundResult = () => s.result || (bossEncounter() && !emittedSettlements.has(fightId()) ? null : confirmedFight(s.duel, mySide()));
 const fightId = () => s.result ? 'practice:' + s.resultId : s.duel?.key?.toString();
@@ -152,7 +187,8 @@ function moveSelector() {
 function resultPanel() {
   const both = roundResult();
   const spectating = s.duel && !participant();
-  const title = spectating ? (both.winner === 0 ? 'Player one wins' : 'Player two wins') :
+  const title = s.result ? (both.winner === 0 ? 'Practice victory.' : 'A lesson from the Underworld.') :
+    spectating ? (both.winner === 0 ? 'Player one wins' : 'Player two wins') :
     both.winner === 0 ? 'The pit is yours.' : 'The pit takes its due.';
   const line = both.moves.map((id, index) => '<span><b>' + moves[id].name + '</b> · ' + both.score[index] + ' DMG' +
     (both.crits[index] ? ' <em>CRIT</em>' : '') + '</span>').join('<small>VS</small>');
@@ -214,7 +250,8 @@ function controls() {
   return '<div class="control"><div><span class="eyebrow">01 / ONCHAIN CARD ESCROW</span><h2>' + (s.duel?.phase === 0 ? 'Match the stake' : 'Choose your challenger') +
     '</h2><p>' + (s.duel?.phase === 0 ? 'Pick a demon from your vault and join this duel.' : 'Select one card. The victor keeps both staked demons.') +
     '</p></div><div class="actions">' + (s.duel?.phase === 0 ? button('join', 'Stake & join', 'primary', 'blade') :
-      button('bot', 'Duel the bot', 'primary', 'blade') + button('create', 'Invite a friend', 'secondary', 'people')) + '</div></div>';
+      (campaignBoss() !== null ? button('bot', 'Face ' + demons[campaignBoss()].name, 'primary', 'blade') :
+        button('bot', 'Duel the bot', 'primary', 'blade') + button('create', 'Invite a friend', 'secondary', 'people'))) + '</div></div>';
 }
 
 function inventory() {
@@ -293,17 +330,17 @@ function modal() {
 }
 
 function draw() {
-  if (s.mode !== 'landing') preloadFighters();
+  if (s.journey === 'arena' && s.mode !== 'landing') preloadFighters();
+  const page = campaignPage();
   const focus = document.activeElement?.dataset?.action;
   const hadDialog = Boolean(app.querySelector('[role=dialog]'));
   const kind = s.mode === 'practice' ? 'PRACTICE MODE' : 'SOLANA DEVNET';
-  app.dataset.screen = s.mode === 'landing' ? 'title' : 'arena';
+  app.dataset.screen = s.journey === 'story' ? 'prologue' : s.journey === 'arena' ? 'arena' : 'campaign';
   app.innerHTML = '<header><div class="nav"><button type="button" class="wordmark" data-action="home"><img src="' + ASSET + 'sigil.svg" alt=""><span>DEMON<span>DUELS</span></span></button><div class="nav-right">' +
     statusText(kind) + '<button type="button" class="square sound" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
     icon(s.sound ? 'volume' : 'mute') + '</button><button type="button" class="square help" data-action="rules" aria-label="Duel rules">' + icon('info') + '</button><button type="button" class="button wallet secondary" data-action="wallet" aria-label="Guest wallet and devnet funding">' +
     icon('wallet', 16) + '<span>' + (safeMode() ? short(client.key) : 'Guest wallet') + '</span></button></div></div></header>' +
-    '<main>' + (s.mode === 'landing' ? titleScreen({ actions: button('quick-duel', 'Enter the pit', 'primary', 'blade') + button('practice', 'Training grounds', 'text') + button('enter', 'Demon vault', 'text') }) :
-    '<div class="hero"><div class="superline">THE PIT / ' + kind + '</div><h1>THE <em>SEALED HAND</em></h1><p>One demon staked. <strong>Winner takes both.</strong></p></div>' + battlefield() + controls() + networkProgress() + capturedVault()) + '<div class="feedback" role="status" aria-live="polite">' + (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice)) + '</div>' + inventory() +
+    '<main>' + (page ?? (arenaHeading() + battlefield() + controls() + bossOutcome() + networkProgress() + capturedVault())) + '<div class="feedback" role="status" aria-live="polite">' + (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice)) + '</div>' + (page === null ? inventory() : '') +
     '<div class="mechanics"><div>' + icon('lock') + '<span><b>PRIVATE MOVES</b><small>MagicBlock Private ER</small></span></div><div>' + icon('spark') +
     '<span><b>VERIFIABLE CRITS</b><small>MagicBlock VRF</small></span></div><div>' + icon('coin') +
     '<span><b>WINNER TAKES BOTH</b><small>Solana card ownership</small></span></div></div></main>' +
@@ -313,7 +350,7 @@ function draw() {
   else if (focus) [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === focus)?.focus({ preventScroll: true });
   effects.mount(app.querySelector('.pit-particles'));
   sound.setScene(s.playing || s.mode === 'practice' || s.duel?.phase === 1 || s.duel?.phase === 2 ? 'fight' : 'menu');
-  if (roundResult() && !s.busy && s.playedId !== fightId()) {
+  if (s.journey === 'arena' && roundResult() && !s.busy && s.playedId !== fightId()) {
     s.playedId = fightId();
     queueMicrotask(playFight);
   }
@@ -439,6 +476,14 @@ function setRoom(key) {
   s.retrySeal = null;
   const url = new URL(location.href);
   if (key) {
+    const savedBoss = localStorage.getItem(encounterKey(key));
+    if (savedBoss !== null && circles[Number(savedBoss)]) {
+      s.requestedOpponent = Number(savedBoss);
+      s.returnToMap = true;
+    } else {
+      s.requestedOpponent = null;
+      s.returnToMap = false;
+    }
     url.searchParams.set('room', key.toBase58());
     const saved = localStorage.getItem(moveKey());
     s.move = saved === null ? null : Number(saved);
@@ -582,6 +627,7 @@ export async function startDuel(solo, demonId) {
   s.solo = solo;
   const { duel } = await client.openDuel(card.key);
   audio('stake');
+  if (solo && demonId === campaignBoss()) localStorage.setItem(encounterKey(duel), String(demonId));
   setRoom(duel);
   localStorage.setItem(activeRoomKey, duel.toBase58());
   if (solo) {
@@ -600,6 +646,7 @@ function restoreRoom() {
   const saved = readKey(localStorage.getItem(activeRoomKey));
   if (!s.room && saved) {
     s.solo = localStorage.getItem('demon-duels:solo:' + saved) === '1';
+    s.mode = 'chain';
     setRoom(saved);
   }
 }
@@ -628,6 +675,8 @@ export async function recoverGuestCards() {
           }
           const next = playerGeneration + 1;
           const replacement = playerFor(next);
+          // Save before switching keys, even if funding or VRF later fails.
+          s.campaign = carryCampaign(localStorage, client.key, replacement.key);
           localStorage.setItem(PLAYER_GENERATION, String(next));
           playerGeneration = next;
           client = replacement;
@@ -706,7 +755,6 @@ async function resolveChain() {
 }
 
 async function action(name) {
-  if (s.returnToMap && (name === 'home' || name === 'leave')) name = 'return-map';
   sound.unlock(s.sound);
   if (name === 'sound') {
     s.sound = !s.sound;
@@ -733,21 +781,60 @@ async function action(name) {
     s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); return;
   }
   if (s.busy || s.playing) return;
+  if (name === 'begin') {
+    localStorage.setItem('demon-duels:story-seen', '1'); showMap(); return;
+  }
+  if (name === 'home' || name === 'map' || name === 'leave') { showMap(); return; }
+  if (name === 'codex') { s.journey = 'codex'; s.notice = ''; draw(); return; }
+  if (name.startsWith('circle:')) {
+    const id = Number(name.slice(7));
+    if (Number.isInteger(id) && circles[id]) { s.circle = id; draw(); }
+    return;
+  }
+  if (name === 'resume') {
+    s.journey = 'arena'; s.mode = 'chain';
+    await run('Resuming your saved duel…', async () => {
+      const saved = readKey(localStorage.getItem(activeRoomKey));
+      if (!activeDuel() && saved && !keyed(s.room, saved)) { setRoom(null); restoreRoom(); }
+      await Promise.all([refreshRoom(), refreshWallet()]);
+    }); return;
+  }
+  if (name === 'pit') {
+    if (!pitUnlocked(s.campaign)) { showMap(); s.notice = 'Defeat all six guardians to unlock the open pit.'; draw(); return; }
+    if (activeDuel()) { s.journey = 'arena'; s.mode = 'chain'; draw(); return; }
+    setRoom(null); s.requestedOpponent = null; s.returnToMap = false; s.journey = 'arena';
+    await action('enter'); return;
+  }
+  if (name.startsWith('boss:')) {
+    const id = Number(name.slice(5));
+    if (!Number.isInteger(id) || !circles[id] || circleState(s.campaign, id) === 'locked') return;
+    window.dispatchEvent(new CustomEvent('demon-duels:launch', { detail: { opponentKind: id, mode: 'chain', returnToMap: true } }));
+    return;
+  }
+  if (name === 'campaign-return') {
+    if (activeDuel()) { showMap(); return; }
+    setRoom(null); s.requestedOpponent = null; s.returnToMap = false;
+    showMap(); return;
+  }
   if (name === 'return-map') {
     const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof };
-    setRoom(null); s.mode = 'landing'; s.returnToMap = false; s.requestedOpponent = null; draw();
+    if (activeDuel()) { showMap(); return; }
+    setRoom(null); s.mode = 'landing'; s.returnToMap = false; s.requestedOpponent = null; showMap();
     window.dispatchEvent(new CustomEvent('demon-duels:return', { detail }));
     return;
   }
   if (name === 'replay' && roundResult()) {
     s.playedId = null; s.frame = null; draw(); return;
   }
-  if (name === 'home' || name === 'leave' || name === 'reset') {
+  if (name === 'reset' && campaignBoss() !== null) { await action('campaign-return'); return; }
+  if (name === 'reset') {
     setRoom(null); s.mode = name === 'reset' ? s.mode : 'landing'; s.solo = false; s.quick = false; s.notice = '';
     if (s.mode === 'practice') s.practiceRival = (s.practiceRival + 1) % demons.length;
     draw(); return;
   }
   if (name === 'practice') {
+    if (activeDuel()) { s.journey = 'arena'; s.mode = 'chain'; draw(); return; }
+    s.journey = 'arena'; s.returnToMap = true; s.requestedOpponent = null;
     setRoom(null); s.mode = 'practice'; s.quick = false; s.notice = '';
     if (!s.practiceCards.length) { s.practiceCards = practicePack(); s.practiceStake = s.practiceCards[0]; }
     s.practiceRival = s.requestedOpponent ?? (s.practiceStake + 1) % demons.length;
@@ -758,6 +845,7 @@ async function action(name) {
     audio('seal'); draw(); return;
   }
   if (name === 'enter') {
+    s.journey = 'arena';
     s.mode = 'chain';
     s.quick = false;
     await run('Loading your devnet vault…', async () => {
@@ -853,7 +941,7 @@ async function action(name) {
   if (name === 'bot' || name === 'create') {
     const solo = name === 'bot';
     await run(solo ? 'Staking a card on Solana…' : 'Creating your duel…',
-      () => startDuel(solo, solo ? s.requestedOpponent ?? undefined : undefined));
+      () => startDuel(solo, solo ? campaignBoss() ?? undefined : undefined));
     return;
   }
   if (name === 'bot-resume') { await run('Resuming the bot…', readyBot); return; }
@@ -882,6 +970,18 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
   if (s.busy || s.playing) return false;
   if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
+  if (activeDuel()) {
+    if (mode === 'chain' && localStorage.getItem(encounterKey(s.room)) === String(opponentKind)) {
+      s.journey = 'arena'; s.mode = 'chain'; draw(); return true;
+    }
+    s.notice = 'Finish or cancel your current duel before challenging another guardian.'; draw(); return false;
+  }
+  const saved = readKey(localStorage.getItem(activeRoomKey));
+  if (mode === 'chain' && saved && localStorage.getItem(encounterKey(saved)) !== String(opponentKind)) {
+    s.notice = 'Resume or finish your saved duel before challenging this guardian.'; draw(); return false;
+  }
+  if (mode === 'chain' && circleState(s.campaign, opponentKind) === 'locked') return false;
+  s.journey = 'arena';
   setRoom(null);
   s.requestedOpponent = opponentKind; s.returnToMap = returnToMap;
   s.notice = ''; s.solo = false;
@@ -890,15 +990,46 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
     if (!s.practiceCards.length) s.practiceCards = practicePack();
     s.practiceStake = s.practiceCards[0]; s.practiceRival = opponentKind;
     draw();
-  } else startQuickDuel().catch(() => {});
+  } else {
+    s.mode = 'chain'; s.quick = false;
+    run('Preparing your guardian encounter…', async () => {
+      restoreRoom();
+      if (s.room) { await Promise.all([refreshRoom(), refreshWallet()]); return; }
+      await prepareGuest(client, progress);
+      await refreshWallet();
+    }).catch(() => {});
+  }
   return true;
 }
 window.addEventListener('demon-duels:launch', (event) => launchFight(event.detail));
+window.addEventListener('demon-duels:return', showMap);
+window.addEventListener('demon-duels:settled', (event) => {
+  const d = s.duel;
+  const bossId = campaignBoss();
+  if (event.detail?.mode !== 'chain' || !event.detail.won || event.detail.player !== client.key.toString() ||
+    !d || bossId === null || localStorage.getItem(encounterKey(d.key)) !== String(bossId) || event.detail.duel !== d.key.toString()) return;
+  const savedBot = loadRoomBot(d.key);
+  if (!savedBot || savedBot.demonId !== bossId) return;
+  s.campaign = persistBossWin(localStorage, client.key, { bossId, phase: d.phase, player: client.key.toString(), winner: d.winner.toString(),
+    opponent: (mySide() ? d.p1 : d.p2).toString(), bot: savedBot.bot.key.toString(), opposingKind: s.opposing?.kind,
+    duel: d.key.toString(), mode: event.detail.mode });
+});
+window.addEventListener('storage', (event) => {
+  if (event.key !== campaignKey(client.key)) return;
+  s.campaign = readCampaign(localStorage, client.key);
+  draw();
+});
 
 // Live hunters: a challenge accepted in the world becomes an ordinary open/join PvP duel.
 function launchRivalDuel(room, join, returnToMap) {
   if (!room) return false;
+  const saved = readKey(localStorage.getItem(activeRoomKey));
+  if ((activeDuel() && !keyed(s.room, room)) || (saved && !keyed(saved, room))) {
+    s.notice = 'Resume or finish your saved duel before opening another hunter duel.';
+    draw(); return false;
+  }
   setRoom(room);
+  s.journey = 'arena';
   s.mode = 'chain'; s.solo = false; s.quick = false; s.notice = '';
   s.requestedOpponent = null; s.returnToMap = returnToMap;
   localStorage.setItem(activeRoomKey, room.toBase58());
@@ -915,12 +1046,15 @@ function launchRivalDuel(room, join, returnToMap) {
 }
 
 async function rivalReady() {
+  assertCurrentGuest();
+  if (client !== presenceGuest) return { ok: false, reason: 'Reload to challenge hunters with your recovered guest.' };
   if (s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
   const active = readKey(localStorage.getItem(activeRoomKey));
   const open = active && await readDuel(active).catch(() => null);
   if (open && open.phase < 3 && (keyed(open.p1, client.key) || keyed(open.p2, client.key))) {
     return { ok: false, reason: 'Finish or cancel your open duel first.' };
   }
+  if (open?.phase >= 3) clearSavedRoom(active);
   await refreshWallet();
   if (!anyCard()) return { ok: false, reason: 'You need an unstaked demon card to duel another hunter.' };
   if (s.balance < 0.006) return { ok: false, reason: 'Fund the guest wallet to stake a card.' };
@@ -931,6 +1065,7 @@ async function hostRivalDuel(stillWanted) {
   const ready = await rivalReady();
   if (!ready.ok) throw new Error(ready.reason);
   if (!stillWanted()) throw new Error('The other hunter backed out before you staked.');
+  assertCurrentGuest();
   const { duel } = await client.openDuel(anyCard().key);
   audio('stake');
   localStorage.setItem(activeRoomKey, duel.toBase58());
@@ -945,7 +1080,8 @@ async function verifyRivalDuel(room, challenger) {
   }
 }
 
-startPresence({ keypair: client.keypair, host: hostRivalDuel, check: rivalReady, verify: verifyRivalDuel });
+const presenceGuest = client;
+startPresence({ keypair: presenceGuest.keypair, host: hostRivalDuel, check: rivalReady, verify: verifyRivalDuel });
 
 let ignorePointerUntil = 0;
 app.addEventListener('click', (event) => {
@@ -960,10 +1096,12 @@ app.addEventListener('click', (event) => {
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && s.modal) { s.modal = null; draw(); return; }
   if (s.modal || event.repeat || event.altKey || event.ctrlKey || event.metaKey || /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
-  if (/^[123]$/.test(event.key) && (s.mode === 'practice' && s.practiceCards.length || s.duel?.phase === 1 && participant())) {
+  if (s.journey === 'arena' && /^[123]$/.test(event.key) && (s.mode === 'practice' && s.practiceCards.length || s.duel?.phase === 1 && participant())) {
     event.preventDefault(); action('move:' + (Number(event.key) - 1));
   }
 });
+restoreRoom();
+if (s.room) s.journey = 'arena';
 draw();
 if (import.meta.env.DEV) previewFinisher(params)?.catch(() => {});
 if (s.room) {
