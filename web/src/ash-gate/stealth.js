@@ -11,6 +11,30 @@ export function blocksStep(x, z, toX, toZ, wall) {
   return clearance(toX, toZ) < clearance(x, z);
 }
 
+export function bossPatrol({ points, speed = 1.4, pause = .7 } = {}) {
+  let waypoint = 0, wait = 0;
+  return (boss, dt) => {
+    if (!points?.length || speed <= 0) return null;
+    if (wait > 0) {
+      wait -= dt;
+      if (wait > 0) return null;
+      dt = -wait;
+    }
+    const target = points[waypoint];
+    const dx = target.x - boss.x, dz = target.z - boss.z;
+    const distance = Math.hypot(dx, dz);
+    const travel = Math.min(distance, speed * dt);
+    if (travel === distance) {
+      waypoint = (waypoint + 1) % points.length;
+      wait = pause;
+    }
+    if (!travel) return null;
+    boss.x += dx * travel / distance;
+    boss.z += dz * travel / distance;
+    return Math.atan2(-dx, -dz) || 0;
+  };
+}
+
 export function obstruction(x, z, toX, toZ, blockers, padding = 0) {
   let nearest = 1;
   for (const b of blockers) {

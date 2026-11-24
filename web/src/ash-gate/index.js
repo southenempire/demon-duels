@@ -8,7 +8,7 @@ import { figure } from './figures.js';
 import { ashHunters, emit } from './hunters.js';
 import { installModel } from './models.js';
 import { braziers, buildGate, cover, limits, roofs, shade } from './scenery.js';
-import { blocksStep, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
 import './style.css';
 import '../game-overlays.css';
 
@@ -173,6 +173,7 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
     bossConfig.model && installModel(wardenRig, bossConfig.model, { height: id === 0 ? undefined : bossConfig.height })]);
   const boss = { ...bossConfig.pos, yaw: bossConfig.facing, range: bossConfig.range ?? 6.4, halfAngle: bossConfig.halfAngle ?? .61, suspicion: 0 };
   const bossGround = boss.y ?? 0;
+  const patrolBoss = bossPatrol(bossConfig.patrol);
   const drawBossCone = visionCone(scene, walls);
   warden.root.position.set(boss.x, bossGround, boss.z);
   warden.root.rotation.y = boss.yaw;
@@ -553,16 +554,19 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
     const pos = position();
     const hidden = rules.concealed(pos, { crouched: sneak }, () => height > 2.35 || sneak && coverZones.some((b) => inside(x, z, b)) &&
       fires.every(([bx, bz]) => Math.hypot(x - bx, z - bz) > 2.05));
+    const patrolYaw = outcome !== 'won' && !attack ? patrolBoss(boss, dt) : null;
     const bossBearing = Math.atan2(boss.x - x, boss.z - z);
     wardenSees = outcome !== 'won' && !attack && rules.detectsBoss(pos, { moving, crouched: sneak, running, concealed: hidden },
       () => sees(sight(boss, pos), x, z, walls, hidden));
     boss.suspicion = T.MathUtils.clamp(boss.suspicion + dt * (wardenSees ? .94 : -.8), 0, 1);
-    const bossYaw = wardenSees ? bossBearing : bossConfig.facing + Math.sin(sceneTime * .78) * .81;
+    const bossYaw = patrolYaw ?? (wardenSees ? bossBearing :
+      bossConfig.patrol ? boss.yaw : bossConfig.facing + Math.sin(sceneTime * .78) * .81);
     if (!attack) boss.yaw += angleDelta(boss.yaw, bossYaw) * (1 - Math.exp(-dt * (wardenSees ? 3.6 : 1.8)));
     const glance = T.MathUtils.clamp(angleDelta(boss.yaw, bossYaw), -.48, .48);
     warden.root.rotation.y = boss.yaw;
+    warden.root.position.set(boss.x, bossGround, boss.z);
     drawBossCone(sight(boss, pos), outcome !== 'won' && (bossConfig.showCone ?? !hooks.detectsBoss));
-    warden.pose(sceneTime * 2.3);
+    warden.pose(sceneTime * (patrolYaw === null ? 2.3 : 7), patrolYaw === null ? 0 : .52);
     if (outcome === 'won') {
       victoryTime += dt;
       scenery.raise?.(T.MathUtils.smoothstep(victoryTime, .65, 3.2));
@@ -573,7 +577,7 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
         warden.root.visible = true;
       }
     } else {
-      wardenRig.model?.update(wardenSees || boss.suspicion > 0 ? 'Alert' : 'Idle', dt, undefined, glance);
+      wardenRig.model?.update(patrolYaw !== null ? 'Walk' : wardenSees || boss.suspicion > 0 ? 'Alert' : 'Idle', dt, undefined, glance);
     }
     let suspicion = boss.suspicion, clearTrail = true;
     const investigation = hooks.investigateTargets?.(sceneTime) ?? [];

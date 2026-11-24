@@ -8,7 +8,7 @@ import { icon } from './icons.js';
 import { botGeneration, ensurePack, prepareGuest, recoverGuestPack, stockBossCard } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
 import { characters } from './characters.js';
-import { arenaCardSide, confirmedFight, confirmedSettlement, defaultStake, fightReason, privateMoveRetryMessage } from './fight.js';
+import { arenaCardSide, confirmedFight, confirmedSettlement, defaultStake, fightReason, privateMoveRetryMessage, sealedMoveNotice } from './fight.js';
 import { mount as mountDuel } from './duel3d/index.js';
 import { bossHeight } from './duel3d/fighter.js';
 import { meleeTimeline } from './duel3d/timeline.js';
@@ -67,14 +67,13 @@ const s = {
   sound: localStorage.getItem('demon-duels:sound') === 'on',
   room: readKey(params.get('room')), solo: false, opposing: null, proof: null, packProof: null, packPending: false, packOpened: false,
   playing: false, frame: null, playedId: null, sequence: 0, resultId: 0,
-  waitSince: null,
+  waitSince: null, waitingRoom: null,
   retrySeal: null,
   requestedOpponent: null, returnToMap: false,
 };
 s.circle = Math.min(s.campaign.wins.length, circles.length - 1);
 const short = (key) => key?.toString().slice(0, 4) + '…' + key?.toString().slice(-4);
 const keyed = (value, key) => Boolean(value && key && value.equals(key));
-const MOVE_WAITING = 'Your move is sealed. Waiting for your opponent.';
 function clearSavedRoom(room) {
   if (localStorage.getItem(activeRoomKey) === room?.toString()) localStorage.removeItem(activeRoomKey);
 }
@@ -132,6 +131,7 @@ function isBoundBossSettlement(detail, duel) {
 }
 let liveSettlement;
 let ashEncounter = null;
+const returnWorldName = () => ashEncounter?.worldName ?? worldName;
 let hostingRival = false;
 const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
 const guardianFinisher = bossFinisher(window, finishers, (campaign, duel) => {
@@ -225,7 +225,7 @@ function resultPanel() {
     '</span><h2>' + title + '</h2><div class="damage">' + line + '</div></div><div class="actions">' +
     (s.result && !s.returnToMap ? button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') : '') +
     button('replay', 'Replay fight', 'text') + button('duel-receipt', 'Details', 'text') +
-    (worldName && s.returnToMap ? '' : button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow')) + '</div></div>';
+    (returnWorldName() && s.returnToMap ? '' : button(s.returnToMap ? 'return-map' : 'reset', s.returnToMap ? 'Return to map' : s.result ? 'Fight again' : 'Back to the pit', 'primary', 'arrow')) + '</div></div>';
 }
 
 function resultReceipt(both) {
@@ -344,6 +344,8 @@ function networkProgress() {
     '</div><p><span>Waiting for devnet · <b data-elapsed>' + Math.floor((Date.now() - s.waitSince) / 1000) + 's</b></span><span data-delay-hint>Moves stay hidden. Combat starts after confirmation.</span></p></div>';
 }
 
+const currentNotice = () => s.notice || (s.journey === 'arena' ? sealedMoveNotice(s.duel, client.key, s.waitingRoom) : '');
+
 function modal() {
   if (!s.modal) return '';
   if (s.modal === 'duel-receipt') {
@@ -352,13 +354,14 @@ function modal() {
       icon('cross') + '</button><h2 id="dialog-title">Duel details</h2>' + resultReceipt(result) + '</section></div>' : '';
   }
   const fund = s.modal === 'wallet';
+  const status = s.busy || currentNotice();
   return '<div class="overlay" data-dismiss><section class="modal" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><button type="button" class="square close" data-action="close" aria-label="Close dialog">' +
     icon('cross') + '</button><span class="eyebrow">' + (fund ? 'ISOLATED DEVNET ACCOUNT' : 'THE PIT / FIELD GUIDE') + '</span><h2 id="dialog-title">' +
     (fund ? 'Guest wallet' : 'Know the stakes.') + '</h2>' + (fund ?
       '<p>This browser holds your guest key. Send devnet SOL only. Clearing browser storage will lose access to this wallet and its cards.</p>' +
       '<div class="wallet-address"><code>' + client.key + '</code><button type="button" class="square" data-action="copy-wallet" aria-label="Copy wallet address">' + icon('copy') + '</button></div>' +
       '<p>Balance: <strong>' + (s.balance === null ? 'checking…' : s.balance.toFixed(3) + ' devnet SOL') + '</strong>. Around 0.05 SOL is enough to get started.</p>' +
-      ((s.busy || s.notice) ? '<p role="status">' + esc(s.busy || s.notice) + '</p>' : '') +
+      (status ? '<p role="status">' + esc(status) + '</p>' : '') +
       '<div class="actions">' + button('faucet', 'Try quick airdrop', 'primary', 'spark') + '<a class="button secondary" href="https://faucet.solana.com" target="_blank" rel="noreferrer">Solana faucet ' + icon('outside', 15) + '</a>' + button('wallet-refresh', 'Refresh balance', 'text') +
       (playerGeneration > 0 ? button('recover-sol', 'Move SOL from previous guests', 'text') : '') + '</div>'
     :
@@ -368,18 +371,19 @@ function modal() {
 
 function feedback() {
   return '<div class="feedback" role="status" aria-live="polite">' +
-    (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(s.notice === MOVE_WAITING && s.duel?.phase !== 1 ? '' : s.notice)) + '</div>';
+    (s.busy ? '<i class="spinner"></i>' + esc(s.busy) : esc(currentNotice())) + '</div>';
 }
 
 function duelScreen() {
   const vault = capturedVault();
+  const destination = returnWorldName();
   const intel = s.returnToMap && ashEncounter?.tells.length ?
     '<section class="control"><div><span class="eyebrow">' + esc(ashEncounter.grade.toUpperCase()) +
-    ' / ' + esc((worldName ?? circles[ashEncounter.circle]?.realm ?? 'Guardian').toUpperCase()) + ' INTEL</span><ul>' +
+    ' / ' + esc((destination ?? circles[ashEncounter.circle]?.realm ?? 'Guardian').toUpperCase()) + ' INTEL</span><ul>' +
     ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '';
   return '<main class="duel-screen">' + battlefield() +
     '<nav class="duel-tools" aria-label="Duel options">' +
-      (worldName && s.returnToMap ? button('return-map', 'Return to ' + esc(worldName), 'secondary', 'arrow') :
+      (destination && s.returnToMap ? button('return-map', 'Return to ' + esc(destination), 'secondary', 'arrow') :
         button('map', 'Map', 'secondary', 'arrow')) +
       '<button type="button" class="button secondary" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
       icon(s.sound ? 'volume' : 'mute', 16) + '</button>' +
@@ -491,7 +495,6 @@ async function refreshRoom() {
   if (room !== s.room || owner !== client) return;
   if (!d) throw new Error('This duel link does not point to a live room.');
   s.duel = d;
-  if (d.phase === 3 && s.notice === MOVE_WAITING) s.notice = '';
   const side = arenaCardSide(d, client.key);
   if (!s.staked || !s.opposing) {
     const cards = await Promise.all([side ? d.card2 : d.card1, side ? d.card1 : d.card2]
@@ -543,6 +546,7 @@ async function run(label, action, recoveryMessage) {
   s.busy = label;
   s.waitSince = Date.now();
   s.notice = '';
+  s.waitingRoom = null;
   draw();
   try { assertCurrentGuest(); await action(); }
   catch (error) {
@@ -562,6 +566,7 @@ function setRoom(key) {
   s.frame = null;
   s.playedId = null;
   s.room = key;
+  s.waitingRoom = null;
   s.duel = null;
   s.staked = null;
   s.opposing = null;
@@ -843,7 +848,7 @@ async function resolveChain() {
       await client.reveal(duel);
     } catch (error) {
       if (/move.*first|MoveMissing|Custom.*6006/i.test(String(error.message))) {
-        if (s.room && keyed(s.room, duel.key) && s.duel?.phase === 1) s.notice = MOVE_WAITING;
+        s.waitingRoom = duel.key.toString();
         return;
       }
       throw error;
@@ -1095,7 +1100,7 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
   if (s.busy || s.playing || hostingRival || guardianFinisher.pending) return false;
   if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
-  const profile = ashGate ? profileFor({ mode, opponentKind, grade, tells, circle }) : null;
+  const profile = ashGate ? profileFor({ mode, opponentKind, grade, tells, circle, worldName }) : null;
   const hunt = profile && Object.hasOwn(worlds, profile.circle) && circleState(s.campaign, profile.circle) !== 'locked' ? profile : null;
   if (circle !== undefined && !hunt) return false;
   if (activeDuel()) {

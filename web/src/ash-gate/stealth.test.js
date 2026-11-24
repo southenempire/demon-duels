@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ASH_WARDEN, blocksStep, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { ASH_WARDEN, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
 import { isAshGate } from '../route.js';
 import { bossMove } from '../world/bot-profile.js';
 import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
@@ -8,6 +8,18 @@ import { separateStep } from './hunters.js';
 
 const guard = { x: 0, z: 0, yaw: 0, range: 6, halfAngle: .5 };
 const wall = { x: 0, z: -2, w: 1, d: 1 };
+
+test('bosses stand by default, or follow and pause at configured patrol points', () => {
+  const boss = { x: 0, z: 0 };
+  assert.equal(bossPatrol()(boss, 10), null);
+  assert.deepEqual(boss, { x: 0, z: 0 });
+  const walk = bossPatrol({ points: [{ x: 0, z: -1 }, { x: 1, z: -1 }], speed: 2, pause: 1 });
+  assert.equal(walk(boss, .5), 0);
+  assert.deepEqual(boss, { x: 0, z: -1 });
+  assert.equal(walk(boss, .75), null);
+  assert.equal(walk(boss, .5), -Math.PI / 2);
+  assert.deepEqual(boss, { x: .5, z: -1 });
+});
 
 test('a hunter falling off an edge can walk out of collider padding but not into the ledge', () => {
   assert.equal(blocksStep(.6, -2, .7, -2, wall), false);
@@ -119,8 +131,9 @@ test('a graded Ash Warden hunt persists only valid chain intel and weights the h
   const store = new Map([[profileKey('warden'), JSON.stringify(profile)]]);
   assert.deepEqual(savedProfile({ getItem: (key) => store.get(key) }, 'warden'), profile);
   assert.equal(profileFor({ ...profile, mode: 'pvp' }), null);
-  const mire = profileFor({ ...ASH_WARDEN, opponentKind: 3, circle: 3, ...huntProfile(true, false) });
+  const mire = profileFor({ ...ASH_WARDEN, opponentKind: 3, circle: 3, worldName: 'Drowned Mire', ...huntProfile(true, false) });
   assert.equal(mire.opponentKind, 3);
+  assert.equal(mire.worldName, 'Drowned Mire');
   store.set(profileKey('mire'), JSON.stringify(mire));
   assert.deepEqual(savedProfile({ getItem: (key) => store.get(key) }, 'mire'), mire);
   assert.equal(huntProfile(false, true).grade, 'shadow');
