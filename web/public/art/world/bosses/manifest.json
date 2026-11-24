@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "title": "Demon Duels \u2014 boss world sprites v1",
+  "frameSize": {
+    "w": 48,
+    "h": 48
+  },
+  "directions": [
+    "down",
+    "left",
+    "right",
+    "up"
+  ],
+  "pivot": {
+    "x": 24,
+    "y": 46
+  },
+  "layout": "world/bosses/<boss>/<anim>.png: rows = down, left, right, up; columns = frames. Left is the right row mirrored. 2x/ = same at 96x96 (the spec draws bosses at about 96 px).",
+  "animations": {
+    "idle": {
+      "frames": 4,
+      "fps": 4,
+      "loop": true
+    },
+    "patrol": {
+      "frames": 6,
+      "fps": 8,
+      "loop": true
+    },
+    "alert": {
+      "frames": 4,
+      "fps": 8,
+      "loop": true
+    },
+    "hit": {
+      "frames": 2,
+      "durationsMs": [
+        140,
+        200
+      ],
+      "loop": false
+    }
+  },
+  "bosses": [
+    {
+      "demonId": 0,
+      "name": "Ash Warden",
+      "id": "ash-warden",
+      "files": {
+        "idle": "world/bosses/ash-warden/idle.png",
+        "patrol": "world/bosses/ash-warden/patrol.png",
+        "alert": "world/bosses/ash-warden/alert.png",
+        "hit": "world/bosses/ash-warden/hit.png"
+      }
+    },
+    {
+      "demonId": 1,
+      "name": "Void Wraith",
+      "id": "void-wraith",
+      "files": {
+        "idle": "world/bosses/void-wraith/idle.png",
+        "patrol": "world/bosses/void-wraith/patrol.png",
+        "alert": "world/bosses/void-wraith/alert.png",
+        "hit": "world/bosses/void-wraith/hit.png"
+      }
+    },
+    {
+      "demonId": 2,
+      "name": "Marrow King",
+      "id": "marrow-king",
+      "files": {
+        "idle": "world/bosses/marrow-king/idle.png",
+        "patrol": "world/bosses/marrow-king/patrol.png",
+        "alert": "world/bosses/marrow-king/alert.png",
+        "hit": "world/bosses/marrow-king/hit.png"
+      }
+    },
+    {
+      "demonId": 3,
+      "name": "Mire Phantom",
+      "id": "mire-phantom",
+      "files": {
+        "idle": "world/bosses/mire-phantom/idle.png",
+        "patrol": "world/bosses/mire-phantom/patrol.png",
+        "alert": "world/bosses/mire-phantom/alert.png",
+        "hit": "world/bosses/mire-phantom/hit.png"
+      }
+    },
+    {
+      "demonId": 4,
+      "name": "Frost Herald",
+      "id": "frost-herald",
+      "files": {
+        "idle": "world/bosses/frost-herald/idle.png",
+        "patrol": "world/bosses/frost-herald/patrol.png",
+        "alert": "world/bosses/frost-herald/alert.png",
+        "hit": "world/bosses/frost-herald/hit.png"
+      }
+    },
+    {
+      "demonId": 5,
+      "name": "Gloam Shade",
+      "id": "gloam-shade",
+      "files": {
+        "idle": "world/bosses/gloam-shade/idle.png",
+        "patrol": "world/bosses/gloam-shade/patrol.png",
+        "alert": "world/bosses/gloam-shade/alert.png",
+        "hit": "world/bosses/gloam-shade/hit.png"
+      }
+    }
+  ]
+}
