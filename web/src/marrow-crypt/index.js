@@ -41,10 +41,7 @@ export const MARROW_KING = {
   },
   hooks: {
     concealedAt: ({ x, y, z }, { crouched }) => y > boss.y + .7 || crowdCover(x, z, y, crouched),
-    sightRange(guard, { y }) {
-      noise.observe(guard);
-      return Math.abs((guard.y ?? 0) - y) > 1.25 ? 0 : guard.range;
-    },
+    sightRange: (guard, { y }) => Math.abs((guard.y ?? 0) - y) > 1.25 ? 0 : guard.range,
     onStep: noise.onStep,
     investigateTargets: noise.investigateTargets,
     detectsBoss: ({ x, y, z }, { crouched, running, moving, concealed }) => {

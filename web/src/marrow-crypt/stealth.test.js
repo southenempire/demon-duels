@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { outcomeOnReturn, sees } from '../ash-gate/stealth.js';
+import { circleRules, outcomeOnReturn, sees } from '../ash-gate/stealth.js';
 import { MARROW_KING } from './index.js';
 import { boss, crowdCover, heardOnBone, nextLedge, perch, strikeFrom } from './stealth.js';
 import { resolveWorldCircle, worlds } from '../worlds.js';
@@ -23,21 +23,24 @@ test('bone amplifies footsteps, but walls and the catwalk cut sound to the groun
   assert.equal(MARROW_KING.hooks.detectsBoss({ x: -3.2, y: boss.y, z: -9.2 }, { moving: true, crouched: true }), false);
 });
 
-test('an unseen sprint on bone gives a patrol a temporary investigation target', () => {
-  const { sightRange, onStep, investigateTargets } = MARROW_KING.hooks;
+test('an unseen sprint on bone gives only the nearby patrol a temporary investigation target', () => {
+  const { onStep } = MARROW_KING.hooks;
+  const { investigateTargets } = circleRules(MARROW_KING.hooks);
   const guard = { x: 0, z: 8, yaw: 0, range: 6, halfAngle: Math.PI / 4 };
+  const distantGuard = { ...guard, z: 4 };
   const behind = { x: 0, y: 0, z: 12 };
   assert.equal(sees(guard, behind.x, behind.z, [], false), false);
-  assert.deepEqual(investigateTargets(10), []);
-  sightRange(guard, behind);
+  assert.deepEqual(investigateTargets(10, guard), []);
   onStep(behind, { crouched: true });
+  assert.deepEqual(investigateTargets(10.1, guard), []);
   onStep(behind, { crouched: false, running: false });
-  assert.deepEqual(investigateTargets(10.1), []);
+  assert.deepEqual(investigateTargets(10.1, guard), []);
   onStep({ ...behind, y: 3.85 }, { running: true });
-  assert.deepEqual(investigateTargets(10.2), []);
+  assert.deepEqual(investigateTargets(10.2, guard), []);
   onStep(behind, { running: true });
-  assert.deepEqual(investigateTargets(11).map(({ pos }) => pos), [behind]);
-  assert.deepEqual(investigateTargets(12), []);
+  assert.deepEqual(investigateTargets(11, distantGuard), []);
+  assert.deepEqual(investigateTargets(11, guard).map(({ pos }) => pos), [behind]);
+  assert.deepEqual(investigateTargets(12, guard), []);
 });
 
 test('three mantles lead to the throne and its hand-block prompt, then a perch allows an aerial strike', () => {

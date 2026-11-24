@@ -41,28 +41,23 @@ export function heardOnBone(guard, x, z, height, gait) {
 }
 
 export function courtNoise() {
-  const patrols = new Set();
   let time = 0;
   let latest = null;
   return {
     reset() {
-      patrols.clear();
       time = 0;
       latest = null;
     },
-    observe(guard) {
-      if (guard.y === undefined) patrols.add(guard);
-    },
     onStep(pos, { crouched, running }) {
       const gait = crouched ? 'sneak' : running ? 'sprint' : 'walk';
-      if ([...patrols].some((guard) => heardOnBone(guard, pos.x, pos.z, pos.y, gait))) {
-        latest = { pos, until: time + 1.6 };
-      }
+      latest = { pos, until: time + 1.6, gait };
     },
-    investigateTargets(now) {
+    investigateTargets(now, guard) {
       time = now;
       if (latest && latest.until <= now) latest = null;
-      return latest ? [latest] : [];
+      if (!latest) return [];
+      const { pos, until, gait } = latest;
+      return heardOnBone(guard, pos.x, pos.z, pos.y, gait) ? [{ pos, until }] : [];
     },
   };
 }
