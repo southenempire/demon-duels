@@ -56,3 +56,11 @@ export function persistBossWin(storage, player, result) {
   if (next !== current) storage.setItem(campaignKey(player), JSON.stringify(next));
   return next;
 }
+
+export function carryCampaign(storage, player, replacement) {
+  const previous = readCampaign(storage, player);
+  const existing = readCampaign(storage, replacement);
+  const progress = previous.wins.length > existing.wins.length ? previous : existing;
+  storage.setItem(campaignKey(replacement), JSON.stringify(progress));
+  return progress;
+}

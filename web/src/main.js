@@ -9,7 +9,7 @@ import { characters, characterArt } from './characters.js';
 import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason } from './fight.js';
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
-import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin } from './campaign.js';
+import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin, carryCampaign } from './campaign.js';
 import { storyView, mapView, codexView, journeyNav, encounterHeading, campaignResult } from './campaign-view.js';
 
 const app = document.getElementById('app');
@@ -618,6 +618,8 @@ export async function recoverGuestCards() {
         replace() {
           const next = playerGeneration + 1;
           const replacement = playerFor(next);
+          // Save before switching keys, even if funding or VRF later fails.
+          s.campaign = carryCampaign(localStorage, client.key, replacement.key);
           localStorage.setItem(PLAYER_GENERATION, String(next));
           playerGeneration = next;
           client = replacement;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { circles, campaignKey, freshCampaign, readCampaign, circleState, pitUnlocked, recordBossWin, persistBossWin } from './campaign.js';
+import { circles, campaignKey, freshCampaign, readCampaign, circleState, pitUnlocked, recordBossWin, persistBossWin, carryCampaign } from './campaign.js';
 
 const result = (bossId = 0) => ({ bossId, mode: 'chain', phase: 3, player: 'player', winner: 'player',
   opponent: 'boss-wallet', bot: 'boss-wallet', opposingKind: bossId, duel: 'confirmed-duel-' + bossId });
@@ -60,4 +60,18 @@ test('a late settlement in an older tab cannot overwrite newer seals', () => {
   assert.deepEqual(readCampaign(storage, 'player'), newer);
   assert.equal(persistBossWin(storage, 'player', result(2)).wins.length, 3);
   assert.deepEqual(readCampaign(storage, 'another-player'), freshCampaign());
+});
+
+test('guest replacement carries earned seals before funding, leaving the old journal untouched', () => {
+  const values = new Map();
+  const storage = { getItem: (key) => values.get(key), setItem: (key, value) => values.set(key, value) };
+  const old = persistBossWin(storage, 'old-guest', result(0));
+  const original = storage.getItem(campaignKey('old-guest'));
+  assert.deepEqual(carryCampaign(storage, 'old-guest', 'replacement'), old);
+  assert.equal(storage.getItem(campaignKey('old-guest')), original);
+  assert.deepEqual(readCampaign(storage, 'replacement'), old, 'reload after failed funding retains seals');
+  const continued = persistBossWin(storage, 'replacement', result(1));
+  assert.equal(continued.wins.length, 2, 'the next boss can still advance after replacing the guest');
+  assert.deepEqual(carryCampaign(storage, 'old-guest', 'replacement'), continued, 'retry never erases newer seals');
+  assert.equal(storage.getItem(campaignKey('old-guest')), original);
 });
