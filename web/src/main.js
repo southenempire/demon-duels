@@ -64,7 +64,7 @@ const safeMode = () => s.mode === 'chain';
 const mySide = () => keyed(s.duel?.p2, client.key) ? 1 : 0;
 const participant = () => keyed(s.duel?.p1, client.key) || keyed(s.duel?.p2, client.key);
 const moveLocked = () => s.move !== null;
-const activeDuel = () => Boolean(s.room && (!s.duel || s.duel.phase < 3));
+const activeDuel = () => Boolean(s.room && (!s.duel || s.duel.phase < 3 && participant()));
 const campaignBoss = () => s.mode === 'chain' && s.returnToMap && Number.isInteger(s.requestedOpponent) ? s.requestedOpponent : null;
 
 function showMap() {
