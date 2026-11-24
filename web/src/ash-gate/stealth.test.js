@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ASH_WARDEN, cameraSweep, canStrike, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { ASH_WARDEN, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
 import { isAshGate } from '../route.js';
 import { bossMove } from '../world/bot-profile.js';
 import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
@@ -30,6 +30,28 @@ test('strike requires a close flank or rear approach without an active alert', (
   assert.deepEqual(ASH_WARDEN, { opponentKind: 0, mode: 'chain', returnToMap: true });
 });
 
+test('omitted terrain hooks keep the world traversable with standard sight and Strike rules', () => {
+  const rules = circleRules();
+  const pos = { x: 0, y: 0, z: -2 };
+  assert.equal(rules.canTraverse(pos), true);
+  assert.equal(rules.tractionAt(pos), 1);
+  assert.equal(rules.interactionAt(pos), null);
+  assert.equal(rules.concealed(pos, {}, () => true), true);
+  assert.equal(rules.detectsBoss(pos, {}, () => sees(guard, pos.x, pos.z, [], false)), true);
+  assert.equal(rules.canStrikeBoss(pos, {}, () => canStrike(pos.x, pos.z, guard, [], false)), false);
+  const custom = circleRules({ concealedAt: () => false, detectsBoss: () => false, canStrikeBoss: () => true, canTraverse: () => false });
+  assert.equal(custom.concealed(pos, {}, () => true), false);
+  assert.equal(custom.detectsBoss(pos, {}, () => true), false);
+  assert.equal(custom.canStrikeBoss(pos, {}, () => false), true);
+  assert.equal(custom.canTraverse(pos), false);
+});
+
+test('ice preserves momentum on release while ordinary terrain stops immediately', () => {
+  assert.equal(dampVelocity(4, 0, 1, .1), 0);
+  assert.ok(dampVelocity(4, 0, .1, .1) > 2);
+  assert.equal(circleRules({ tractionAt: () => -2 }).tractionAt({}), 0);
+});
+
 test('the same bound chain duel must settle before the map credits its result', () => {
   const returned = { mode: 'chain', opponentKind: 0, duel: 'warden', result: { winner: 0 } };
   const settled = { mode: 'chain', opponentKind: 0, duel: 'warden', bossBound: true, won: true };
@@ -40,6 +62,7 @@ test('the same bound chain duel must settle before the map credits its result', 
   assert.equal(outcomeOnReturn({ ...settled, mode: 'practice' }, returned), null);
   assert.equal(outcomeOnReturn({ ...settled, bossBound: false }, returned), null);
   assert.equal(outcomeOnReturn({ ...settled, opponentKind: 1 }, returned), null);
+  assert.equal(outcomeOnReturn({ ...settled, opponentKind: 3 }, { ...returned, opponentKind: 3 }, 3), 'won');
 });
 
 test('nearby ledges are mounted in stages instead of teleporting to arbitrary roofs', () => {
@@ -88,6 +111,10 @@ test('a graded Ash Warden hunt persists only valid chain intel and weights the h
   const store = new Map([[profileKey('warden'), JSON.stringify(profile)]]);
   assert.deepEqual(savedProfile({ getItem: (key) => store.get(key) }, 'warden'), profile);
   assert.equal(profileFor({ ...profile, mode: 'pvp' }), null);
+  const mire = profileFor({ ...ASH_WARDEN, opponentKind: 3, circle: 3, ...huntProfile(true, false) });
+  assert.equal(mire.opponentKind, 3);
+  store.set(profileKey('mire'), JSON.stringify(mire));
+  assert.deepEqual(savedProfile({ getItem: (key) => store.get(key) }, 'mire'), mire);
   assert.equal(huntProfile(false, true).grade, 'shadow');
   assert.equal(huntProfile(true, true).grade, 'exposed');
   for (const roll of [.01, .30, .59]) assert.equal(bossMove(0, 'ghost', roll), 1);

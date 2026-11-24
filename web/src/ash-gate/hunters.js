@@ -1,23 +1,22 @@
 import { Vector3 } from 'three';
 import { figure } from './figures.js';
-import { limits, roofs } from './scenery.js';
 import { inside } from './stealth.js';
 
 const headings = { up: 0, left: Math.PI / 2, down: Math.PI, right: -Math.PI / 2 };
 export const emit = (name, detail) => window.dispatchEvent(new CustomEvent('demon-duels:' + name, { detail }));
 
-function peerHeight(peer) {
+function peerHeight(peer, roofs) {
   if (Number.isFinite(peer.height)) return peer.height;
   if (!peer.anim?.startsWith('roof-')) return 0;
   return roofs.reduce((y, roof) => inside(peer.x, peer.y, roof) ? Math.max(y, roof.h) : y, 0);
 }
 
-export function separateStep(x, z, height, dx, dz, peers) {
+export function separateStep(x, z, height, dx, dz, peers, roofs = []) {
   const distance = Math.hypot(dx, dz);
   if (!distance) return [dx, dz];
   let steering = 0;
   for (const peer of peers) {
-    if (Math.abs(height - peerHeight(peer)) > .65) continue;
+    if (Math.abs(height - peerHeight(peer, roofs)) > .65) continue;
     const px = peer.x - x, pz = peer.y - z;
     const gap = Math.hypot(px, pz);
     if (gap >= .9 || px * dx + pz * dz <= 0) continue;
@@ -28,24 +27,24 @@ export function separateStep(x, z, height, dx, dz, peers) {
   return [dx - dz * steer, dz + dx * steer];
 }
 
-export function ashHunters(scene, world) {
+export function ashHunters(scene, world, { circle, bounds, roofs = [] }) {
   const actors = new Map();
   const framePoint = new Vector3();
   let peers = [];
   window.addEventListener('demon-duels:hunters', ({ detail }) => {
-    if (detail?.circle !== 0 || !Array.isArray(detail.hunters)) return;
+    if (detail?.circle !== circle || !Array.isArray(detail.hunters)) return;
     peers = detail.hunters.filter((peer) => typeof peer.id === 'string' && Object.hasOwn(headings, peer.dir)
-      && Number.isFinite(peer.x) && peer.x >= limits.left && peer.x <= limits.right
-      && Number.isFinite(peer.y) && peer.y >= limits.far && peer.y <= limits.near).slice(0, 8);
+      && Number.isFinite(peer.x) && peer.x >= bounds.left && peer.x <= bounds.right
+      && Number.isFinite(peer.y) && peer.y >= bounds.far && peer.y <= bounds.near).slice(0, 8);
   });
   return {
     count() { return peers.length; },
     leave() { peers = []; emit('hunter-pose', { circle: null }); },
-    separate(x, z, height, dx, dz) { return separateStep(x, z, height, dx, dz, peers); },
+    separate(x, z, height, dx, dz) { return separateStep(x, z, height, dx, dz, peers, roofs); },
     publish(x, z, height, yaw, anim) {
       const names = ['up', 'left', 'down', 'right'];
       const dir = names[(Math.round(yaw / (Math.PI / 2)) % 4 + 4) % 4];
-      emit('hunter-pose', { circle: 0, x, y: z, height, heading: yaw, dir, anim: height > 2.3 ? 'roof-' + anim : anim });
+      emit('hunter-pose', { circle, x, y: z, height, heading: yaw, dir, anim: height > 2.3 ? 'roof-' + anim : anim });
     },
     update(dt, x, z, height) {
       let near = null, closest = 2.3;
@@ -58,7 +57,7 @@ export function ashHunters(scene, world) {
       }
       for (const peer of peers) {
         const yaw = Number.isFinite(peer.heading) ? peer.heading : headings[peer.dir];
-        const top = peerHeight(peer);
+        const top = peerHeight(peer, roofs);
         let slot = actors.get(peer.id);
         if (!slot) {
           const label = document.createElement('span');

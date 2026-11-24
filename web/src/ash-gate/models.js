@@ -1,7 +1,7 @@
 import * as T from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-export async function installModel(actor, file) {
+export async function installModel(actor, file, { height } = {}) {
   try {
     const url = new URL(import.meta.env.BASE_URL + 'models/' + file, location.href);
     const response = await fetch(url);
@@ -10,6 +10,10 @@ export async function installModel(actor, file) {
     if (data.byteLength < 12 || new DataView(data).getUint32(0, true) !== 0x46546c67) throw new Error('Response is not a GLB');
     const { scene, animations } = await new GLTFLoader().parseAsync(data, new URL('.', url).href);
     scene.rotation.y = Math.PI;
+    if (height) {
+      const size = new T.Box3().setFromObject(scene).getSize(new T.Vector3()).y;
+      if (size > 0) scene.scale.multiplyScalar(height / size);
+    }
     scene.traverse((node) => {
       if (!node.isMesh) return;
       node.castShadow = node.receiveShadow = true;

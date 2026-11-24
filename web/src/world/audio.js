@@ -1,6 +1,6 @@
 const loadManifest = (url) => fetch(url).then((response) => response.ok ? response.json() : null).catch(() => null);
 
-export function installHuntAudio(base, signal) {
+export function installHuntAudio(base, signal, { ambient } = {}) {
   const documentAudio = document.createElement('audio');
   const supportsOgg = Boolean(documentAudio.canPlayType('audio/ogg; codecs="vorbis"'));
   const manifest = loadManifest(base + 'world/audio/manifest.json');
@@ -73,7 +73,7 @@ export function installHuntAudio(base, signal) {
     const pack = await manifest;
     if (!pack || generation !== token) return;
     const bindings = pack.event_bindings['demon-duels:world-state'].alert_to_asset_id;
-    const selected = ['amb-circle-' + desiredCircle, ...Object.values(bindings)];
+    const selected = [ambient ?? 'amb-circle-' + desiredCircle, ...Object.values(bindings)];
     const assets = selected.map((id) => pack.assets.find((asset) => asset.id === id)).filter(Boolean);
     const clips = await Promise.all(assets.map((asset) => fetchBuffer(asset)));
     if (generation !== token || signal.aborted) return;

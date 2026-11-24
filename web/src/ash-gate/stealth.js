@@ -64,6 +64,21 @@ export function canStrike(x, z, boss, blockers, alert) {
     && obstruction(x, z, boss.x, boss.z, blockers) === 1;
 }
 
+export function circleRules(hooks = {}) {
+  return {
+    concealed: (pos, state, fallback) => hooks.concealedAt ? hooks.concealedAt(pos, state) : fallback(),
+    detectsBoss: (pos, state, fallback) => hooks.detectsBoss ? hooks.detectsBoss(pos, state) : fallback(),
+    canStrikeBoss: (pos, state, fallback) => hooks.canStrikeBoss ? hooks.canStrikeBoss(pos, state) : fallback(),
+    canTraverse: (pos) => hooks.canTraverse ? hooks.canTraverse(pos) : true,
+    interactionAt: (pos) => hooks.interactionAt?.(pos) ?? null,
+    tractionAt: (pos) => Math.max(0, Math.min(1, hooks.tractionAt?.(pos) ?? 1)),
+  };
+}
+
+export function dampVelocity(current, desired, traction, dt) {
+  return traction === 1 ? desired : desired + (current - desired) * Math.exp(-dt * (1.6 + 20 * traction));
+}
+
 export function mantleTarget(x, z, height, roofs) {
   let closest = null, distance = .86;
   for (const roof of roofs) {
@@ -90,10 +105,10 @@ export function mantleTarget(x, z, height, roofs) {
   return closest;
 }
 
-export function outcomeOnReturn(settlement, returned) {
-  if (settlement?.mode !== 'chain' || settlement.opponentKind !== ASH_WARDEN.opponentKind ||
+export function outcomeOnReturn(settlement, returned, opponentKind = ASH_WARDEN.opponentKind) {
+  if (settlement?.mode !== 'chain' || settlement.opponentKind !== opponentKind ||
       !settlement.bossBound || !settlement.duel || settlement.duel !== returned?.duel ||
-      returned.mode !== 'chain' || returned.opponentKind !== ASH_WARDEN.opponentKind ||
+      returned.mode !== 'chain' || returned.opponentKind !== opponentKind ||
       typeof settlement.won !== 'boolean') return null;
   return settlement.won ? 'won' : 'lost';
 }

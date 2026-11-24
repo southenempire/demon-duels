@@ -1,6 +1,7 @@
 import { Buffer } from 'buffer';
 import { titleScreen } from './game-ui.js';
 import { isAshGate } from './route.js';
+import { resolveWorldCircle, worlds } from './worlds.js';
 import './game-overlays.css';
 import './ash-gate/style.css';
 
@@ -17,9 +18,11 @@ function failed(error) {
 async function enterAshGate() {
   app.querySelector('button').disabled = true;
   app.querySelector('[role=status]').textContent = 'Opening Ash Gate…';
-  const [{ hasAshSeal, setExploring }, { mountAshGate }] = await Promise.all([import('./main.js'), import('./ash-gate/index.js')]);
+  const { getWorldCampaign, setExploring } = await import('./main.js');
+  const circle = resolveWorldCircle(params, getWorldCampaign());
+  const [descriptor, { mountCircle }] = await Promise.all([worlds[circle](), import('./ash-gate/index.js')]);
   try {
-    mountAshGate({ hasAshSeal, setExploring, startInPlay: true });
+    mountCircle(descriptor, { hasSeal: () => getWorldCampaign().wins.some((win) => win.bossId === descriptor.opponentKind), setExploring, startInPlay: true });
   } catch (error) {
     const notice = document.createElement('p');
     notice.setAttribute('role', 'status');

@@ -18,6 +18,7 @@ import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnloc
 import { storyView, mapView, codexView, campaignResult } from './campaign-view.js';
 import { startPresence } from './presence-live.js';
 import { initialJourney, isAshGate } from './route.js';
+import { worlds } from './worlds.js';
 import { profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
 import { bossMove } from './world/bot-profile.js';
 import { duelHud, installDialogKeys, movePicker } from './game-ui.js';
@@ -44,7 +45,8 @@ function assertCurrentGuest() {
 const BOT_GENERATION = 'demon-duels:rival-generation';
 const BOSS_GENERATIONS = 'demon-duels:boss-generations';
 const activeRoomKey = 'demon-duels:active';
-export const hasAshSeal = () => readCampaign(localStorage, client.key).wins.some((win) => win.bossId === 0);
+export const getWorldCampaign = () => readCampaign(localStorage, client.key);
+export const hasAshSeal = () => getWorldCampaign().wins.some((win) => win.bossId === 0);
 const botFor = (generation) => new ArenaClient(localKey(generation ? 'rival-' + generation : 'rival'));
 const bossFor = (generation) => new ArenaClient(localKey('boss-' + generation));
 const roomBotKey = (room) => 'demon-duels:room-bot:' + room;
@@ -909,6 +911,10 @@ async function action(name) {
   if (name.startsWith('boss:')) {
     const id = Number(name.slice(5));
     if (!Number.isInteger(id) || !circles[id] || circleState(s.campaign, id) === 'locked') return;
+    if (!activeDuel() && !readKey(localStorage.getItem(activeRoomKey)) && Object.hasOwn(worlds, id)) {
+      location.href = '?world=3d&circle=' + id;
+      return;
+    }
     window.dispatchEvent(new CustomEvent('demon-duels:launch', { detail: { opponentKind: id, mode: 'chain', returnToMap: true } }));
     return;
   }
@@ -921,18 +927,19 @@ async function action(name) {
   }
   if (name === 'return-map') {
     if (guardianFinisher.pending) await presentFinisher();
-    const savedAsh = s.room && savedProfile(localStorage, s.room);
-    const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof };
+    const savedWorld = s.room && savedProfile(localStorage, s.room);
+    const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof,
+      circle: savedWorld?.circle ?? ashEncounter?.circle };
     if (activeDuel() || checkingBossSettlement()) {
       showMap();
-      if (!ashGate) return;
+      if (!ashGate && !savedWorld) return;
     } else {
       setRoom(null); s.mode = 'landing'; s.returnToMap = false; s.requestedOpponent = null;
       ashEncounter = null;
       showMap();
     }
     window.dispatchEvent(new CustomEvent('demon-duels:return', { detail }));
-    if (!ashGate && savedAsh) location.href = '?world=3d';
+    if (!ashGate && savedWorld) location.href = '?world=3d&circle=' + savedWorld.circle;
     return;
   }
   if (name === 'replay' && roundResult()) {
@@ -1078,11 +1085,13 @@ async function action(name) {
 }
 
 // Campaign integration: launch a selected boss without coupling the arena to a map.
-export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade, tells } = {}) {
+export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade, tells, circle } = {}) {
   if (s.busy || s.playing || hostingRival || guardianFinisher.pending) return false;
   if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
-  const hunt = ashGate ? profileFor({ mode, opponentKind, grade, tells }) : null;
+  const profile = ashGate ? profileFor({ mode, opponentKind, grade, tells, circle }) : null;
+  const hunt = profile && Object.hasOwn(worlds, profile.circle) && circleState(s.campaign, profile.circle) !== 'locked' ? profile : null;
+  if (circle !== undefined && !hunt) return false;
   if (activeDuel()) {
     if (mode === 'chain' && roomBoss(s.room) === String(opponentKind)) {
       s.journey = 'arena'; s.mode = 'chain';
