@@ -37,11 +37,11 @@ export const coverZones = [
 ];
 
 export const patrols = [
-  { route: [[-2.6, 10.7], [2.7, 10.7], [2.7, 3.4], [-2.6, 3.4]], yaw: -Math.PI / 2 },
-  { route: [[-2.6, -1.8], [2.7, -1.8], [2.7, -8.65], [-2.6, -8.65]], yaw: -Math.PI / 2 },
-  { route: [[6.2, -7.8], [9.6, -7.8], [9.6, -16.2], [3.9, -16.2], [3.9, -10]], yaw: -Math.PI / 2 },
+  { route: [[-2.6, 10.7], [2.7, 10.7], [2.7, 3.4], [-2.6, 3.4]], facing: -Math.PI / 2 },
+  { route: [[-2.6, -1.8], [2.7, -1.8], [2.7, -8.65], [-2.6, -8.65]], facing: -Math.PI / 2 },
+  { route: [[6.2, -7.8], [9.6, -7.8], [9.6, -16.2], [3.9, -16.2], [3.9, -10]], facing: -Math.PI / 2 },
 ];
 
-export function concealedAt({ x, z, y = 0, height = y }) {
-  return coverZones.some((zone) => Math.abs(height - zone.h) < .32 && inside(x, z, zone));
+export function concealedAt({ x, y = 0, z }) {
+  return coverZones.some((zone) => Math.abs(y - zone.h) < .32 && inside(x, z, zone));
 }
