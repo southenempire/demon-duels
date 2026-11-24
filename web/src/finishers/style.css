@@ -63,7 +63,7 @@
   box-shadow: 0 0 0 12px #ffffff08, 0 0 0 13px var(--finisher-edge), inset 0 0 70px #08050d80;
   background: repeating-conic-gradient(from 5deg, transparent 0 29deg, #ffffff12 29deg 30deg);
 }
-.finisher-boss, .finisher-hunter {
+.finisher-boss {
   position: absolute;
   object-fit: contain;
   pointer-events: none;
@@ -71,19 +71,25 @@
   height: 105%;
   max-width: 65%;
   object-position: bottom;
+  left: 45%;
+  transform: scaleX(-1);
+  transform-origin: 43.75% 92.1875%;
 }
-.finisher-boss { left: 45%; transform: scaleX(-1); transform-origin: 43.75% 92.1875%; }
 .finisher-boss-before { animation: finisher-before 4000ms linear both; }
 .finisher-boss-after { animation: finisher-after 4000ms ease-out both; }
 .finisher-hunter {
-  right: 54%;
-  bottom: 1%;
-  height: 82%;
+  position: absolute;
+  right: 50%;
+  bottom: -1%;
+  width: min(65%, clamp(163px, 50.4dvh, 462px));
+  aspect-ratio: 1;
+  overflow: hidden;
   z-index: 1;
-  filter: drop-shadow(0 0 9px #bc8b9b66);
-  transform-origin: 60% 88%;
+  filter: drop-shadow(0 0 7px #bc8b9b55);
+  transform-origin: 43.75% 92.1875%;
   animation: finisher-hunter 4000ms cubic-bezier(.2,.6,.4,1) both;
 }
+.finisher-hunter img { display: block; height: 100%; max-width: none; }
 .finisher[data-effect="fallen"] .finisher-hunter { animation-name: finisher-fall; }
 .finisher[data-grade="ghost"] .finisher-hunter { animation-name: finisher-ghost; filter: drop-shadow(0 0 5px #7e84977a); }
 .finisher[data-grade="exposed"] .finisher-hunter { animation-name: finisher-exposed; }
@@ -136,7 +142,7 @@
   0% { transform: translateX(-34%); opacity: .12; }
   28% { transform: translateX(21%); opacity: 1; }
   34% { transform: translateX(4%) rotate(-28deg); opacity: 1; }
-  52%, 100% { transform: translate(-10%, 6%) rotate(-63deg); opacity: 1; }
+  52%, 100% { transform: translate(-10%, 6%) rotate(-58deg); opacity: 1; }
 }
 @keyframes finisher-ghost {
   0%, 21% { transform: translateX(-15%); opacity: 0; }
@@ -160,5 +166,5 @@
   .finisher *, .finisher[data-grade] .finisher-hunter { animation: none; }
   .finisher-boss-before, .finisher-cut { display: none; }
   .finisher-hunter { transform: translateX(25%); }
-  .finisher[data-effect="fallen"] .finisher-hunter { animation: none; transform: translate(-10%, 6%) rotate(-63deg); }
+  .finisher[data-effect="fallen"] .finisher-hunter { animation: none; transform: translate(-10%, 6%) rotate(-58deg); }
 }
