@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ASH_WARDEN, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { ASH_WARDEN, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees } from './stealth.js';
 import { isAshGate } from '../route.js';
 import { bossMove } from '../world/bot-profile.js';
 import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
@@ -8,6 +8,11 @@ import { separateStep } from './hunters.js';
 
 const guard = { x: 0, z: 0, yaw: 0, range: 6, halfAngle: .5 };
 const wall = { x: 0, z: -2, w: 1, d: 1 };
+
+test('a patrol returning from pursuit skips waypoints blocked by a pillar', () => {
+  const route = [[0, -4], [.2, -4], [2, -1]];
+  assert.equal(nextPatrolWaypoint(route, 0, { x: 0, z: -1 }, [wall], () => true), 2);
+});
 
 test('bosses stand by default, or follow and pause at configured patrol points', () => {
   const boss = { x: 0, z: 0 };

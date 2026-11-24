@@ -56,6 +56,15 @@ export function obstruction(x, z, toX, toZ, blockers, padding = 0) {
   return nearest;
 }
 
+export function nextPatrolWaypoint(route, current, { x, z }, walls, canWalk) {
+  for (let step = 1; step < route.length; step++) {
+    const index = (current + step) % route.length;
+    const [toX, toZ] = route[index];
+    if (Math.hypot(toX - x, toZ - z) > .1 && canWalk(toX, toZ) && obstruction(x, z, toX, toZ, walls, .12) === 1) return index;
+  }
+  return (current + 1) % route.length;
+}
+
 export function cameraSweep(from, to, blockers, radius = .18) {
   let nearest = 1;
   for (const b of blockers) {

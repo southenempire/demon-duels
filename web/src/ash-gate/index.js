@@ -8,7 +8,7 @@ import { figure } from './figures.js';
 import { ashHunters, emit } from './hunters.js';
 import { installModel } from './models.js';
 import { braziers, buildGate, cover, limits, roofs, shade } from './scenery.js';
-import { blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees } from './stealth.js';
 import './style.css';
 import '../game-overlays.css';
 
@@ -84,6 +84,7 @@ function patrol(scene, { route, facing, yaw = facing ?? 0, range = 6, halfAngle 
   const paint = visionCone(scene, walls);
   const state = { x, z, yaw, range, halfAngle, waypoint: 1 % route.length, suspicion: 0, pause: 1.2, pursuit: null };
   const clear = (x, z) => canWalk(x, z) && !walls.some((wall) => inside(x, z, wall, .12));
+  let stalled = 0;
   return {
     state,
     update(t, dt, targets) {
@@ -98,20 +99,28 @@ function patrol(scene, { route, facing, yaw = facing ?? 0, range = 6, halfAngle 
       const dist = Math.hypot(dx, dz);
       state.pause -= dt;
       const moving = (state.pursuit || search || state.pause <= 0) && dist > .1;
+      let walked = false;
       if (dist > .1) state.yaw += angleDelta(state.yaw, Math.atan2(-dx, -dz)) * Math.min(1, dt * 4.6);
       else if (state.pursuit || search) state.yaw += Math.sin(t * 5) * dt * 2;
       if (moving) {
+        const { x: oldX, z: oldZ } = state;
         const travel = Math.min(dist, dt * (state.pursuit ? 2.85 : 1.46));
         const x = state.x + dx / dist * travel, z = state.z + dz / dist * travel;
         if (clear(x, state.z)) state.x = x;
         if (clear(state.x, z)) state.z = z;
+        walked = Math.hypot(state.x - oldX, state.z - oldZ) > 0;
+        stalled = !walked && !state.pursuit && !search ? stalled + dt : 0;
+        if (stalled >= .6) {
+          state.waypoint = nextPatrolWaypoint(route, state.waypoint, state, walls, canWalk);
+          stalled = 0;
+        }
       } else if (!state.pursuit && !search && dist <= .1) {
         state.waypoint = (state.waypoint + 1) % route.length;
         state.pause = .7;
       }
       actor.root.position.set(state.x, 0, state.z);
       actor.root.rotation.y = state.yaw;
-      actor.pose(t * 7, moving ? .52 : 0);
+      actor.pose(t * 7, walked ? .52 : 0);
     },
     paint,
   };
