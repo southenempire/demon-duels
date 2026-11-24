@@ -63,6 +63,7 @@ export function startPresence({ keypair, host, check, verify, brokers = BROKERS 
     const body = open(payload, now);
     if (!body || body.id === self) return;
     if (body.k === 'pose' || body.k === 'bye') { peers.receive(body, now); return; }
+    if (body.k === 'challenge' && (circle === null || !peers.has(body.id, circle, now))) return;
     handle(talks.receive(body, now));
   }
 
@@ -141,8 +142,10 @@ export function startPresence({ keypair, host, check, verify, brokers = BROKERS 
     if (event.type === 'accepted') {
       render();
       try {
-        const duel = await host();
-        direct(talks.staked(duel));
+        const duel = await host(() => talks.outgoing?.to === event.to && talks.outgoing.stage === 'staking');
+        const staked = talks.staked(duel);
+        if (staked) direct(staked);
+        else toast(hunterName(event.to) + ' backed out. Cancel the duel to get your card back.');
         render();
         launch(duel, false);
       } catch (error) {
