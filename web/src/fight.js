@@ -29,31 +29,6 @@ export function confirmedSettlement(duel, player, opponentKind, proof = null) {
     player: player.toString(), opponentKind, won: result.winner === 0, result, proof };
 }
 
-export function fightTimeline(result) {
-  const frames = [{ stage: 'reveal', duration: 1050, attacks: 0 }];
-  for (const side of [0, 1]) {
-    frames.push(
-      { stage: 'windup', attacker: side, duration: 520, attacks: side },
-      { stage: 'strike', attacker: side, duration: 620, attacks: side + 1, sound: result.crits[side] ? 'crit' : 'strike' },
-      { stage: 'recover', attacker: side, duration: 540, attacks: side + 1 },
-    );
-  }
-  frames.push(
-    { stage: 'decision', duration: 1000, attacks: 2 },
-    { stage: 'spoils', duration: 1500, attacks: 2, sound: result.winner === 0 ? 'victory' : 'defeat' },
-    { stage: 'finish', duration: 500, attacks: 2 },
-  );
-  return frames;
-}
-
-export function fighterPose(frame, side, result) {
-  if (!frame || !result) return 'idle';
-  if (frame.stage === 'finish' || frame.stage === 'spoils') return result.winner === side ? 'crit' : 'defeat';
-  if (frame.stage === 'windup' && frame.attacker === side) return 'attack';
-  if (frame.stage === 'strike') return frame.attacker === side ? (result.crits[side] ? 'crit' : 'attack') : 'hit';
-  return 'idle';
-}
-
 export function fightReason(result, practice = false) {
   if (result.score[0] === result.score[1]) return practice ? 'Damage tied · practice randomness broke the tie.' : 'Damage tied · MagicBlock VRF broke the tie.';
   const loser = 1 - result.winner;
