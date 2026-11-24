@@ -13,6 +13,7 @@ export async function ensurePack(owner, pack = undefined, wait = until) {
   const existing = pack === undefined ? await owner.pack() : pack;
   if (existing?.opened) return;
   if (!existing) await owner.requestPack();
+  else if (!await owner.retryPack()) throw new Error('A starter pack retry is already pending. Check again in a few minutes.');
   await wait(async () => (await owner.pack())?.opened, 60000);
 }
 
@@ -38,4 +39,11 @@ export async function prepareGuest(owner, progress, openPack = ensurePack) {
   }
   progress('Opening your MagicBlock VRF starter pack…');
   await openPack(owner);
+}
+
+export async function recoverGuestPack(owner, { replace, progress, prepare = prepareGuest }) {
+  const [cards, pack] = await Promise.all([owner.inventory({ allowFallback: false }), owner.pack()]);
+  if (cards.length) return false;
+  await prepare(pack?.opened ? replace() : owner, progress);
+  return true;
 }
