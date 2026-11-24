@@ -39,3 +39,10 @@ export async function prepareGuest(owner, progress, openPack = ensurePack) {
   progress('Opening your MagicBlock VRF starter pack…');
   await openPack(owner);
 }
+
+export async function recoverGuestPack(owner, { replace, progress, prepare = prepareGuest }) {
+  const [cards, pack] = await Promise.all([owner.inventory({ allowFallback: false }), owner.pack()]);
+  if (cards.length) return false;
+  await prepare(pack?.opened ? replace() : owner, progress);
+  return true;
+}

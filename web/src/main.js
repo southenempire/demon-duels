@@ -2,13 +2,16 @@ import './style.css';
 import { PublicKey } from '@solana/web3.js';
 import { ArenaClient, PROGRAM, ZERO, addressExplorer, cardKey, explorer, localKey, packKey, proof, readCard, readCards, readDuel, readRound, until, sleep } from './chain.js';
 import { icon } from './icons.js';
-import { botGeneration, ensurePack, prepareGuest, stockBossCard } from './onboarding.js';
+import { botGeneration, ensurePack, prepareGuest, recoverGuestPack, stockBossCard } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
-const client = new ArenaClient(localKey('player'));
+const PLAYER_GENERATION = 'demon-duels:player-generation';
+const playerFor = (generation) => new ArenaClient(localKey(generation ? 'player-' + generation : 'player'));
+let playerGeneration = botGeneration(localStorage.getItem(PLAYER_GENERATION));
+let client = playerFor(playerGeneration);
 const BOT_GENERATION = 'demon-duels:rival-generation';
 const BOSS_GENERATIONS = 'demon-duels:boss-generations';
 const activeRoomKey = 'demon-duels:active';
@@ -21,7 +24,7 @@ const s = {
   balance: null, owned: [], selected: null, practiceCards: [], practiceStake: 0, practiceRival: 1,
   result: null, move: null, duel: null, busy: null, notice: '', modal: null, quick: false,
   sound: localStorage.getItem('demon-duels:sound') === 'on',
-  room: readKey(params.get('room')), solo: false, opposing: null, proof: null, packProof: null, packPending: false,
+  room: readKey(params.get('room')), solo: false, opposing: null, proof: null, packProof: null, packPending: false, packOpened: false,
 };
 const short = (key) => key?.toString().slice(0, 4) + '…' + key?.toString().slice(-4);
 const keyed = (value, key) => Boolean(value && key && value.equals(key));
@@ -121,12 +124,16 @@ function controls() {
     (s.solo ? '<h2>Preparing the bot</h2><p>The bot will stake a card and privately seal its move.</p>' :
       '<h2>Waiting for a challenger</h2><p>Send the duel link; only the first opponent to stake can join.</p>') + '</div><div class="actions">' +
     button(s.solo ? 'bot-resume' : 'invite', s.solo ? 'Resume bot' : 'Copy invite', 'primary', s.solo ? 'spark' : 'copy') + button('refund', 'Cancel duel', 'secondary') + '</div></div>';
+  if (s.packOpened && !s.owned.length && !s.busy) return '<div class="control"><div><span class="eyebrow">01 / MAGICBLOCK VRF</span><h2>Out of cards</h2>' +
+    '<p>Open a fresh guest wallet with a free starter pack. Your previous wallet and campaign progress stay in this browser.</p></div><div class="actions">' +
+    button('recover-guest', 'Get a fresh starter pack', 'primary', 'box') + '</div></div>';
   if (s.quick && !s.room) return '<div class="control"><div><span class="eyebrow">SOLANA DEVNET / QUICK DUEL</span><h2>' +
     (s.busy ? 'Preparing your duel…' : 'Quick duel paused') + '</h2><p>' +
     (s.busy ? 'Setting up a guest wallet, starter cards and a bot opponent.' : 'Retry setup, open your vault, or play the offchain tutorial.') + '</p></div>' +
     (s.busy ? '' : '<div class="actions">' + button('quick-duel', 'Retry quick duel', 'primary') + button('enter', 'Open devnet vault') +
       button('practice', 'Offchain tutorial', 'text') + '</div>') + '</div>';
   const card = anyCard();
+  if (!card && s.owned.length) return '<div class="control"><div><h2>All demons are staked</h2><p>Finish or cancel your active duel to use your cards again.</p></div></div>';
   if (!card) {
     return '<div class="control"><div><span class="eyebrow">01 / MAGICBLOCK VRF</span><h2>' + (s.packPending ? 'Starter pack is rolling…' : 'Summon your starter pack') + '</h2><p>' +
       (s.packPending ? 'Awaiting the verifiable randomness callback.' : 'Claim three random demons. The pack is free; devnet SOL covers transaction fees.') + '</p></div><div class="actions">' +
@@ -190,26 +197,39 @@ function draw() {
 }
 
 async function refreshWallet() {
-  const [balance, owned, pack] = await Promise.all([client.balance(), client.inventory(), client.pack()]);
+  const owner = client;
+  const [balance, owned, pack] = await Promise.all([owner.balance(), owner.inventory(), owner.pack()]);
+  if (owner !== client) return;
   s.balance = balance;
   s.owned = owned;
+  s.packOpened = Boolean(pack?.opened);
   s.packPending = Boolean(pack && !pack.opened);
-  if (pack?.opened && !s.packProof) s.packProof = await proof(packKey(client.key), 'Starter pack opened:').catch(() => null);
+  if (pack?.opened && !s.packProof) {
+    const packProof = await proof(packKey(owner.key), 'Starter pack opened:').catch(() => null);
+    if (owner === client) s.packProof = packProof;
+  }
 }
 
 async function refreshRoom() {
-  if (!s.room) return;
+  const room = s.room;
+  const owner = client;
+  if (!room) return;
   const previous = s.duel?.phase;
-  s.duel = await readDuel(s.room);
-  if (!s.duel) throw new Error('This duel link does not point to a live room.');
-  const d = s.duel;
+  const d = await readDuel(room);
+  if (room !== s.room || owner !== client) return;
+  if (!d) throw new Error('This duel link does not point to a live room.');
+  s.duel = d;
   const side = mySide();
   if (!s.staked || !s.opposing) {
-    [s.staked, s.opposing] = await Promise.all([side ? d.card2 : d.card1, side ? d.card1 : d.card2]
+    const cards = await Promise.all([side ? d.card2 : d.card1, side ? d.card1 : d.card2]
       .map((key) => keyed(key, ZERO) ? null : readCard(key)));
+    if (room !== s.room || owner !== client) return;
+    [s.staked, s.opposing] = cards;
   }
   if (d.phase === 3) {
-    s.proof ||= await proof(d.key, 'Demon Duels: winner').catch(() => null);
+    const settlement = s.proof || await proof(d.key, 'Demon Duels: winner').catch(() => null);
+    if (room !== s.room || owner !== client) return;
+    s.proof = settlement;
     if (previous !== 3) {
       localStorage.removeItem(activeRoomKey);
       audio('strike');
@@ -403,6 +423,54 @@ function restoreRoom() {
   }
 }
 
+export async function recoverGuestCards() {
+  let recovered = false;
+  await run('Checking whether your guest needs new cards…', async () => {
+    const saved = readKey(localStorage.getItem(activeRoomKey));
+    for (const key of [saved, s.room]) {
+      if (!key) continue;
+      const duel = await readDuel(key);
+      if (duel?.phase < 3 && [duel.p1, duel.p2].some((owner) => keyed(owner, client.key))) {
+        throw new Error('Finish or cancel your active duel before replacing your guest wallet.');
+      }
+    }
+    s.mode = 'chain';
+    s.quick = false;
+    try {
+      recovered = await recoverGuestPack(client, {
+        progress,
+        replace() {
+          const next = playerGeneration + 1;
+          const replacement = playerFor(next);
+          localStorage.setItem(PLAYER_GENERATION, String(next));
+          playerGeneration = next;
+          client = replacement;
+          localStorage.removeItem(activeRoomKey);
+          if (s.duel?.phase >= 3) setRoom(null);
+          s.balance = null;
+          s.owned = [];
+          s.selected = null;
+          s.packProof = null;
+          s.packOpened = false;
+          s.packPending = false;
+          return replacement;
+        },
+      });
+      if (recovered) {
+        if (s.duel?.phase >= 3) setRoom(null);
+        s.notice = 'Your new demons are ready.';
+      }
+    } catch (error) {
+      s.modal = 'wallet';
+      throw error;
+    } finally {
+      await refreshWallet().catch(() => {});
+    }
+    recovered = Boolean(anyCard());
+  });
+  return recovered;
+}
+
 async function startQuickDuel() {
   s.mode = 'chain';
   s.quick = true;
@@ -490,6 +558,7 @@ async function action(name) {
     }); return;
   }
   if (name === 'quick-duel') { await startQuickDuel(); return; }
+  if (name === 'recover-guest') { await recoverGuestCards(); return; }
   if (name.startsWith('select:')) {
     if (s.mode === 'practice') s.practiceStake = Number(name.slice(7));
     else s.selected = readKey(name.slice(7));
