@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { botGeneration, ensurePack, prepareGuest } from './onboarding.js';
+import { botGeneration, ensurePack, prepareGuest, stockBossCard } from './onboarding.js';
 
 test('a new guest is funded before the starter pack is opened', async () => {
   const order = [];
@@ -51,4 +51,37 @@ test('existing rooms with no stored generation still use the original bot', () =
   assert.equal(botGeneration(null), 0);
   assert.equal(botGeneration('bogus'), 0);
   assert.equal(botGeneration('3'), 3);
+});
+
+test('boss preparation reuses the exact stocked card without requesting a pack', async () => {
+  const card = { key: 'existing', kind: 4 };
+  const bot = { key: 'rival' };
+  const prepared = await stockBossCard(4, {
+    find: async (kind) => { assert.equal(kind, 4); return { bot, card, generation: 1 }; },
+    mint: async () => assert.fail('unexpected starter pack'),
+    fund: async (candidate) => assert.equal(candidate, bot),
+  });
+  assert.deepEqual(prepared, { bot, card, generation: 1, demonId: 4 });
+});
+
+test('an exhausted boss pool opens packs until the requested kind is found', async () => {
+  const bot = { key: 'new rival' };
+  let packs = 0;
+  const prepared = await stockBossCard(0, {
+    find: async () => null,
+    mint: async () => ({ bot, generation: packs, cards: [{ kind: ++packs === 2 ? 0 : 5 }] }),
+    fund: async (candidate) => assert.equal(candidate, bot),
+  });
+  assert.equal(packs, 2);
+  assert.deepEqual(prepared, { bot, generation: 1, card: { kind: 0 }, demonId: 0 });
+});
+
+test('boss preparation does not substitute the wrong kind when the starter pack budget runs out', async () => {
+  let packs = 0;
+  await assert.rejects(stockBossCard(2, {
+    find: async () => null,
+    mint: async () => packs++ < 3 ? { cards: [{ kind: 3 }] } : null,
+    fund: async () => assert.fail('unexpected bot funding'),
+  }), /Your card was not staked/);
+  assert.equal(packs, 4);
 });

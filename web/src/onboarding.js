@@ -1,4 +1,5 @@
 import { until } from './chain.js';
+import { demons } from './rules.js';
 
 const GUEST_MINIMUM = 0.05;
 
@@ -14,6 +15,20 @@ export async function ensurePack(owner, pack = undefined, wait = until) {
   if (!existing) await owner.requestPack();
   else if (!await owner.retryPack()) throw new Error('A starter pack retry is already pending. Check again in a few minutes.');
   await wait(async () => (await owner.pack())?.opened, 60000);
+}
+
+export async function stockBossCard(demonId, { find, mint, fund }) {
+  if (!Number.isInteger(demonId) || !demons[demonId]) throw new Error('Unknown boss demon.');
+  let candidate = await find(demonId);
+  while (!candidate) {
+    const pack = await mint();
+    if (!pack) throw new Error('Fund the guest wallet to continue summoning this boss. Your card was not staked.');
+    const { bot, generation, cards } = pack;
+    const card = cards.find((item) => item.kind === demonId);
+    if (card) candidate = { bot, generation, card };
+  }
+  await fund(candidate.bot);
+  return { ...candidate, demonId };
 }
 
 export async function prepareGuest(owner, progress, openPack = ensurePack) {

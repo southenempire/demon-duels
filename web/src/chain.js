@@ -88,6 +88,13 @@ export async function readCard(key, connection = DEVNET) {
   return data ? decodeCard(key, data) : null;
 }
 
+export async function readCards(keys, connection = DEVNET) {
+  const prefix = await discriminator('account:Card');
+  const accounts = await connection.getMultipleAccountsInfo(keys, 'confirmed');
+  return accounts.map((info, index) => info?.owner.equals(PROGRAM) && info.data.length === 73 &&
+    info.data.subarray(0, 8).equals(prefix) ? decodeCard(keys[index], info.data) : null);
+}
+
 export async function until(fn, timeout = 42000, pause = 1300) {
   const start = Date.now();
   do {
