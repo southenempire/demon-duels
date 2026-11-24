@@ -7,7 +7,7 @@ import { icon } from './icons.js';
 import { botGeneration, ensurePack, prepareGuest, stockBossCard } from './onboarding.js';
 import { demons, moves, practicePack, resolve } from './rules.js';
 import { characters, characterArt } from './characters.js';
-import { campaignApproval, previewFinisher, settlementCinematics } from './finishers/index.js';
+import { campaignApproval, matchesBossStake, previewFinisher, settlementCinematics } from './finishers/index.js';
 import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason } from './fight.js';
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
@@ -65,6 +65,14 @@ const moveLocked = () => s.move !== null;
 const roundResult = () => s.result || (bossEncounter() && !emittedSettlements.has(fightId()) ? null : confirmedFight(s.duel, mySide()));
 const fightId = () => s.result ? 'practice:' + s.resultId : s.duel?.key?.toString();
 const bossEncounter = () => s.mode === 'chain' && s.solo && Number.isInteger(s.requestedOpponent) && participant();
+function isBoundBossSettlement(detail, duel) {
+  if (!bossEncounter() || !keyed(duel.p1, client.key)) return false;
+  try {
+    const saved = loadRoomBot(duel.key);
+    const binding = saved && { kind: saved.demonId, player: saved.bot.key.toString(), card: saved.key?.toString() };
+    return matchesBossStake(detail, s.requestedOpponent, fightId(), duel.p2.toString(), duel.card2.toString(), binding);
+  } catch { return false; }
+}
 let liveSettlement;
 const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
 const presentFinisher = () => finishers.play(fightId()).catch(() => {});
@@ -343,8 +351,9 @@ async function refreshRoom() {
     const detail = confirmedSettlement(d, client.key, s.opposing?.kind ?? null, s.proof);
     if (detail && !emittedSettlements.has(detail.duel)) {
       emittedSettlements.add(detail.duel);
-      const approval = detail.won ? campaignApproval(localStorage, detail) : null;
-      if ((previous !== undefined || approval) && bossEncounter() && detail.duel === fightId() && detail.opponentKind === s.requestedOpponent) {
+      const boundBoss = isBoundBossSettlement(detail, d);
+      const approval = boundBoss && detail.won ? campaignApproval(localStorage, detail) : null;
+      if (boundBoss && (previous !== undefined || approval)) {
         liveSettlement = detail;
       }
       try { window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail })); }

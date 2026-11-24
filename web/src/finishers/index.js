@@ -34,6 +34,7 @@ function playScene(scene, detail, { grade = 'shadow', sound, preview = false } =
   dialog.dataset.effect = scene.effect;
   dialog.dataset.grade = detail.won ? grade : 'defeat';
   dialog.style.setProperty('--finisher-ink', scene.color);
+  dialog.style.setProperty('--hunter-lead', hunterPoses[pose].lead + 'ms');
   dialog.setAttribute('aria-labelledby', 'finisher-title');
   dialog.setAttribute('aria-describedby', 'finisher-line');
   dialog.innerHTML = `
@@ -42,7 +43,10 @@ function playScene(scene, detail, { grade = 'shadow', sound, preview = false } =
       <div class="finisher-ring"></div>
       <img class="finisher-boss finisher-boss-before" alt="" src="${art + scene.opening}">
       <img class="finisher-boss finisher-boss-after" alt="" src="${art + scene.ending}">
-      <div class="finisher-hunter"><img alt="" src="${art}world/hunter/duel/${pose}.png"></div>
+      <div class="finisher-hunter">
+        <img class="finisher-hunter-idle" alt="" src="${art}world/hunter/duel/idle.png">
+        <img class="finisher-hunter-action" alt="" src="${art}world/hunter/duel/${pose}.png">
+      </div>
       <div class="finisher-cut"></div>
       <svg class="finisher-sigil" viewBox="0 0 120 100" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">${scene.sigil}</svg>
     </div>
@@ -76,7 +80,7 @@ function playScene(scene, detail, { grade = 'shadow', sound, preview = false } =
     try {
       document.body.append(dialog);
       dialog.showModal();
-      animateHunter(dialog.querySelector('.finisher-hunter img'), hunterPoses[pose], reduced);
+      animateHunter(dialog.querySelector('.finisher-hunter-action'), hunterPoses[pose], reduced);
       if (sound && (!detail.won || grade !== 'ghost')) {
         const victor = detail.won ? 0 : 1;
         const cue = detail.result?.crits?.[victor] ? 'crit' : grade === 'exposed' ? 'rend' : 'strike';
@@ -100,6 +104,13 @@ export function campaignApproval(storage, detail) {
   };
   const alreadyAccepted = accepted();
   return () => !alreadyAccepted && accepted();
+}
+
+export function matchesBossStake(detail, requestedKind, room, opponent, card, binding) {
+  return detail?.mode === 'chain' && detail.duel === room &&
+    Number.isInteger(requestedKind) && detail.opponentKind === requestedKind &&
+    binding?.kind === requestedKind && Boolean(binding.player && binding.card) &&
+    binding.player === opponent && binding.card === card;
 }
 
 export function installFinishers(target, accept, render) {

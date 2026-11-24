@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { campaignApproval, installFinishers } from './index.js';
+import { campaignApproval, installFinishers, matchesBossStake } from './index.js';
 import { finisherScene } from './scenes.js';
 import { demons } from '../rules.js';
 
@@ -81,4 +81,22 @@ test('bound campaign wins require a fresh journal entry for the same boss and du
   data.set(journal, JSON.stringify({ version: 1, wins: [{ bossId: 2, duel: win.duel }] }));
   assert.equal(approved(), true);
   assert.equal(campaignApproval(storage, win)(), false);
+});
+
+test('a matching kind or world request cannot turn PvP into a house boss win', async () => {
+  const binding = { kind: 2, player: 'house-boss', card: 'house-card' };
+  assert.equal(matchesBossStake(win, 2, win.duel, 'house-boss', 'house-card', binding), true);
+  assert.equal(matchesBossStake(win, 2, win.duel, 'house-boss', 'other-card', binding), false);
+  assert.equal(matchesBossStake(win, 2, 'other-room', 'house-boss', 'house-card', binding), false);
+  assert.equal(matchesBossStake(win, 2, win.duel, 'house-boss', 'house-card', null), false);
+  assert.equal(matchesBossStake({ ...win, mode: 'practice' }, 2, win.duel, 'house-boss', 'house-card', binding), false);
+  const target = new EventTarget();
+  const finishers = installFinishers(target,
+    (detail) => matchesBossStake(detail, 2, win.duel, 'friend-wallet', 'house-card', binding),
+    () => assert.fail('PvP settlement opened a boss cinematic'));
+  emit(target, 'settled', win);
+  emit(target, 'finisher', { opponentKind: 2, duel: win.duel, grade: 'exposed' });
+  await Promise.resolve();
+  assert.equal(finishers.has(win.duel), false);
+  await finishers.play(win.duel);
 });

@@ -89,7 +89,12 @@
   transform-origin: 43.75% 92.1875%;
   animation: finisher-hunter 4000ms cubic-bezier(.2,.6,.4,1) both;
 }
-.finisher-hunter img { display: block; height: 100%; max-width: none; }
+.finisher-hunter img { position: absolute; top: 0; left: 0; height: 100%; max-width: none; }
+.finisher-hunter-idle {
+  width: 400%;
+  animation: finisher-idle 1s steps(4, end) infinite, finisher-hide 1ms var(--hunter-lead) step-end both;
+}
+.finisher-hunter-action { animation: finisher-show 1ms var(--hunter-lead) step-end both; }
 .finisher[data-effect="fallen"] .finisher-hunter { animation-name: finisher-fall; }
 .finisher[data-grade="ghost"] .finisher-hunter { animation-name: finisher-ghost; filter: drop-shadow(0 0 5px #7e84977a); }
 .finisher[data-grade="exposed"] .finisher-hunter { animation-name: finisher-exposed; }
@@ -132,6 +137,9 @@
 
 @keyframes finisher-before { 0%, 28% { opacity: 1; } 31%, 100% { opacity: 0; } }
 @keyframes finisher-after { 0%, 28% { opacity: 0; } 33% { opacity: 1; transform: scaleX(-1) translateX(-4%); } 48%, 100% { opacity: 1; transform: scaleX(-1); } }
+@keyframes finisher-idle { to { transform: translateX(-100%); } }
+@keyframes finisher-hide { from { visibility: visible; } to { visibility: hidden; } }
+@keyframes finisher-show { from { visibility: hidden; } to { visibility: visible; } }
 @keyframes finisher-hunter {
   0% { transform: translateX(-34%); opacity: .12; }
   22% { transform: translateX(-12%); opacity: .8; }
@@ -164,7 +172,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .finisher *, .finisher[data-grade] .finisher-hunter { animation: none; }
-  .finisher-boss-before, .finisher-cut { display: none; }
+  .finisher-boss-before, .finisher-cut, .finisher-hunter-idle { display: none; }
   .finisher-hunter { transform: translateX(25%); }
   .finisher[data-effect="fallen"] .finisher-hunter { animation: none; transform: translate(-10%, 6%) rotate(-58deg); }
 }
