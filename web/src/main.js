@@ -15,6 +15,8 @@ import { bossMove } from './world/bot-profile.js';
 import { encounterKey as worldEncounterKey, readJSON as readWorldJSON } from './world/progress.js';
 import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin, carryCampaign } from './campaign.js';
 import { storyView, mapView, codexView, journeyNav, encounterHeading, campaignResult } from './campaign-view.js';
+import { startPresence } from './presence-live.js';
+import { hunterLedger, openBounties } from './world/market.js';
 
 const app = document.getElementById('app');
 const hunt = document.createElement('div');
@@ -24,6 +26,8 @@ let world;
 let mountPromise;
 let worldFight = null;
 let worldArena = false;
+let postingBounty = false;
+let livePresence;
 const params = new URLSearchParams(location.search);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
 const PLAYER_GENERATION = 'demon-duels:player-generation';
@@ -133,7 +137,10 @@ function isBoundBossSettlement(detail, duel) {
   } catch { return false; }
 }
 let liveSettlement;
-const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
+const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio, (detail) =>
+  worldFight?.duel === detail.duel ? () => window.dispatchEvent(new CustomEvent('demon-duels:audio', {
+    detail: { cue: 'finisher-hit', circle: detail.opponentKind },
+  })) : undefined);
 const presentFinisher = () => finishers.play(fightId()).catch(() => {});
 const fighterKinds = () => [
   s.mode === 'practice' ? s.practiceStake : s.mode === 'landing' ? 0 : s.staked?.kind ?? anyCard()?.kind,
@@ -256,7 +263,8 @@ function controls() {
     '</h2><p>' + (s.duel?.phase === 0 ? 'Pick a demon from your vault and join this duel.' : 'Select one card. The victor keeps both staked demons.') +
     '</p></div><div class="actions">' + (s.duel?.phase === 0 ? button('join', 'Stake & join', 'primary', 'blade') :
       (campaignBoss() !== null ? button('bot', 'Face ' + demons[campaignBoss()].name, 'primary', 'blade') :
-        button('bot', 'Duel the bot', 'primary', 'blade') + button('create', 'Invite a friend', 'secondary', 'people'))) + '</div></div>';
+        (postingBounty ? button('create', 'Stake & post bounty', 'primary', 'people') :
+          button('bot', 'Duel the bot', 'primary', 'blade') + button('create', 'Invite a friend', 'secondary', 'people')))) + '</div></div>';
 }
 
 function inventory() {
@@ -431,7 +439,8 @@ async function refreshRoom() {
       await refreshWallet().catch(() => {});
       if (room !== s.room || owner !== client) return;
     }
-    const detail = confirmedSettlement(d, client.key, s.opposing?.kind ?? null, s.proof);
+    const settled = confirmedSettlement(d, client.key, s.opposing?.kind ?? null, s.proof);
+    const detail = settled && !s.solo ? { ...settled, mode: 'pvp' } : settled;
     if (detail && !emittedSettlements.has(detail.duel)) {
       emittedSettlements.add(detail.duel);
       const boundBoss = isBoundBossSettlement(detail, d);
@@ -692,6 +701,8 @@ export async function recoverGuestCards() {
           localStorage.setItem(PLAYER_GENERATION, String(next));
           playerGeneration = next;
           client = replacement;
+          world?.rekey(client.key);
+          if (livePresence) startGuestPresence();
           if (s.duel?.phase >= 3) setRoom(null);
           s.balance = null;
           s.owned = [];
@@ -834,6 +845,7 @@ async function action(name) {
     const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof, phase: s.duel?.phase };
     if (worldArena) {
       worldFight = null; worldArena = false;
+      postingBounty = false;
       app.hidden = true;
     } else if (activeDuel()) { showMap(); return; }
     setRoom(null); s.mode = 'landing'; s.returnToMap = false; s.requestedOpponent = null;
@@ -984,8 +996,9 @@ async function action(name) {
 }
 
 // Campaign integration: launch a selected boss without coupling the arena to a map.
-export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, source } = {}) {
+export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, source, room, join = false } = {}) {
   if (s.busy || s.playing) return false;
+  if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap, source);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
   if (activeDuel()) {
     if (mode === 'chain' && localStorage.getItem(encounterKey(s.room)) === String(opponentKind)) {
@@ -1021,22 +1034,14 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
 }
 window.addEventListener('demon-duels:launch', (event) => {
   const detail = event.detail;
-  if (detail?.mode === 'pvp' && detail.source === 'presence') {
-    const room = readKey(detail.room);
-    if (!world || !room || s.busy || s.playing) { event.preventDefault(); return; }
-    openWorldArena();
-    setRoom(null); s.solo = false; s.mode = 'chain'; s.quick = false; s.returnToMap = true;
-    setRoom(room);
-    run('Opening the hunter challenge…', async () => { await Promise.all([refreshRoom(), refreshWallet()]); })
-      .then(() => { if (detail.join && s.duel?.phase === 0 && !keyed(s.duel.p1, client.key) && anyCard()) return action('join'); }).catch(() => {});
+  if (detail?.mode === 'pvp') {
+    if (!launchFight(detail)) event.preventDefault();
     return;
   }
   if (detail?.source !== 'world') { launchFight(detail); return; }
   if (!world || worldArena || (detail.mode === 'chain' && localStorage.getItem(activeRoomKey))) { event.preventDefault(); return; }
   worldFight = { ...detail, tells: Array.isArray(detail.tells) ? detail.tells.filter((line) => typeof line === 'string').slice(0, 2) : [] };
   if (!launchFight(detail)) { worldFight = null; event.preventDefault(); return; }
-  sound.unlock(s.sound);
-  sound.play('strike');
   openWorldArena(worldFight);
   syncWorldArena();
 });
@@ -1080,9 +1085,30 @@ async function openWorld(savedEncounter) {
       },
       exit: () => {
         engine.unmountWorld(); world = null; app.hidden = false;
+        livePresence?.dispose(); livePresence = null;
         const url = new URL(location.href); url.searchParams.delete('world'); history.replaceState(null, '', url);
+        showMap();
       },
       vault: () => { openWorldArena(); action('enter').catch(() => {}); },
+      market: () => openBounties(client.base, client.key, localStorage),
+      ledger: () => hunterLedger(client.base),
+      post: () => {
+        openWorldArena();
+        postingBounty = true;
+        s.returnToMap = true;
+        action('enter').catch(() => {});
+      },
+      friend: async () => {
+        const room = readKey(localStorage.getItem(activeRoomKey));
+        if (!room || localStorage.getItem('demon-duels:solo:' + room) === '1') return 'Post a bounty first, then share its invite.';
+        const duel = await readDuel(room);
+        if (duel?.phase !== 0 || !keyed(duel.p1, client.key) || duel.deadline <= Date.now()) return 'Post a bounty first, then share its invite.';
+        const url = new URL(location.href);
+        url.searchParams.delete('world');
+        url.searchParams.set('room', String(room));
+        await navigator.clipboard.writeText(url.href);
+        return 'Invite link copied.';
+      },
       resume: () => {
         const room = localStorage.getItem(activeRoomKey);
         worldFight = readWorldJSON(localStorage, worldEncounterKey(room));
@@ -1091,6 +1117,7 @@ async function openWorld(savedEncounter) {
       },
       returnToWorld: () => action('return-map').catch(() => {}),
     } });
+    if (!livePresence) startGuestPresence();
     if (savedEncounter) {
       worldFight = savedEncounter;
       s.requestedOpponent = savedEncounter.opponentKind; s.returnToMap = true;
@@ -1109,7 +1136,8 @@ async function openWorld(savedEncounter) {
 window.addEventListener('demon-duels:settled', (event) => {
   const d = s.duel;
   const bossId = campaignBoss();
-  if (!d || bossId === null || localStorage.getItem(encounterKey(d.key)) !== String(bossId) || event.detail?.duel !== d.key.toString()) return;
+  if (!d || bossId === null || event.detail?.mode !== 'chain' || !isBoundBossSettlement(event.detail, d) ||
+    localStorage.getItem(encounterKey(d.key)) !== String(bossId) || event.detail.duel !== d.key.toString()) return;
   const savedBot = loadRoomBot(d.key);
   if (!savedBot || savedBot.demonId !== bossId) return;
   s.campaign = persistBossWin(localStorage, client.key, { bossId, phase: d.phase, player: client.key.toString(), winner: d.winner.toString(),
@@ -1121,6 +1149,68 @@ window.addEventListener('storage', (event) => {
   s.campaign = readCampaign(localStorage, client.key);
   draw();
 });
+
+// Live hunters: a challenge accepted in the world becomes an ordinary open/join PvP duel.
+function launchRivalDuel(room, join, returnToMap, source) {
+  const saved = readKey(localStorage.getItem(activeRoomKey));
+  if (!room || (saved && !keyed(saved, room)) || (activeDuel() && !keyed(s.room, room))) return false;
+  if (source === 'presence' || source === 'market') {
+    if (!world || worldArena) return false;
+    openWorldArena({ mode: 'pvp' });
+  }
+  s.journey = 'arena';
+  setRoom(room);
+  s.mode = 'chain'; s.solo = false; s.quick = false; s.notice = '';
+  s.requestedOpponent = null; s.returnToMap = returnToMap;
+  run(join ? 'Staking your card and preparing the private arena…' : 'Opening your duel…', async () => {
+    await Promise.all([refreshRoom(), refreshWallet()]);
+    if (join && s.duel?.phase === 0 && !participant()) {
+      if (!anyCard()) throw new Error('Choose an unstaked demon first.');
+      await client.joinDuel(s.duel, anyCard().key);
+      localStorage.setItem(activeRoomKey, room.toBase58());
+      audio('stake');
+      await refreshRoom(); await client.delegate(s.duel); await refreshWallet();
+    }
+  });
+  return true;
+}
+
+async function rivalReady() {
+  if (s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
+  const active = readKey(localStorage.getItem(activeRoomKey));
+  const open = active && await readDuel(active).catch(() => null);
+  if (open && open.phase < 3 && (keyed(open.p1, client.key) || keyed(open.p2, client.key))) {
+    return { ok: false, reason: 'Finish or cancel your open duel first.' };
+  }
+  await refreshWallet();
+  if (!anyCard()) return { ok: false, reason: 'You need an unstaked demon card to duel another hunter.' };
+  if (s.balance < 0.006) return { ok: false, reason: 'Fund the guest wallet to stake a card.' };
+  return { ok: true };
+}
+
+async function hostRivalDuel(stillWanted) {
+  const ready = await rivalReady();
+  if (!ready.ok) throw new Error(ready.reason);
+  if (!stillWanted()) throw new Error('The other hunter backed out before you staked.');
+  assertCurrentGuest();
+  const { duel } = await client.openDuel(anyCard().key);
+  audio('stake');
+  localStorage.setItem(activeRoomKey, duel.toBase58());
+  return duel.toBase58();
+}
+
+async function verifyRivalDuel(room, challenger) {
+  const key = readKey(room);
+  const duel = key && await until(() => readDuel(key), 20000).catch(() => null);
+  if (!duel || duel.phase !== 0 || !duel.p1.equals(new PublicKey(challenger)) || !keyed(duel.p2, ZERO)) {
+    throw new Error('That duel is not open on chain. No card was taken.');
+  }
+}
+
+function startGuestPresence() {
+  livePresence?.dispose();
+  livePresence = startPresence({ keypair: client.keypair, host: hostRivalDuel, check: rivalReady, verify: verifyRivalDuel });
+}
 
 let ignorePointerUntil = 0;
 app.addEventListener('click', (event) => {

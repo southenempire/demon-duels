@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Demon Duels — live hunters harness</title>
+  <style>
+    #world { position: fixed; inset: 0; z-index: 50; background: #0d0a10; color: #eee; font: 13px system-ui; }
+    #world[hidden] { display: none; }
+    #world canvas { display: block; margin: 24px auto 8px; border: 1px solid #443; image-rendering: pixelated; }
+    #world p { text-align: center; margin: 0; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <section id="world"><canvas width="640" height="400"></canvas><p id="hint">WASD to walk · E to challenge a nearby hunter</p></section>
+  <script type="module" src="../src/bootstrap.js"></script>
+  <script type="module" src="./hunters.js"></script>
+</body>
+</html>

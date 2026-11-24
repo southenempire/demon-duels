@@ -27,7 +27,7 @@ function animateHunter(image, { lead, frames, still }, reduced) {
   image.animate(keyframes, { duration: sceneDuration, fill: 'both' });
 }
 
-function playScene(scene, detail, { grade = 'shadow', sound, preview = false } = {}) {
+function playScene(scene, detail, { grade = 'shadow', sound, worldImpact, preview = false } = {}) {
   const pose = !detail.won ? 'hit' : grade === 'ghost' ? 'strike' : 'finisher';
   const dialog = document.createElement('dialog');
   dialog.className = 'finisher';
@@ -81,7 +81,9 @@ function playScene(scene, detail, { grade = 'shadow', sound, preview = false } =
       document.body.append(dialog);
       dialog.showModal();
       animateHunter(dialog.querySelector('.finisher-hunter-action'), hunterPoses[pose], reduced);
-      if (sound && (!detail.won || grade !== 'ghost')) {
+      if (worldImpact && detail.won) {
+        impact = setTimeout(() => worldImpact(detail), reduced ? 0 : 1170);
+      } else if (sound && (!detail.won || grade !== 'ghost')) {
         const victor = detail.won ? 0 : 1;
         const cue = detail.result?.crits?.[victor] ? 'crit' : grade === 'exposed' ? 'rend' : 'strike';
         impact = setTimeout(() => sound(cue), reduced ? 0 : 1170);
@@ -150,8 +152,10 @@ export function installFinishers(target, accept, render) {
   };
 }
 
-export const settlementCinematics = (target, accept, sound) =>
-  installFinishers(target, accept, (scene, detail, grade) => playScene(scene, detail, { grade, sound }));
+export const settlementCinematics = (target, accept, sound, worldImpact) =>
+  installFinishers(target, accept, (scene, detail, grade) => playScene(scene, detail, {
+    grade, sound, worldImpact: worldImpact?.(detail),
+  }));
 
 export function previewFinisher(params) {
   if (!params.has('finisher')) return;

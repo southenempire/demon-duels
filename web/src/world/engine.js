@@ -1,5 +1,7 @@
 import './world.css';
 import { demons } from '../rules.js';
+import { circles } from '../campaign.js';
+import { installHuntAudio } from './audio.js';
 import { levels, TILE } from './levels.js';
 import { acceptedWin, activeKey, campaignKey, gradeScore, readJSON, readWins, worldKey } from './progress.js';
 import { createPresence, worldEvent } from './presence.js';
@@ -13,6 +15,7 @@ let current;
 const rom = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 const button = (label, action, cls = 'secondary') => '<button type="button" class="button ' + cls + '" data-hunt="' + action + '">' + label + '</button>';
 const keys = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', 'c', 'e', 'q', 'f', ' ', 'escape']);
+const short = (key) => key.slice(0, 4) + '…' + key.slice(-4);
 const intro = [
   ['The Pit', 'Every soul that falls here keeps one thing. Its name.'],
   ['The Pit', 'Except you.'],
@@ -36,8 +39,10 @@ export function mountWorld(el, { wallet, chain }) {
   const presence = createPresence(levels, signal);
   const asset = import.meta.env.BASE_URL + 'art/';
   const art = loadWorldArt(asset);
-  const player = String(wallet);
-  const flavor = { intel: {}, bestGrade: {}, vantage: {}, checkpoint: null, ...readJSON(localStorage, worldKey(player)) };
+  const huntAudio = installHuntAudio(import.meta.env.BASE_URL, signal);
+  let player = String(wallet);
+  const loadFlavor = () => ({ intel: {}, bestGrade: {}, grades: {}, vantage: {}, checkpoint: null, ...readJSON(localStorage, worldKey(player)) });
+  let flavor = loadFlavor();
   const save = () => localStorage.setItem(worldKey(player), JSON.stringify(flavor));
   const wins = () => readWins(localStorage, player);
   const audio = (cue, pos) => worldEvent('audio', { cue, circle: kind, ...(pos ? { pos: { x: pos.x / TILE, y: pos.y / TILE } } : {}) });
@@ -58,12 +63,17 @@ export function mountWorld(el, { wallet, chain }) {
   let encounter = null;
   let striking = false;
   let strikeTimer;
-  let finishTimer;
+  let finishedScene = null;
   let pauseBoss = 0;
   let objective = null;
   const down = new Set();
   const finished = new Set();
   let introIndex = 0;
+  let chapter;
+  let pitRenderer;
+  let pitPeer;
+  let bountyRooms = [];
+  let enterCutscene = null;
   const preloads = [...Object.values(sprites.hunter), sprites.circles[0].boss].filter(Boolean).map((path) => {
     const img = new Image(); img.src = asset + path;
     return img.decode().catch(() => {});
@@ -85,13 +95,30 @@ export function mountWorld(el, { wallet, chain }) {
     Promise.all(preloads).then(() => { if (query('loading')) query('loading').textContent = 'The gates are ready'; });
   }
 
+  function startStory(id, lines, done) {
+    chapter = { id, lines, done };
+    introIndex = 0;
+    worldEvent('cutscene', { id });
+    story();
+  }
+
   function story() {
     scene = 'story';
-    const [speaker, line] = intro[introIndex];
-    el.innerHTML = '<div class="hunt-title hunt-story"><img src="' + asset + 'sigil.svg" alt=""><span class="hunt-kicker">HUNTER’S OATH / ' +
-      (introIndex + 1) + ' OF ' + intro.length + '</span><h2>' + speaker + '</h2><p>' + line + '</p>' +
-      button(introIndex === intro.length - 1 ? 'Enter The Pit' : 'Continue', 'story-next', 'primary') + button('Skip story', 'story-skip', 'text') + '</div>';
+    const [speaker, line] = chapter.lines[introIndex];
+    el.innerHTML = '<div class="hunt-title hunt-story"><img src="' + asset + 'sigil.svg" alt=""><span class="hunt-kicker">' +
+      (chapter.id === 'intro' ? 'HUNTER’S OATH' : chapter.id === 'outro' ? 'THE OPEN PIT' : 'THE DESCENT') + ' / ' +
+      (introIndex + 1) + ' OF ' + chapter.lines.length + '</span><h2></h2><p></p>' +
+      button('Continue', 'story-next', 'primary') + button('Skip story', 'story-skip', 'text') + '</div>';
+    el.querySelector('h2').textContent = speaker;
+    el.querySelector('p').textContent = line;
     el.querySelector('[data-hunt=story-next]').focus();
+  }
+
+  function finishStory() {
+    const { id, done } = chapter;
+    chapter = null;
+    worldEvent('cutscene-done', { id });
+    done();
   }
 
   function endStory() {
@@ -101,9 +128,38 @@ export function mountWorld(el, { wallet, chain }) {
     el.querySelector('[data-hunt=vault]').focus();
   }
 
+  async function loadPitBoard() {
+    const board = query('bounties');
+    const ledger = query('ledger');
+    if (!board || !ledger) return;
+    bountyRooms = [];
+    board.textContent = 'Reading open devnet duels…';
+    ledger.textContent = 'Reading recent settlements…';
+    await Promise.all([
+      Promise.resolve().then(() => chain.market()).then((rows) => {
+        if (!board.isConnected || suspended) return;
+        bountyRooms = rows.map(({ room }) => room);
+        board.innerHTML = rows.length ? rows.map(({ owner, kind }, i) =>
+          '<div class="hunt-market-row"><span>' + (demons[kind]?.name ?? 'Demon') + ' staked by hunter ' + short(owner) + '</span>' +
+          button('Challenge', 'bounty:' + i) + '</div>').join('') : 'The board is empty. Post the first bounty.';
+      }).catch(() => { board.textContent = 'The bounty board is unavailable. Try again later.'; }),
+      Promise.resolve().then(() => chain.ledger()).then((rows) => {
+        if (!ledger.isConnected || suspended) return;
+        ledger.innerHTML = rows.length ? rows.map(({ winner, loser, kind, duel }) => {
+          const boss = wins().find((win) => win.duel === duel);
+          const grade = boss && flavor.grades[duel];
+          const demon = demons[kind]?.name ?? 'demon';
+          return '<div class="hunt-market-row">Hunter ' + short(winner) + (boss ? ' slew the ' + demon +
+            (Object.hasOwn(gradeScore, grade) ? ' (' + grade + ', local/unverified)' : '') :
+            ' took ' + short(loser) + '’s ' + demon) + '</div>';
+        }).join('') : 'No settlements in recent program activity.';
+      }).catch(() => { ledger.textContent = 'The hunter ledger is unavailable. Try again later.'; }),
+    ]);
+  }
+
   function pit(notice = '') {
     if (scene === 'circle') presence.leave();
-    scene = 'pit'; kind = null; el.classList.remove('hunt--circle');
+    scene = 'pit'; kind = null; el.classList.remove('hunt--circle'); huntAudio.circle(null); chain.surface?.('pit');
     const progress = wins().length;
     const saved = localStorage.getItem(activeKey);
     el.innerHTML = '<div class="hunt-pit"><div class="hunt-top"><span class="hunt-kicker">DEMON DUELS / HUNTER’S REFUGE</span>' +
@@ -113,7 +169,15 @@ export function mountWorld(el, { wallet, chain }) {
       levels.map((level, i) => '<button data-hunt="circle:' + i + '" type="button" ' + (i > progress ? 'disabled' : '') +
         '><span>' + rom[i] + ' / ' + (i < progress ? 'CLEARED' : i === progress ? 'OPEN' : 'SEALED') +
         '</span><strong>' + level.name + '</strong><small>' + demons[i].name + '</small></button>').join('') +
-      '</div><p class="hunt-notice" data-hunt-notice role="status"></p></div>';
+      '</div><div class="hunt-refuge"><canvas width="512" height="256" aria-label="Hunters in The Pit"></canvas>' +
+      '<button type="button" class="button secondary" data-hunt="pit-challenge" hidden></button></div>' +
+      '<section class="hunt-market" aria-label="Open Pit market"><h2>The Bounty Board</h2>' +
+      '<p>Every bounty is a demon on the table. Answer it with yours. The winner takes both.</p><div class="hunt-pit-actions">' +
+      button('Post a bounty', 'post', 'primary') + button('Challenge a friend', 'friend') + button('Refresh board and ledger', 'market', 'text') +
+      '</div><p class="hunt-notice" data-hunt-notice role="status"></p><div data-hunt-bounties>Refresh to show open devnet duels.</div>' +
+      '<h2>The Hunter Ledger</h2><p>Duels are settled onchain. Grades are local and unverified.</p><div data-hunt-ledger>Refresh to show recent settlements.</div></section></div>';
+    pitRenderer = createRenderer(el.querySelector('canvas'), asset, art);
+    pitPeer = null;
     message(notice);
     if (!suspended) presence.publish('pit', pitPose, performance.now());
   }
@@ -121,8 +185,11 @@ export function mountWorld(el, { wallet, chain }) {
   function enter(number, notice = '', cutscene = true) {
     if (number > wins().length || !levels[number]) return;
     if (scene === 'pit') presence.leave();
+    objective = null;
     scene = 'circle'; kind = number; paused = false; resetInput(); sneaking = false; sprinting = false; lastState = '';
     const level = levels[kind];
+    chain.surface?.('circle');
+    huntAudio.circle(kind);
     const checkpoint = level.checkpoints[flavor.checkpoint?.circle === kind ? flavor.checkpoint.index : 0] ?? level.start;
     run = newRun(level, flavor.intel[kind], flavor.vantage[kind], checkpoint);
     run.lookoutUntil = cutscene && !matchMedia('(prefers-reduced-motion: reduce)').matches ? performance.now() + 2400 : 0;
@@ -142,9 +209,19 @@ export function mountWorld(el, { wallet, chain }) {
     objective = null;
     message(notice || (kind === 0 ? 'Stay in shadow or ash grass. Douse braziers with E; the gold diamond marks your quarry.' :
       kind === 1 ? 'The Wraith listens instead of looking. Sneak near it; E enters a purple void tear.' : 'Follow the gold diamond to your quarry.'));
-    if (cutscene) worldEvent('cutscene', { id: 'circle-' + kind + '-enter' });
+    enterCutscene = cutscene ? 'circle-' + kind + '-enter' : null;
+    if (enterCutscene) {
+      worldEvent('cutscene', { id: enterCutscene });
+      if (!run.lookoutUntil) endLookout();
+    }
     audio(level.ambience);
     if (run.lookoutUntil) audio('boss-reveal', run.boss);
+  }
+
+  function endLookout() {
+    if (!enterCutscene) return;
+    worldEvent('cutscene-done', { id: enterCutscene });
+    enterCutscene = null;
   }
 
   function handleInteraction(isPractice) {
@@ -192,12 +269,22 @@ export function mountWorld(el, { wallet, chain }) {
     frame = requestAnimationFrame(loop);
     const dt = Math.min(0.035, (now - (lastTime || now)) / 1000);
     lastTime = now;
+    if (scene === 'pit') {
+      const peers = presence.inCircle('pit');
+      pitRenderer.renderPit(pitPose, peers, now);
+      pitPeer = peers.find((peer) => !peer.busy && distance(peer, pitPose) <= TILE * 1.5);
+      const prompt = el.querySelector('[data-hunt=pit-challenge]');
+      prompt.hidden = !pitPeer;
+      if (pitPeer) prompt.textContent = 'E: Challenge ' + pitPeer.name;
+      return;
+    }
     if (scene !== 'circle' || !run) return;
     const level = levels[kind];
     const peers = presence.inCircle(kind);
     if (run.lookoutUntil && (now >= run.lookoutUntil || down.size || stick.x || stick.y)) {
       if (now < run.lookoutUntil) renderer.snap();
       run.lookoutUntil = 0;
+      endLookout();
     }
     query('reveal').hidden = !run.lookoutUntil;
     if (!paused && !striking && now >= pauseBoss) {
@@ -258,17 +345,28 @@ export function mountWorld(el, { wallet, chain }) {
     if (action === 'exit') { chain.exit(); return; }
     if (action === 'sound') {
       const enabled = chain.sound?.();
+      huntAudio.enable(Boolean(enabled));
       el.querySelector('[data-hunt=sound]').textContent = enabled ? 'Mute sound' : 'Enable sound';
       return;
     }
     if (action === 'start' && scene === 'title') {
-      chain.start?.();
+      huntAudio.enable(Boolean(chain.start?.()));
       if (flavor.intro) pit();
-      else { worldEvent('cutscene', { id: 'intro' }); story(); }
-    } else if (action === 'story-next' && ++introIndex < intro.length) story();
-    else if (action === 'story-next' || action === 'story-skip') endStory();
+      else startStory('intro', intro, endStory);
+    } else if (action === 'story-next' && ++introIndex < chapter.lines.length) story();
+    else if (action === 'story-next' || action === 'story-skip') finishStory();
     else if (action === 'vault' || action === 'resume') chain[action]();
-    else if (action === 'pit' && !striking) pit();
+    else if (action === 'post') chain.post();
+    else if (action === 'friend') Promise.resolve().then(chain.friend).then(message, () => message('Could not copy the open duel invite.'));
+    else if (action === 'market') loadPitBoard();
+    else if (action === 'pit-challenge' && pitPeer) worldEvent('challenge-hunter', { id: pitPeer.id });
+    else if (action?.startsWith('bounty:')) {
+      const room = bountyRooms[Number(action.slice(7))];
+      if (room && !window.dispatchEvent(new CustomEvent('demon-duels:launch', {
+        cancelable: true, detail: { source: 'market', mode: 'pvp', room, join: false, returnToMap: true },
+      }))) message('Return to your current duel before challenging another hunter.');
+    }
+    else if (action === 'pit' && !striking) { endLookout(); pit(); }
     else if (action?.startsWith('circle:')) enter(Number(action.slice(7)));
     else if (action === 'interact' || action === 'practice') handleInteraction(action === 'practice');
     else if (action === 'pause') pause();
@@ -281,6 +379,8 @@ export function mountWorld(el, { wallet, chain }) {
   listen(window, 'keydown', (event) => {
     if (suspended || event.altKey || event.ctrlKey || event.metaKey || /INPUT|TEXTAREA|SELECT|BUTTON/.test(event.target.tagName) && event.key === ' ') return;
     if (scene === 'title' && event.key === 'Enter') { event.preventDefault(); act('start'); return; }
+    if (scene === 'story' && event.key === 'Escape') { event.preventDefault(); finishStory(); return; }
+    if (scene === 'pit' && event.key.toLowerCase() === 'e' && !event.repeat) { act('pit-challenge'); return; }
     if (scene !== 'circle') return;
     const key = event.key.toLowerCase();
     if (!keys.has(key)) return;
@@ -333,23 +433,47 @@ export function mountWorld(el, { wallet, chain }) {
       finished.add(detail.duel);
       const { opponentKind, grade } = encounter;
       if (gradeScore[grade] > (gradeScore[flavor.bestGrade[opponentKind]] ?? -1)) {
-        flavor.bestGrade[opponentKind] = grade; save();
+        flavor.bestGrade[opponentKind] = grade;
       }
+      flavor.grades[detail.duel] = grade;
+      save();
       worldEvent('finisher', { opponentKind, grade, duel: detail.duel });
     });
   });
   listen(window, 'demon-duels:finisher-done', ({ detail }) => {
     if (!encounter?.duel || !finished.has(encounter.duel) || encounter.opponentKind !== detail?.opponentKind) return;
-    finishTimer = setTimeout(() => chain.returnToWorld(), 0);
+    finishedScene = encounter.duel;
   });
   listen(window, 'demon-duels:return', ({ detail }) => {
     if (!suspended) return;
     const last = encounter; encounter = null;
-    const won = last?.duel && finished.has(last.duel);
+    const won = last?.duel && last.duel === finishedScene;
+    finishedScene = null;
     if (won) {
-      worldEvent('cutscene', { id: 'circle-' + last.opponentKind + '-clear' });
       audio('gate-open');
-      show(null, 'Guardian down. Return to the gates.');
+      suspended = false; el.hidden = false; el.classList.remove('hunt--circle');
+      const boss = last.opponentKind;
+      startStory('circle-' + boss + '-clear', [[demons[boss].name, circles[boss].victory]], () => {
+        if (wins().length < levels.length || flavor.outro) {
+          show(null, 'Guardian down. Return to the gates.');
+          return;
+        }
+        const name = short(player);
+        startStory('outro', [
+          ['Gloam Shade', 'So you know. The Pit was never mine. I only kept it chained.'],
+          ['The Pit', 'Six runes. One name. ' + name + '. Written where no fire can reach it.'],
+          ['Hunter', 'I remember.'],
+          ['The Pit', 'The chains are broken. The board is open. Not just to you.'],
+          ['The Pit', 'No guardians now. No house. Only the Old Pact. The winner takes both.'],
+          ['Hunter', 'Then let’s see who’s hungry.'],
+          ['The Pit', 'Welcome to the Pit, ' + name + '. It always takes.'],
+        ], () => {
+          flavor.outro = true; save();
+          show(null, 'The chains are broken. The board is open.');
+          query('bounties')?.scrollIntoView({ block: 'center' });
+          loadPitBoard();
+        });
+      });
     } else if (Number.isInteger(last?.opponentKind) || scene === 'circle') {
       const note = last?.mode === 'practice' ? 'Practice grants no clear or cards.' : detail?.phase === 4 ? 'The boss fled. Your stake was returned.' :
         detail?.mode === 'chain' && detail?.result?.winner === 1 ? 'Your demon fell. The guardian still waits.' : '';
@@ -362,11 +486,15 @@ export function mountWorld(el, { wallet, chain }) {
     hide(detail) {
       encounter = detail ?? null;
       suspended = true; el.hidden = true; resetInput(); presence.leave();
+      endLookout();
+      huntAudio.circle(null);
       cancelAnimationFrame(frame);
     },
     bind(duel) { if (encounter?.mode === 'chain') encounter.duel = duel; },
+    rekey(wallet) { player = String(wallet); flavor = loadFlavor(); },
+    finishReturn() { if (encounter?.duel && finishedScene === encounter.duel) chain.returnToWorld(); },
     dispose() {
-      controller.abort(); cancelAnimationFrame(frame); clearTimeout(strikeTimer); clearTimeout(finishTimer);
+      controller.abort(); cancelAnimationFrame(frame); clearTimeout(strikeTimer);
       presence.leave(); el.replaceChildren(); el.hidden = true;
     },
   };

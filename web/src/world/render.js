@@ -200,6 +200,25 @@ export function createRenderer(canvas, assetBase, art, kind) {
     ctx.restore();
   }
 
+  function peerSprite(actor, now) {
+    hunterSprite(actor, '#a5d0f5', now);
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#bce5ff';
+    ctx.fillText(actor.name, actor.x, actor.y - 61);
+  }
+
+  function renderPit(hunter, peers, now) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.scale(canvas.width / (16 * TILE), canvas.height / (8 * TILE));
+    for (const actor of [...peers, hunter].sort((a, b) => a.y - b.y)) {
+      if (actor.peer) peerSprite(actor, now);
+      else hunterSprite(actor, '#f2c59f', now);
+    }
+    ctx.restore();
+  }
+
   function marker(x, y, radius, fill, stroke) {
     ctx.beginPath();
     ctx.ellipse(x, y, radius, radius * 0.64, 0, 0, Math.PI * 2);
@@ -309,11 +328,7 @@ export function createRenderer(canvas, assetBase, art, kind) {
         marker(actor.x, actor.y, 18, '#09101280', actor.hidden ? '#95ebaa' : '#e5c6a8');
         hunterSprite(actor, actor.hidden ? '#95ebaa' : '#f2c59f', now);
       } else if (actor.peer) {
-        hunterSprite(actor, '#a5d0f5', now);
-        ctx.font = '10px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#bce5ff';
-        ctx.fillText(actor.name, actor.x, actor.y - 61);
+        peerSprite(actor, now);
       } else {
         hood(actor, hunter.sight || actor.meter >= 30 ? '#ff655e' : '#e8ab78', image(sprites.sentry), true);
       }
@@ -357,5 +372,5 @@ export function createRenderer(canvas, assetBase, art, kind) {
     }
   }
 
-  return { render, snap: () => { snap = true; } };
+  return { render, renderPit, snap: () => { snap = true; } };
 }

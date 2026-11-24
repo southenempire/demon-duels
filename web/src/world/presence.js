@@ -13,14 +13,19 @@ export function createPresence(levels, signal) {
     const circle = detail?.circle;
     const level = circle === 'pit' ? { width: 16 * TILE, height: 8 * TILE } : Number.isInteger(circle) ? levels[circle] : null;
     if (!level || !Array.isArray(detail.hunters)) return;
+    const previous = new Map((peers.get(circle) ?? []).map((peer) => [peer.id, peer]));
+    const now = performance.now();
     peers.set(circle, detail.hunters.flatMap((peer) => {
       if (typeof peer?.id !== 'string' || !peer.id || !Number.isFinite(peer.x) || !Number.isFinite(peer.y)) return [];
       const x = peer.x * TILE;
       const y = peer.y * TILE;
       if (x < 0 || x > level.width || y < 0 || y > level.height) return [];
+      const anim = Object.hasOwn(animations, peer.anim) ? peer.anim : 'idle';
+      const prior = previous.get(peer.id);
+      const animStart = prior?.anim === anim ? prior.animStart : now;
       return [{ ...peer, x, y, peer: true, name: typeof peer.name === 'string' && peer.name.trim() ? peer.name.trim().slice(0, 28) : 'Hunter',
         angle: Object.hasOwn(angles, peer.dir) ? angles[peer.dir] : 0,
-        anim: Object.hasOwn(animations, peer.anim) ? peer.anim : 'idle', hue: Number.isFinite(peer.hue) ? Math.max(0, Math.min(360, peer.hue)) : 0 }];
+        anim, animStart, takedownUntil: animStart + 840, hue: Number.isFinite(peer.hue) ? Math.max(0, Math.min(360, peer.hue)) : 0 }];
     }));
   }, { signal });
   return {
@@ -34,6 +39,6 @@ export function createPresence(levels, signal) {
       lastSent = now;
       worldEvent('hunter-pose', pose);
     },
-    leave() { lastKey = ''; lastSent = -Infinity; worldEvent('hunter-pose', { circle: null }); },
+    leave() { peers.clear(); lastKey = ''; lastSent = -Infinity; worldEvent('hunter-pose', { circle: null }); },
   };
 }

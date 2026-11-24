@@ -1,3 +1,8 @@
+.hunt-refuge { display: grid; justify-items: center; margin: 18px auto; }
+.hunt-refuge canvas { width: min(100%, 512px); aspect-ratio: 2; background: radial-gradient(ellipse at 50% 44%, #2b202c, #110c14 68%); border: 1px solid #422f42; border-radius: 12px; }
+.hunt-market { margin-top: 28px; padding: clamp(16px, 3vw, 28px); background: #1a111c; border: 1px solid #473145; border-radius: 12px; }
+.hunt .hunt-market h2 { margin-top: 16px; }
+.hunt-market-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #473145; }
 .hunt[hidden], .hunt [hidden] { display: none !important; }
 .hunt { width: min(1120px, calc(100% - 42px)); margin: 0 auto; color: #f7e9e3; }
 .hunt h1, .hunt h2 { margin: 0; font-family: var(--display); text-transform: uppercase; line-height: .92; }
