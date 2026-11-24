@@ -8,7 +8,7 @@ import { figure } from './figures.js';
 import { ashHunters, emit } from './hunters.js';
 import { installModel } from './models.js';
 import { braziers, buildGate, cover, limits, roofs, shade } from './scenery.js';
-import { blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees, usesWorldKey, worldFrameRuns } from './stealth.js';
+import { blocksRadiusStep, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, movementAxis, movementBindings, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees, usesWorldKey, worldFrameRuns } from './stealth.js';
 import './style.css';
 import '../game-overlays.css';
 
@@ -243,10 +243,10 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
     });
   }
   const keys = new Set();
-  const controls = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC', 'KeyQ', 'KeyE', 'KeyF', 'Space', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight']);
+  const controls = new Set([...Object.values(movementBindings).flat(), 'KeyC', 'KeyQ', 'KeyE', 'KeyF', 'Space', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight']);
   const canMoveTo = (toX, toZ) => within(toX, toZ, bounds) && rules.canTraverse({ x: toX, y: height, z: toZ })
     && !walls.some((b) => b.h > height + .03 && blocksStep(x, z, toX, toZ, b))
-    && (outcome === 'won' || Math.abs(height - bossGround) > .7 || Math.hypot(toX - boss.x, toZ - boss.z) >= .74);
+    && (outcome === 'won' || Math.abs(height - bossGround) > .7 || !blocksRadiusStep(x, z, toX, toZ, boss, .74));
   let x = spawn.x, z = spawn.z, facing = spawn.facing ?? 0, yaw = facing, tilt = .16, height = spawn.y ?? 0, falling = 0, climb = null, ledge = null;
   let active = true, crouch = false, gait = 0, bend = 0, step = 0, alert = 0, attack = 0;
   let block = 0, blockLearned = false, blockPrompt = false;
@@ -275,7 +275,7 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
   const cameraGoal = new T.Vector3();
   const controlsGuide = descriptor.guide?.[touch ? 'touch' : 'keyboard'] ?? (touch
     ? 'Drag the left stick to move or sprint. Drag the scene to look.\nTap Crouch for stealth and Jump or Climb at a ledge.\nPractice Block, then circle behind ' + bossName + ' and tap Strike.'
-    : 'WASD: move · Drag mouse: look · Shift: sprint\nC or Ctrl: crouch · Space: jump or climb\nQ: hand-block · E: strike · F: challenge a nearby hunter');
+    : 'WASD / ↑↓←→: move · Drag mouse: look · Shift: sprint\nC or Ctrl: crouch · Space: jump or climb\nQ: hand-block · E: strike · F: challenge a nearby hunter');
   const objectiveCopy = descriptor.objective ?? ASH_GATE.objective;
   const position = () => ({ x, y: height, z });
   const sight = (guard, pos) => hooks.sightRange ? { ...guard, range: hooks.sightRange(guard, pos) ?? guard.range } : guard;
@@ -513,8 +513,8 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
     const sneak = crouch || keys.has('ControlLeft') || keys.has('ControlRight');
     sneaking = sneak;
     const running = !sneak && (Math.hypot(touchX, touchY) > .85 || keys.has('ShiftLeft') || keys.has('ShiftRight'));
-    const vertical = Number(keys.has('KeyW')) - Number(keys.has('KeyS')) + touchY;
-    const horizontal = Number(keys.has('KeyD')) - Number(keys.has('KeyA')) + touchX;
+    const vertical = movementAxis(keys, 'forward', 'backward') + touchY;
+    const horizontal = movementAxis(keys, 'right', 'left') + touchX;
     const canWalk = !attack && !block && !climb && !crossing;
     const wantsMove = Math.hypot(vertical, horizontal) > .12 && canWalk;
     const initialX = x, initialZ = z;
@@ -697,7 +697,7 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
   window.addEventListener('blur', () => { keys.clear(); pointer = null; touchX = touchY = 0; });
   function toggleCrouch() { crouch = !crouch; if (crouch) cue('sneak-on'); }
   window.addEventListener('keydown', (e) => {
-    if (!active || e.altKey || e.metaKey || e.repeat && e.code === 'Escape') return;
+    if (!active || duelOpen || e.altKey || e.metaKey || e.repeat && e.code === 'Escape') return;
     if (e.code === 'Escape' && menu !== 'loading' && menu !== 'title') {
       e.preventDefault();
       if (!attack) setMenu(menu === 'play' ? 'pause' : 'play');
@@ -765,8 +765,16 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
     world.hidden = true;
     stopRendering();
   });
-  window.addEventListener('demon-duels:duel3d-close', () => {
+  window.addEventListener('demon-duels:duel3d-close', ({ detail }) => {
     duelOpen = false;
+    if (pending && detail?.tutorialCancelled) {
+      if (pending === 'boss') {
+        show('');
+        renderOverlay();
+      }
+      returnToGate();
+      return;
+    }
     if (active) world.hidden = false;
     startRendering();
   });
