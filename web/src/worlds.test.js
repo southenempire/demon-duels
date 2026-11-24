@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveWorldCircle, worlds } from './worlds.js';
+import { opensWorldHunt, resolveWorldCircle, worlds } from './worlds.js';
 
 test('world links default to Ash Gate and use the highest unlocked registered fallback', () => {
   const campaign = { wins: [{ bossId: 0 }] };
@@ -14,4 +14,11 @@ test('world links default to Ash Gate and use the highest unlocked registered fa
   assert.equal(resolve('world=3d&circle=6', registered), 1);
   assert.equal(resolve('world=3d&circle=void', registered), 1);
   assert.equal(resolve('world=3d&circle=1'), 0);
+});
+
+test('a registered guardian uses the direct duel when the world renderer fails', () => {
+  assert.equal(opensWorldHunt(0, { rendererUnavailable: false, hasOpenDuel: false }), true);
+  assert.equal(opensWorldHunt(0, { rendererUnavailable: true, hasOpenDuel: false }), false);
+  assert.equal(opensWorldHunt(0, { rendererUnavailable: false, hasOpenDuel: true }), false);
+  assert.equal(opensWorldHunt(9, { rendererUnavailable: false, hasOpenDuel: false }), false);
 });

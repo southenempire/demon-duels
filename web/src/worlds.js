@@ -5,6 +5,10 @@ export const worlds = Object.freeze({
   2: () => import('./marrow-crypt/index.js').then((module) => module.MARROW_KING),
 });
 
+export function opensWorldHunt(circle, { rendererUnavailable, hasOpenDuel }, registered = worlds) {
+  return !rendererUnavailable && !hasOpenDuel && Object.hasOwn(registered, circle);
+}
+
 export function resolveWorldCircle(params, campaign, registered = worlds) {
   const value = params.get('circle');
   const requested = value === null ? 0 : /^\d+$/.test(value) ? Number(value) : -1;

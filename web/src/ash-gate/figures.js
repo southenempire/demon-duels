@@ -225,5 +225,17 @@ export function figure(scene, kind, tint) {
     if (hiddenBlade) hiddenBlade.position.y = -.39 - .25 * attack;
   }
 
-  return { root, body, pose };
+  function dispose() {
+    const geometries = new Set(), materials = new Set();
+    body.traverse(({ geometry, material }) => {
+      if (geometry && geometry !== cube && geometry !== sphere) geometries.add(geometry);
+      if (material) materials.add(material);
+    });
+    for (const geometry of geometries) geometry.dispose();
+    for (const material of materials) material.dispose();
+    fabric.map?.dispose();
+    root.removeFromParent();
+  }
+
+  return { root, body, pose, dispose };
 }

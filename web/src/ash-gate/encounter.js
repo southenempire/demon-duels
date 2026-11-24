@@ -9,7 +9,8 @@ export function profileFor(detail) {
   const circle = detail.circle ?? detail.opponentKind;
   if (!Number.isInteger(circle) || !circles[circle]) return null;
   const tells = Array.isArray(detail.tells) ? detail.tells.filter((line) => typeof line === 'string').slice(0, 2) : [];
-  return { opponentKind: detail.opponentKind, circle, grade: detail.grade, tells };
+  const worldName = typeof detail.worldName === 'string' ? detail.worldName.trim() : '';
+  return { opponentKind: detail.opponentKind, circle, grade: detail.grade, tells, ...(worldName ? { worldName } : {}) };
 }
 
 export function savedProfile(storage, duel) {

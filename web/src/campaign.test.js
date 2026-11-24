@@ -16,6 +16,7 @@ test('only a settled win against the exact next boss advances the descent', () =
   assert.deepEqual(next.wins, [{ bossId: 0, duel: 'confirmed-duel-0' }]);
   assert.equal(progress.wins.length, 0);
   assert.equal(recordBossWin(next, result()), next, 'duplicate settlement is idempotent');
+  assert.equal(recordBossWin(next, { ...result(), duel: 'confirmed-rematch' }), next, 'a rematch never awards a second seal');
 });
 
 test('each circle unlocks in order and only the final win opens PvP', () => {
