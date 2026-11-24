@@ -1068,7 +1068,7 @@ function syncWorldArena() {
       button(worldArena ? 'world-back' : 'world-enter', worldArena ? 'Return to hunt' : 'Hunt (Underworld)', 'secondary') + '</span>');
   }
   if (worldArena && worldFight?.tells?.length) {
-    app.querySelector('.hero')?.insertAdjacentHTML('afterend', '<section class="world-arena-intel"><b>HUNTER INTEL / ' +
+    app.querySelector('.encounter-heading, .hero')?.insertAdjacentHTML('afterend', '<section class="world-arena-intel"><b>HUNTER INTEL / ' +
       esc(worldFight.grade.toUpperCase()) + '</b><ul>' + worldFight.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></section>');
   }
 }
