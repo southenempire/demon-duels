@@ -765,8 +765,9 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
     world.hidden = true;
     stopRendering();
   });
-  window.addEventListener('demon-duels:duel3d-close', () => {
+  window.addEventListener('demon-duels:duel3d-close', ({ detail }) => {
     duelOpen = false;
+    if (pending && detail?.tutorialCancelled) { returnToGate(); return; }
     if (active) world.hidden = false;
     startRendering();
   });
