@@ -18,6 +18,13 @@ export function defaultStake(cards, opponentKind, kindOf = (card) => card.kind) 
   return cards.find((card) => kindOf(card) !== opponentKind) ?? cards[0];
 }
 
+export function sealedMoveNotice(duel, player, waitingRoom) {
+  return duel?.phase === 1 && duel.key.toString() === waitingRoom &&
+    (duel.p1.equals(player) || duel.p2.equals(player))
+    ? 'Your move is sealed. Waiting for your opponent.'
+    : '';
+}
+
 // Presentation only: never roll randomness or infer a chain result here.
 export function confirmedFight(duel, side = 0) {
   if (duel?.phase !== 3) return null;

@@ -4,6 +4,37 @@ export function inside(x, z, { x: cx, z: cz, w, d }, padding = 0) {
   return Math.abs(x - cx) < w / 2 + padding && Math.abs(z - cz) < d / 2 + padding;
 }
 
+export function blocksStep(x, z, toX, toZ, wall) {
+  if (!inside(toX, toZ, wall, .28)) return false;
+  if (inside(toX, toZ, wall) || !inside(x, z, wall, .28)) return true;
+  const clearance = (px, pz) => Math.max(Math.abs(px - wall.x) - wall.w / 2, Math.abs(pz - wall.z) - wall.d / 2);
+  return clearance(toX, toZ) < clearance(x, z);
+}
+
+export function bossPatrol({ points, speed = 1.4, pause = .7 } = {}) {
+  let waypoint = 0, wait = 0;
+  return (boss, dt) => {
+    if (!points?.length || speed <= 0) return null;
+    if (wait > 0) {
+      wait -= dt;
+      if (wait > 0) return null;
+      dt = -wait;
+    }
+    const target = points[waypoint];
+    const dx = target.x - boss.x, dz = target.z - boss.z;
+    const distance = Math.hypot(dx, dz);
+    const travel = Math.min(distance, speed * dt);
+    if (travel === distance) {
+      waypoint = (waypoint + 1) % points.length;
+      wait = pause;
+    }
+    if (!travel) return null;
+    boss.x += dx * travel / distance;
+    boss.z += dz * travel / distance;
+    return Math.atan2(-dx, -dz) || 0;
+  };
+}
+
 export function obstruction(x, z, toX, toZ, blockers, padding = 0) {
   let nearest = 1;
   for (const b of blockers) {
@@ -23,6 +54,15 @@ export function obstruction(x, z, toX, toZ, blockers, padding = 0) {
     if (enter <= exit) nearest = enter;
   }
   return nearest;
+}
+
+export function nextPatrolWaypoint(route, current, { x, z }, walls, canWalk) {
+  for (let step = 1; step < route.length; step++) {
+    const index = (current + step) % route.length;
+    const [toX, toZ] = route[index];
+    if (Math.hypot(toX - x, toZ - z) > .1 && canWalk(toX, toZ) && obstruction(x, z, toX, toZ, walls, .12) === 1) return index;
+  }
+  return (current + 1) % route.length;
 }
 
 export function cameraSweep(from, to, blockers, radius = .18) {
@@ -71,6 +111,7 @@ export function circleRules(hooks = {}) {
     canStrikeBoss: (pos, state, fallback) => hooks.canStrikeBoss ? hooks.canStrikeBoss(pos, state) : fallback(),
     canTraverse: (pos) => hooks.canTraverse ? hooks.canTraverse(pos) : true,
     interactionAt: (pos) => hooks.interactionAt?.(pos) ?? null,
+    investigateTargets: (time, guard) => hooks.investigateTargets?.(time, guard) ?? [],
     tractionAt: (pos) => Math.max(0, Math.min(1, hooks.tractionAt?.(pos) ?? 1)),
   };
 }

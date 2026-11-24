@@ -18,7 +18,7 @@ function failed(error) {
 async function enterAshGate() {
   app.querySelector('button').disabled = true;
   app.querySelector('[role=status]').textContent = 'Opening Ash Gate…';
-  const { getWorldCampaign, setExploring } = await import('./main.js');
+  const { getWorldCampaign, launchFight, setExploring } = await import('./main.js');
   const circle = resolveWorldCircle(params, getWorldCampaign());
   const [descriptor, { mountCircle }] = await Promise.all([worlds[circle](), import('./ash-gate/index.js')]);
   try {
@@ -26,8 +26,9 @@ async function enterAshGate() {
   } catch (error) {
     const notice = document.createElement('p');
     notice.setAttribute('role', 'status');
-    notice.textContent = 'Ash Gate needs a browser with WebGL 2. You can still play in the arena below.';
+    notice.textContent = descriptor.name + ' needs WebGL 2. You can still challenge its guardian below.';
     app.before(notice);
+    launchFight({ opponentKind: descriptor.opponentKind, mode: 'chain', returnToMap: true });
     console.error(error);
   }
 }
