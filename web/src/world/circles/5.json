@@ -14,7 +14,7 @@
   "lights": [{"x":15,"y":33,"r":6,"douseable":false},{"x":33,"y":31,"r":6,"douseable":false},{"x":53,"y":9,"r":6,"douseable":false}],
   "surfaces": {},
   "patrols": [{"path":[[15,9],[19,9],[19,23],[15,23]],"speed":78,"cone":{"deg":90,"range":6}},{"path":[[25,11],[31,11],[31,25],[25,25]],"speed":78,"cone":{"deg":90,"range":6}},{"path":[[37,17],[53,17],[53,19],[37,19]],"speed":78,"cone":{"deg":90,"range":6}},{"path":[[37,27],[51,27],[51,33],[37,33]],"speed":78,"cone":{"deg":90,"range":6}},{"path":[[45,5],[53,5],[53,13],[49,13],[49,5]],"speed":78,"cone":{"deg":90,"range":6}}],
-  "intel": [{"id":0,"x":15,"y":31,"text":"The Gloam Shade favors Rend when you strike from stealth."},{"id":1,"x":29,"y":31,"text":"Against a Ghost, Rend is at least twice as likely as any other move."},{"id":2,"x":49,"y":19,"text":"Against a Ghost, Hex is the boss’s rarest choice."}],
+  "intel": [{"id":0,"x":15,"y":31,"text":"The Gloam Shade favors Rend when struck from stealth."},{"id":1,"x":29,"y":31,"text":"Ward is the Gloam Shade’s rarest choice when struck from stealth."},{"id":2,"x":49,"y":19,"text":"Hex counters the Gloam Shade’s favored Rend."}],
   "boss": {"patrol":[[57,5],[60,5]],"strikeRadius":1.5},
   "signature": {},
   "palette": ["#201a2c","#383552","#f0a2ed","#6a678e"],

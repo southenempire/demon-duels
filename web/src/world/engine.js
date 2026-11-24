@@ -4,6 +4,7 @@ import { levels, TILE } from './levels.js';
 import { acceptedWin, activeKey, campaignKey, gradeScore, readJSON, readWins, worldKey } from './progress.js';
 import { createPresence, worldEvent } from './presence.js';
 import { createRenderer } from './render.js';
+import { sprites } from './sprites.js';
 import { advance, interaction, newRun, throwEmber } from './simulation.js';
 import { gradeFor, distance } from './stealth.js';
 
@@ -11,6 +12,15 @@ let current;
 const rom = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 const button = (label, action, cls = 'secondary') => '<button type="button" class="button ' + cls + '" data-hunt="' + action + '">' + label + '</button>';
 const keys = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', 'c', 'e', 'q', 'f', ' ', 'escape']);
+const intro = [
+  ['The Pit', 'Every soul that falls here keeps one thing. Its name.'],
+  ['The Pit', 'Except you.'],
+  ['Ash Warden', 'No name, no way out. The fire thanks you.'],
+  ['The Pit', 'Your name broke into six runes. Six guardians caught them.'],
+  ['The Pit', 'They chain the Pit. They keep every soul in their cards.'],
+  ['Hunter', 'Then I take them back. One rune at a time.'],
+  ['The Pit', 'Swear the Hunter’s Oath. The dark will choose three demons for you.'],
+];
 
 export function unmountWorld() {
   current?.dispose();
@@ -51,6 +61,11 @@ export function mountWorld(el, { wallet, chain }) {
   let objective = null;
   const down = new Set();
   const finished = new Set();
+  let introIndex = 0;
+  const preloads = [...Object.values(sprites.hunter), sprites.circles[0].boss].filter(Boolean).map((path) => {
+    const img = new Image(); img.src = asset + path;
+    return img.decode().catch(() => {});
+  });
   const query = (name) => el.querySelector('[data-hunt-' + name + ']');
   const pitPose = { x: 8 * TILE, y: 4 * TILE, angle: Math.PI / 2, anim: 'idle' };
   const message = (text) => { const node = query('notice'); if (node) node.textContent = text; };
@@ -63,7 +78,25 @@ export function mountWorld(el, { wallet, chain }) {
   function title() {
     scene = 'title';
     el.innerHTML = '<div class="hunt-title"><img src="' + asset + 'sigil.svg" alt=""><span class="hunt-kicker">DEMON DUELS / THE SEALED HAND</span><h1>UNDERWORLD<br><em>HUNT</em></h1><p>Six guardians stole your name. Take it back.</p>' +
-      button('Press start', 'start', 'primary') + button('Campaign map', 'exit', 'text') + '</div>';
+      '<small class="hunt-kicker" data-hunt-loading>Loading hunter gear…</small>' +
+      button('Press start', 'start', 'primary') + button('Enable sound', 'sound', 'text') + button('Campaign map', 'exit', 'text') + '</div>';
+    Promise.all(preloads).then(() => { if (query('loading')) query('loading').textContent = 'The gates are ready'; });
+  }
+
+  function story() {
+    scene = 'story';
+    const [speaker, line] = intro[introIndex];
+    el.innerHTML = '<div class="hunt-title hunt-story"><img src="' + asset + 'sigil.svg" alt=""><span class="hunt-kicker">HUNTER’S OATH / ' +
+      (introIndex + 1) + ' OF ' + intro.length + '</span><h2>' + speaker + '</h2><p>' + line + '</p>' +
+      button(introIndex === intro.length - 1 ? 'Enter The Pit' : 'Continue', 'story-next', 'primary') + button('Skip story', 'story-skip', 'text') + '</div>';
+    el.querySelector('[data-hunt=story-next]').focus();
+  }
+
+  function endStory() {
+    flavor.intro = true;
+    save();
+    pit();
+    el.querySelector('[data-hunt=vault]').focus();
   }
 
   function pit(notice = '') {
@@ -86,7 +119,7 @@ export function mountWorld(el, { wallet, chain }) {
   function enter(number, notice = '', cutscene = true) {
     if (number > wins().length || !levels[number]) return;
     if (scene === 'pit') presence.leave();
-    scene = 'circle'; kind = number; paused = false; resetInput(); sneaking = false; sprinting = false;
+    scene = 'circle'; kind = number; paused = false; resetInput(); sneaking = false; sprinting = false; lastState = '';
     const level = levels[kind];
     const checkpoint = level.checkpoints[flavor.checkpoint?.circle === kind ? flavor.checkpoint.index : 0] ?? level.start;
     run = newRun(level, flavor.intel[kind], flavor.vantage[kind], checkpoint);
@@ -128,7 +161,7 @@ export function mountWorld(el, { wallet, chain }) {
         if (!window.dispatchEvent(new CustomEvent('demon-duels:launch', { detail, cancelable: true }))) {
           message(localStorage.getItem(activeKey) ? 'Resume or finish your saved duel at the Pit first.' : 'The arena is busy. Try again shortly.');
         }
-      }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 430);
+      }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 510);
     } else if (name === 'douse') {
       target.doused = true; message('Brazier doused. The lane darkens.'); audio('douse', target);
     } else if (name === 'tear') {
@@ -143,7 +176,7 @@ export function mountWorld(el, { wallet, chain }) {
       message('Synchronized. The map now shows the boss route and intel.'); audio('vantage-sync', level.vantage);
     } else if (name === 'takedown') {
       run.guards = run.guards.filter((guard) => guard !== target);
-      run.hunter.takedownUntil = performance.now() + 450;
+      run.hunter.takedownUntil = performance.now() + 840;
       message('Thrall silently removed.'); audio('takedown', target);
     } else if (name === 'challenge') worldEvent('challenge-hunter', { id: target.id });
   }
@@ -180,6 +213,7 @@ export function mountWorld(el, { wallet, chain }) {
       objective = prompt;
       const grade = gradeFor(run);
       const state = run.watch + ':' + grade;
+      query('watch').textContent = run.watch.toUpperCase() + (run.hunter.hidden ? ' · COVER' : '');
       if (state !== lastState) {
         const previous = lastState.split(':')[0];
         lastState = state;
@@ -187,7 +221,6 @@ export function mountWorld(el, { wallet, chain }) {
           if (run.watch !== 'unaware') audio('detect-' + run.watch);
           else if (previous) audio('lose-trail');
         }
-        query('watch').textContent = run.watch.toUpperCase() + (run.hunter.hidden ? ' · COVER' : '');
         query('watch').dataset.watch = run.watch;
         query('grade').textContent = grade.toUpperCase();
         worldEvent('world-state', { circle: kind, alert: run.watch, grade });
@@ -211,11 +244,18 @@ export function mountWorld(el, { wallet, chain }) {
 
   function act(action) {
     if (action === 'exit') { chain.exit(); return; }
+    if (action === 'sound') {
+      const enabled = chain.sound?.();
+      el.querySelector('[data-hunt=sound]').textContent = enabled ? 'Mute sound' : 'Enable sound';
+      return;
+    }
     if (action === 'start' && scene === 'title') {
       chain.start?.();
-      worldEvent('cutscene', { id: 'intro' });
-      pit();
-    } else if (action === 'vault' || action === 'resume') chain[action]();
+      if (flavor.intro) pit();
+      else { worldEvent('cutscene', { id: 'intro' }); story(); }
+    } else if (action === 'story-next' && ++introIndex < intro.length) story();
+    else if (action === 'story-next' || action === 'story-skip') endStory();
+    else if (action === 'vault' || action === 'resume') chain[action]();
     else if (action === 'pit' && !striking) pit();
     else if (action?.startsWith('circle:')) enter(Number(action.slice(7)));
     else if (action === 'interact' || action === 'practice') handleInteraction(action === 'practice');

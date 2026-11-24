@@ -14,7 +14,7 @@
   "lights": [{"x":9,"y":7,"r":6,"douseable":false},{"x":21,"y":15,"r":6,"douseable":false},{"x":35,"y":19,"r":6,"douseable":false},{"x":55,"y":27,"r":6,"douseable":false}],
   "surfaces": {},
   "patrols": [{"path":[[7,13],[13,13],[13,23],[7,23]],"speed":62,"cone":{"deg":90,"range":6}},{"path":[[31,7],[45,7],[45,19],[31,19]],"speed":62,"cone":{"deg":90,"range":6}},{"path":[[55,25],[61,25],[61,33],[55,33]],"speed":62,"cone":{"deg":90,"range":6}}],
-  "intel": [{"id":0,"x":19,"y":5,"text":"The Void Wraith favors Hex when you strike from stealth."},{"id":1,"x":35,"y":17,"text":"Against a Ghost, Hex is at least twice as likely as any other move."},{"id":2,"x":57,"y":21,"text":"Against a Ghost, Rend is the boss’s rarest choice."}],
+  "intel": [{"id":0,"x":19,"y":5,"text":"The Void Wraith favors Hex when struck from stealth."},{"id":1,"x":35,"y":17,"text":"Rend is the Void Wraith’s rarest choice when struck from stealth."},{"id":2,"x":57,"y":21,"text":"Ward counters the Void Wraith’s favored Hex."}],
   "boss": {"patrol":[[57,29],[60,29]],"strikeRadius":1.5},
   "signature": {"hearingMultiplier":2,"tears":[[21,7],[55,25]]},
   "palette": ["#1c1629","#372b4c","#c18cff","#65547e"],

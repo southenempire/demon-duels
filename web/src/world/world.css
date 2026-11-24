@@ -8,6 +8,8 @@
 .hunt-title img { width: 72px; filter: drop-shadow(0 0 24px #ff71438c); }
 .hunt-title h1 { font-size: clamp(70px, 14vw, 150px); letter-spacing: .025em; }
 .hunt-title p, .hunt-deck { color: #cbb6ba; margin: 0 0 12px; }
+.hunt-story h2 { color: #ff9d74; font-size: clamp(42px, 9vw, 80px); }
+.hunt-story p { font-size: clamp(16px, 3vw, 25px); }
 .hunt-pit { padding: 28px 0 42px; }
 .hunt-pit h1 { margin: 38px 0 12px; }
 .hunt-top { display: flex; justify-content: space-between; align-items: end; gap: 12px; padding: 14px 0; }
@@ -23,8 +25,8 @@
 .hunt-stage { position: relative; height: clamp(410px, 72dvh, 760px); overflow: hidden; isolation: isolate; background: #261719; border: 1px solid #77483d; border-radius: 6px; box-shadow: 0 24px 70px #09040ba3; }
 .hunt-stage canvas { display: block; width: 100%; height: 100%; transition: filter .22s; }
 .hunt-stage .hunt-sight-on { filter: saturate(.52) contrast(1.19) brightness(1.12); }
-.hunt-stage.hunt-striking::after { content: ""; position: absolute; inset: 0; z-index: 6; pointer-events: none; background: #ffd1a1; opacity: 0; animation: hunt-impact 430ms ease-out; }
-@keyframes hunt-impact { 0%, 48%, 100% { opacity: 0; } 54% { opacity: .56; } }
+.hunt-stage.hunt-striking::after { content: ""; position: absolute; inset: 0; z-index: 6; pointer-events: none; background: #ffd1a1; opacity: 0; animation: hunt-impact 510ms ease-out; }
+@keyframes hunt-impact { 0%, 67%, 100% { opacity: 0; } 70% { opacity: .56; } }
 .hunt-hud { position: absolute; top: 12px; left: 12px; min-width: 132px; display: grid; gap: 6px; padding: 9px 12px; background: #150e18e8; border: 1px solid #755147; border-radius: 4px; }
 .hunt-hud span, .hunt-hud small { font: 11px var(--mono); letter-spacing: .10em; }
 .hunt-hud span[data-watch=suspicious] { color: #ffd197; }
@@ -39,6 +41,8 @@
 .hunt-pause { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 17px; background: #130c1ad9; z-index: 5; }
 .hunt-pause h2 { font-size: 46px; }
 .hunt-arena-link { margin-left: 6px; }
+.world-arena-intel { border: 1px solid #725345; background: #2c1b20; padding: 10px 16px; margin: 10px 0; color: #ffe1c8; }
+.world-arena-intel ul { margin: 5px 0; }
 @media (max-width: 620px) {
   .hunt { width: calc(100% - 20px); }
   .hunt-gates { grid-template-columns: repeat(2, 1fr); }

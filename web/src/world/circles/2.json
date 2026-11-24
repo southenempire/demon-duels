@@ -14,7 +14,7 @@
   "lights": [{"x":55,"y":31,"r":6,"douseable":false},{"x":35,"y":17,"r":6,"douseable":false},{"x":9,"y":13,"r":6,"douseable":false}],
   "surfaces": {"bone":[[28,0,14,36]]},
   "patrols": [{"path":[[55,13],[59,13],[59,25],[55,25]],"speed":66,"cone":{"deg":90,"range":6}},{"path":[[37,15],[47,15],[47,21],[37,21]],"speed":66,"cone":{"deg":90,"range":6}},{"path":[[7,23],[9,23],[9,27],[7,27]],"speed":66,"cone":{"deg":90,"range":6}},{"path":[[21,5],[33,5],[33,9],[21,9]],"speed":66,"cone":{"deg":90,"range":6}}],
-  "intel": [{"id":0,"x":53,"y":31,"text":"The Marrow King favors Rend when you strike from stealth."},{"id":1,"x":35,"y":31,"text":"Against a Ghost, Rend is at least twice as likely as any other move."},{"id":2,"x":11,"y":15,"text":"Against a Ghost, Ward is the boss’s rarest choice."}],
+  "intel": [{"id":0,"x":53,"y":31,"text":"The Marrow King favors Rend when struck from stealth."},{"id":1,"x":35,"y":31,"text":"Ward is the Marrow King’s rarest choice when struck from stealth."},{"id":2,"x":11,"y":15,"text":"Hex counters the Marrow King’s favored Rend."}],
   "boss": {"patrol":[[7,7],[10,7]],"strikeRadius":1.5},
   "signature": {},
   "palette": ["#28231d","#493b31","#f3c776","#8c7659"],

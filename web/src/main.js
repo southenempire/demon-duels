@@ -809,6 +809,11 @@ async function openWorld(savedEncounter) {
     history.replaceState(null, '', url);
     world = engine.mountWorld(hunt, { wallet: client.key, chain: {
       start: () => { sound.unlock(s.sound); sound.setScene('menu'); },
+      sound: () => {
+        s.sound = !s.sound; sound.unlock(s.sound);
+        localStorage.setItem('demon-duels:sound', s.sound ? 'on' : 'off');
+        return s.sound;
+      },
       exit: () => {
         engine.unmountWorld(); world = null; app.hidden = false;
         const url = new URL(location.href); url.searchParams.delete('world'); history.replaceState(null, '', url);

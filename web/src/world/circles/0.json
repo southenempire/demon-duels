@@ -14,7 +14,7 @@
   "lights": [{"x":7,"y":29,"r":6,"douseable":true},{"x":17,"y":29,"r":6,"douseable":true},{"x":33,"y":31,"r":6,"douseable":true},{"x":57,"y":21,"r":6,"douseable":true},{"x":57,"y":9,"r":6,"douseable":true}],
   "surfaces": {},
   "patrols": [{"path":[[17,15],[17,25],[23,25],[23,21],[17,21]],"speed":58,"cone":{"deg":90,"range":6}},{"path":[[29,13],[35,13],[35,5],[29,5]],"speed":58,"cone":{"deg":90,"range":6}},{"path":[[45,21],[53,21],[53,25],[45,25]],"speed":58,"cone":{"deg":90,"range":6}}],
-  "intel": [{"id":0,"x":9,"y":27,"text":"The Ash Warden favors Ward when you strike from stealth."},{"id":1,"x":33,"y":33,"text":"Against a Ghost, Ward is at least twice as likely as any other move."},{"id":2,"x":57,"y":25,"text":"Against a Ghost, Hex is the boss’s rarest choice."}],
+  "intel": [{"id":0,"x":9,"y":27,"text":"The Ash Warden favors Ward when struck from stealth."},{"id":1,"x":33,"y":33,"text":"Hex is the Ash Warden’s rarest choice when struck from stealth."},{"id":2,"x":57,"y":25,"text":"Rend counters the Ash Warden’s favored Ward."}],
   "boss": {"patrol":[[57,7],[60,7]],"strikeRadius":1.5},
   "signature": {"braziers":true},
   "palette": ["#231719","#422627","#ff8555","#80584d"],

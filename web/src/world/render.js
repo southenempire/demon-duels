@@ -1,6 +1,20 @@
 import { TILE } from './levels.js';
+import { animations, direction } from './presence.js';
 import { sprites } from './sprites.js';
 import { clamp, rayDistance } from './stealth.js';
+
+const directions = ['down', 'left', 'right', 'up'];
+const fps = { idle: 4, walk: 10, sneak: 7, sprint: 14, hide: 2 };
+const strikeFrames = [80, 90, 110, 70, 140, 110, 120, 140];
+const takedownFrames = [120, 110, 110, 140, 200, 160];
+const singleFrame = (durations, elapsed) => {
+  let remaining = elapsed;
+  for (const [index, duration] of durations.entries()) {
+    remaining -= duration;
+    if (remaining < 0) return index;
+  }
+  return durations.length - 1;
+};
 
 export function createRenderer(canvas, assetBase) {
   const ctx = canvas.getContext('2d');
@@ -106,6 +120,7 @@ export function createRenderer(canvas, assetBase) {
     if (sprite) { ctx.drawImage(sprite, x - 26, y - 43 + bob, 52, 52); return; }
     ctx.save();
     ctx.translate(x, y + bob);
+    if (actor.anim === 'sneak' || actor.anim === 'hide') ctx.scale(1.12, 0.69);
     if (Math.cos(actor.angle) < 0) ctx.scale(-1, 1);
     polygon(ctx, [[-8, -15], [6, -16], [15, 5], [8, 8], [-15, 9]], '#201522', color + 'bd');
     polygon(ctx, [[-7, -17], [-2, -29], [8, -25], [13, -16], [2, -10], [-9, -14]], '#3a293e', color);
@@ -113,6 +128,22 @@ export function createRenderer(canvas, assetBase) {
     ctx.fillStyle = color;
     ctx.fillRect(6, -19, 4, 1);
     polygon(ctx, [[10, 0], [20, -6], [16, 3], [11, 5]], '#bfa7b7');
+    ctx.restore();
+  }
+
+  function hunterSprite(actor, color, now) {
+    const anim = actor.anim ?? 'idle';
+    const sprite = image(sprites.hunter[anim]);
+    if (!sprite) { hood(actor, color, null, actor.moving); return; }
+    const row = directions.indexOf(direction(actor.angle));
+    const frame = anim === 'strike' ? singleFrame(strikeFrames, now - (actor.animStart ?? now)) :
+      anim === 'takedown' ? singleFrame(takedownFrames, now - (actor.takedownUntil ?? now) + 840) :
+        Math.floor(now / (1000 / fps[anim])) % animations[anim];
+    marker(actor.x, actor.y + 3, 13, '#0c0611a8', '#0c06114a');
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    if (actor.peer) ctx.filter = 'hue-rotate(' + actor.hue + 'deg) saturate(1.25)';
+    ctx.drawImage(sprite, frame * 48, row * 48, 48, 48, actor.x - 24, actor.y - 46, 48, 48);
     ctx.restore();
   }
 
@@ -135,9 +166,10 @@ export function createRenderer(canvas, assetBase) {
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
     }
-    const scale = Math.max(w / level.width, h / level.height, w < 600 ? 0.80 : 1);
+    const strikeZoom = run.strike ? Math.sin(Math.min(1, (now - run.strike) / 450) * Math.PI / 2) * 0.34 : 0;
+    const scale = Math.max(w / level.width, h / level.height, w < 600 ? 0.80 : 1) + strikeZoom;
     view = { w: w / scale, h: h / scale };
-    const ease = snap ? 1 : 1 - Math.exp(-dt * 8);
+    const ease = snap ? 1 : 1 - Math.exp(-dt * (run.strike ? 15 : 8));
     camera.x += (clamp(hunter.x - view.w / 2, 0, level.width - view.w) - camera.x) * ease;
     camera.y += (clamp(hunter.y - view.h / 2, 0, level.height - view.h) - camera.y) * ease;
     snap = false;
@@ -199,15 +231,20 @@ export function createRenderer(canvas, assetBase) {
         polygon(ctx, [[x, y - 89], [x + 6, y - 83], [x, y - 77], [x - 6, y - 83]], hunter.sight ? '#ffd387' : accent);
       } else if (actor === hunter) {
         marker(actor.x, actor.y, 18, '#09101280', actor.hidden ? '#95ebaa' : '#e5c6a8');
-        hood(actor, actor.hidden ? '#95ebaa' : '#f2c59f', image(sprites.hunter), actor.moving);
+        hunterSprite(actor, actor.hidden ? '#95ebaa' : '#f2c59f', now);
       } else if (actor.peer) {
-        hood(actor, '#a5d0f5', image(sprites.hunter));
+        hunterSprite(actor, '#a5d0f5', now);
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#bce5ff';
         ctx.fillText(actor.name, actor.x, actor.y - 37);
       } else {
         hood(actor, hunter.sight || actor.meter >= 30 ? '#ff655e' : '#e8ab78', image(sprites.sentry), true);
+      }
+      if (!actor.peer && actor !== hunter && (actor.meter >= 30 || actor.alert)) {
+        ctx.textAlign = 'center'; ctx.font = 'bold 19px monospace';
+        ctx.fillStyle = actor.alert ? '#ff745e' : '#ffd18d';
+        ctx.fillText(actor.alert ? '!' : '?', actor.x, actor.y - (actor === boss ? 93 : 36));
       }
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

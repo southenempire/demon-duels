@@ -14,7 +14,7 @@
   "lights": [{"x":17,"y":19,"r":6,"douseable":false},{"x":37,"y":17,"r":6,"douseable":false},{"x":55,"y":15,"r":6,"douseable":false}],
   "surfaces": {"water":[[12,14,24,10],[44,10,10,14]]},
   "patrols": [{"path":[[17,15],[37,15],[37,21],[17,21]],"speed":70,"cone":{"deg":90,"range":6}},{"path":[[25,5],[31,5],[31,9],[25,9]],"speed":70,"cone":{"deg":90,"range":6}},{"path":[[21,29],[43,29],[43,33],[21,33]],"speed":70,"cone":{"deg":90,"range":6}},{"path":[[47,11],[47,25],[49,25],[49,11]],"speed":70,"cone":{"deg":90,"range":6}}],
-  "intel": [{"id":0,"x":17,"y":17,"text":"The Mire Phantom favors Hex when you strike from stealth."},{"id":1,"x":35,"y":19,"text":"Against a Ghost, Hex is at least twice as likely as any other move."},{"id":2,"x":49,"y":15,"text":"Against a Ghost, Ward is the boss’s rarest choice."}],
+  "intel": [{"id":0,"x":17,"y":17,"text":"The Mire Phantom favors Hex when struck from stealth."},{"id":1,"x":35,"y":19,"text":"Rend is the Mire Phantom’s rarest choice when struck from stealth."},{"id":2,"x":49,"y":15,"text":"Ward counters the Mire Phantom’s favored Hex."}],
   "boss": {"patrol":[[57,17],[60,17]],"strikeRadius":1.5},
   "signature": {},
   "palette": ["#192522","#283f34","#b5dc78","#658660"],
