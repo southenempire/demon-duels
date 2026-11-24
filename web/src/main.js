@@ -306,7 +306,8 @@ function stakePicker() {
     s.owned.filter((card) => keyed(card.lock, ZERO));
   const selected = practice ? s.practiceStake : anyCard()?.key?.toString();
   if (!cards.length) return '';
-  return '<div class="duel-stakes" role="group" aria-label="Choose a demon card">' + cards.map(({ key, kind }) =>
+  return '<div class="duel-stakes" role="group" aria-label="Choose a demon card">' +
+    (practice ? '' : proofLink(s.packProof, 'Starter pack proof')) + cards.map(({ key, kind }) =>
     '<button type="button" data-action="select:' + key + '" aria-pressed="' + (selected === (practice ? key : key.toString())) +
     '"' + (s.busy ? ' disabled' : '') + '>' + demons[kind].name + '</button>').join('') + '</div>';
 }

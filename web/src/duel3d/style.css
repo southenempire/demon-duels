@@ -65,6 +65,7 @@
 .duel-panels .feedback:empty { display: none; }
 .duel-panels .spoils-vault { margin: 0; }
 .duel-stakes { display: flex; gap: 4px; overflow: auto; padding: 2px; }
+.duel-stakes .proof-link { flex: 0 0 auto; padding-inline: 10px; background: #171219e8; }
 .duel-stakes button {
   flex: 1 0 auto; border: 1px solid #755b51; border-radius: 3px;
   background: #171219e8; color: #f8e3ca; padding: 6px 10px; font: 11px var(--mono);
