@@ -154,7 +154,8 @@ function moveSelector() {
 function resultPanel() {
   const both = roundResult();
   const spectating = s.duel && !participant();
-  const title = spectating ? (both.winner === 0 ? 'Player one wins' : 'Player two wins') :
+  const title = s.result ? (both.winner === 0 ? 'Practice victory.' : 'A lesson from the Underworld.') :
+    spectating ? (both.winner === 0 ? 'Player one wins' : 'Player two wins') :
     both.winner === 0 ? 'The pit is yours.' : 'The pit takes its due.';
   const line = both.moves.map((id, index) => '<span><b>' + moves[id].name + '</b> · ' + both.score[index] + ' DMG' +
     (both.crits[index] ? ' <em>CRIT</em>' : '') + '</span>').join('<small>VS</small>');
