@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as T from 'three';
-import { bossPatrol, canStrike, inside as paddedInside, mantleTarget, obstruction } from '../../ash-gate/stealth.js';
+import { bossPatrol, canStrike, inside as paddedInside, mantleTarget, obstruction, sees } from '../../ash-gate/stealth.js';
 import { huntProfile } from '../../ash-gate/encounter.js';
 import { resolveWorldCircle, worlds } from '../../worlds.js';
 import { FROST_HERALD as circle } from './index.js';
@@ -29,7 +29,7 @@ test('Rime Spire sets the fifth guardian and has a stone and rooftop flank route
   for (let x = -6.75; x < 0; x += .25) assert.equal(surfaceAt({ x, z: -10.95 }), 'stone');
   const boss = { ...circle.boss.pos, yaw: circle.boss.facing, range: 6.4, halfAngle: .61 };
   assert.equal(canStrike(-.6, -10.95, boss, colliders, false), true);
-  assert.equal(canStrike(boss.x, boss.z + 1.5, boss, colliders, false), false);
+  assert.equal(canStrike(boss.x + 1.5, boss.z, boss, colliders, false), false);
 });
 
 test('the Herald pauses between short bell-tower walks and leaves the west flank open', () => {
@@ -39,15 +39,24 @@ test('the Herald pauses between short bell-tower walks and leaves the west flank
   const boss = { ...pos, yaw: facing, range: 6.4, halfAngle: .61 };
   const update = bossPatrol(patrol);
   const walls = [...colliders, ...barriers];
+  const dt = .05;
   assert.equal(obstruction(start.x, start.z, bell.x, bell.z, walls, .74), 1);
-  for (let frame = 0; frame < 480; frame++) {
-    const yaw = update(boss, .05);
-    if (yaw !== null) boss.yaw = yaw;
+  for (let frame = 0; frame < 1440; frame++) {
+    const yaw = update(boss, dt);
+    for (const z of [-10.95, -11.2, -11.45]) {
+      for (const x of [-2.1, -1.5, -.85, -.25]) {
+        assert.equal(sees(boss, x, z, walls, false), false, `saw the flank at ${x}, ${z}, frame ${frame}`);
+      }
+    }
+    if (yaw !== null) {
+      const turn = Math.atan2(Math.sin(yaw - boss.yaw), Math.cos(yaw - boss.yaw));
+      boss.yaw += turn * (1 - Math.exp(-dt * 1.8));
+    }
     if (frame === 100) assert.equal(boss.z, start.z);
     if (frame === 300) assert.equal(boss.z, bell.z);
+    if (frame === 479) assert.equal(boss.z, start.z);
     assert.equal(canStrike(-.25, -11.2, boss, walls, false), true);
   }
-  assert.equal(boss.z, start.z);
 });
 
 test('ice changes ground speed and only the cave interior provides ground concealment', () => {

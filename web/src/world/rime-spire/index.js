@@ -31,7 +31,7 @@ export const FROST_HERALD = {
   spawn,
   boss: {
     name: 'Frost Herald', model: 'frost-herald.glb', height: 3,
-    pos: herald, facing: Math.PI,
+    pos: herald, facing: -Math.PI / 2,
     patrol: {
       points: [herald, { x: herald.x, z: herald.z - 1.6 }],
       speed: .45,
