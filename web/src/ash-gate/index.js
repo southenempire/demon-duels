@@ -122,6 +122,7 @@ export function mountAshGate({ hasAshSeal, setExploring }) {
     && (outcome === 'won' || Math.hypot(x - boss.x, z - boss.z) >= .74);
   let x = spawn.x, z = spawn.z, facing = 0, yaw = 0, tilt = .16, height = 0, falling = 0, climb = null, ledge = null;
   let active = true, crouch = false, gait = 0, bend = 0, step = 0, alert = 0, attack = 0;
+  let duelOpen = false, frameRequest = null;
   let seal = hasAshSeal();
   let ready = false, pending = null, settlement = null, outcome = seal ? 'won' : null, noticeTime = 0, pointer = null;
   let watched = false, spotted = false, nearbyPeer = null, lastPose = -Infinity, lastFootstep = 0;
@@ -209,6 +210,7 @@ export function mountAshGate({ hasAshSeal, setExploring }) {
     settlement = null;
     keys.clear();
     active = false;
+    stopRendering();
     peers.leave();
     audio.circle(null);
     world.hidden = true;
@@ -227,6 +229,7 @@ export function mountAshGate({ hasAshSeal, setExploring }) {
     useAudio();
     setExploring(true);
     document.title = gateTitle;
+    startRendering();
   }
   function showVictory() {
     if (seal || !hasAshSeal()) return;
@@ -238,8 +241,17 @@ export function mountAshGate({ hasAshSeal, setExploring }) {
   function challenge() {
     if (active && menu === 'play' && nearbyPeer) emit('challenge-hunter', { id: nearbyPeer.id });
   }
+  function stopRendering() {
+    if (frameRequest !== null) cancelAnimationFrame(frameRequest);
+    frameRequest = null;
+  }
+  function startRendering() {
+    if (frameRequest !== null || !active || duelOpen) return;
+    previous = performance.now();
+    frameRequest = requestAnimationFrame(frame);
+  }
   function frame(now) {
-    requestAnimationFrame(frame);
+    frameRequest = requestAnimationFrame(frame);
     const dt = Math.min((now - previous) / 1000, .1);
     previous = now;
     if (!active || document.hidden) return;
@@ -425,6 +437,16 @@ export function mountAshGate({ hasAshSeal, setExploring }) {
   window.addEventListener('demon-duels:launch', (event) => {
     if (active && !event.defaultPrevented && event.detail?.mode === 'pvp') enterArena('pvp');
   });
+  window.addEventListener('demon-duels:duel3d-open', () => {
+    duelOpen = true;
+    world.hidden = true;
+    stopRendering();
+  });
+  window.addEventListener('demon-duels:duel3d-close', () => {
+    duelOpen = false;
+    if (active) world.hidden = false;
+    startRendering();
+  });
   window.addEventListener('demon-duels:settled', ({ detail }) => {
     if (pending === 'boss' && detail?.bossBound && detail.opponentKind === ASH_WARDEN.opponentKind) settlement = detail;
   });
@@ -455,5 +477,5 @@ export function mountAshGate({ hasAshSeal, setExploring }) {
     .then(() => setMenu('title'));
   resize();
   camera.position.set(x + .54, 2.35, z + 3.13);
-  requestAnimationFrame(frame);
+  startRendering();
 }
