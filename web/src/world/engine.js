@@ -64,6 +64,7 @@ export function mountWorld(el, { wallet, chain }) {
   let encounter = null;
   let striking = false;
   let strikeTimer;
+  let finishingWin = null;
   let finishedScene = null;
   let pauseBoss = 0;
   let objective = null;
@@ -440,20 +441,22 @@ export function mountWorld(el, { wallet, chain }) {
 
   listen(window, 'demon-duels:settled', ({ detail }) => {
     queueMicrotask(() => {
-      if (signal.aborted || !acceptedWin(wins(), player, encounter, detail) || finished.has(detail.duel)) return;
+      if (signal.aborted || !chain.finisherReady(detail) || detail.duel !== encounter?.duel || finished.has(detail.duel)) return;
       finished.add(detail.duel);
-      const { opponentKind, grade } = encounter;
-      if (gradeScore[grade] > (gradeScore[flavor.bestGrade[opponentKind]] ?? -1)) {
-        flavor.bestGrade[opponentKind] = grade;
-      }
-      flavor.grades[detail.duel] = grade;
-      save();
-      worldEvent('finisher', { opponentKind, grade, duel: detail.duel });
+      finishingWin = detail;
+      worldEvent('finisher', { opponentKind: encounter.opponentKind, grade: encounter.grade, duel: detail.duel });
     });
   });
   listen(window, 'demon-duels:finisher-done', ({ detail }) => {
-    if (!encounter?.duel || !finished.has(encounter.duel) || encounter.opponentKind !== detail?.opponentKind) return;
-    finishedScene = encounter.duel;
+    if (detail?.opponentKind !== encounter?.opponentKind || !acceptedWin(wins(), player, encounter, finishingWin)) return;
+    const { opponentKind, grade, duel } = encounter;
+    if (gradeScore[grade] > (gradeScore[flavor.bestGrade[opponentKind]] ?? -1)) {
+      flavor.bestGrade[opponentKind] = grade;
+    }
+    flavor.grades[duel] = grade;
+    save();
+    finishingWin = null;
+    finishedScene = duel;
   });
   listen(window, 'demon-duels:return', ({ detail }) => {
     if (!suspended) return;

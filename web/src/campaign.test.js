@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { circles, campaignKey, freshCampaign, readCampaign, circleState, pitUnlocked, recordBossWin, persistBossWin, carryCampaign } from './campaign.js';
+import { circles, campaignKey, freshCampaign, readCampaign, circleState, pitUnlocked, recordBossWin, persistBossWin, prepareBossWin, carryCampaign } from './campaign.js';
 
 const result = (bossId = 0) => ({ bossId, mode: 'chain', phase: 3, player: 'player', winner: 'player',
   opponent: 'boss-wallet', bot: 'boss-wallet', opposingKind: bossId, duel: 'confirmed-duel-' + bossId });
@@ -60,6 +60,21 @@ test('a late settlement in an older tab cannot overwrite newer seals', () => {
   assert.deepEqual(readCampaign(storage, 'player'), newer);
   assert.equal(persistBossWin(storage, 'player', result(2)).wins.length, 3);
   assert.deepEqual(readCampaign(storage, 'another-player'), freshCampaign());
+});
+
+test('a prepared boss win leaves the journal unchanged until committed', () => {
+  const values = new Map();
+  const storage = { getItem: (key) => values.get(key), setItem: (key, value) => values.set(key, value) };
+  for (const invalid of [{ mode: 'pvp' }, { winner: 'boss-wallet' }, { phase: 4 }, { bossId: 1 }]) {
+    assert.equal(prepareBossWin(storage, 'player', { ...result(), ...invalid }), null);
+  }
+  const commit = prepareBossWin(storage, 'player', result());
+  assert.equal(values.size, 0);
+  assert.equal(circleState(readCampaign(storage, 'player'), 1), 'locked');
+  assert.equal(circleState(commit(), 1), 'available');
+  assert.equal(prepareBossWin(storage, 'player', result()), null);
+  persistBossWin(storage, 'player', result(1));
+  assert.equal(commit().wins.length, 2);
 });
 
 test('guest replacement carries earned seals before funding, leaving the old journal untouched', () => {

@@ -13,7 +13,7 @@ import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
 import { bossMove } from './world/bot-profile.js';
 import { encounterKey as worldEncounterKey, readJSON as readWorldJSON } from './world/progress.js';
-import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin, carryCampaign } from './campaign.js';
+import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin, prepareBossWin, carryCampaign } from './campaign.js';
 import { storyView, mapView, codexView, journeyNav, encounterHeading, campaignResult } from './campaign-view.js';
 import { startPresence } from './presence-live.js';
 import { hunterLedger, openBounties } from './world/market.js';
@@ -137,6 +137,7 @@ function isBoundBossSettlement(detail, duel) {
   } catch { return false; }
 }
 let liveSettlement;
+let pendingWorldWin;
 const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio, (detail) =>
   worldFight?.duel === detail.duel ? () => window.dispatchEvent(new CustomEvent('demon-duels:audio', {
     detail: { cue: 'finisher-hit', circle: detail.opponentKind },
@@ -435,7 +436,7 @@ async function refreshRoom() {
     if (room !== s.room || owner !== client) return;
     s.proof = settlement;
     if (previous !== 3) {
-      clearSavedRoom(room);
+      if (!worldFight) clearSavedRoom(room);
       await refreshWallet().catch(() => {});
       if (room !== s.room || owner !== client) return;
     }
@@ -444,17 +445,20 @@ async function refreshRoom() {
     if (detail && !emittedSettlements.has(detail.duel)) {
       emittedSettlements.add(detail.duel);
       const boundBoss = isBoundBossSettlement(detail, d);
-      const approval = boundBoss && detail.won ? campaignApproval(localStorage, detail) : null;
-      if (boundBoss && (worldFight ? Boolean(approval) : previous !== undefined || approval)) {
+      const approval = !worldFight && boundBoss && detail.won ? campaignApproval(localStorage, detail) : null;
+      const worldWin = worldFight?.mode === 'chain' && worldFight.duel === detail.duel &&
+        worldFight.opponentKind === detail.opponentKind && detail.won;
+      if (boundBoss && (worldFight ? worldWin : previous !== undefined || approval)) {
         liveSettlement = detail;
       }
       try { window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail })); }
       finally { liveSettlement = undefined; }
-      if (finishers.has(detail.duel) && approval && !approval()) finishers.clear();
+      if (finishers.has(detail.duel) && (worldFight ? !pendingWorldWin : approval && !approval())) finishers.clear();
       if (previous === undefined && finishers.has(detail.duel)) {
         s.playedId = null; s.frame = null;
       }
     }
+    if (worldFight && !pendingWorldWin) clearSavedRoom(room);
   }
   if (d.phase === 4) clearSavedRoom(room);
 }
@@ -477,6 +481,7 @@ async function run(label, action, recoveryMessage) {
 
 function setRoom(key) {
   finishers.clear();
+  pendingWorldWin = undefined;
   document.querySelectorAll('.capture-card').forEach((card) => card.remove());
   s.sequence++;
   s.playing = false;
@@ -1078,6 +1083,7 @@ async function openWorld(savedEncounter) {
     world = engine.mountWorld(hunt, { wallet: client.key, chain: {
       start: () => { sound.unlock(s.sound); sound.setScene('menu'); return s.sound; },
       surface: (name) => sound.unlock(name !== 'circle' && s.sound),
+      finisherReady: (detail) => pendingWorldWin && pendingWorldWin.detail === detail,
       sound: () => {
         s.sound = !s.sound; sound.unlock(s.sound);
         localStorage.setItem('demon-duels:sound', s.sound ? 'on' : 'off');
@@ -1140,9 +1146,22 @@ window.addEventListener('demon-duels:settled', (event) => {
     localStorage.getItem(encounterKey(d.key)) !== String(bossId) || event.detail.duel !== d.key.toString()) return;
   const savedBot = loadRoomBot(d.key);
   if (!savedBot || savedBot.demonId !== bossId) return;
-  s.campaign = persistBossWin(localStorage, client.key, { bossId, phase: d.phase, player: client.key.toString(), winner: d.winner.toString(),
+  const result = { bossId, phase: d.phase, player: client.key.toString(), winner: d.winner.toString(),
     opponent: (mySide() ? d.p1 : d.p2).toString(), bot: savedBot.bot.key.toString(), opposingKind: s.opposing?.kind,
-    duel: d.key.toString(), mode: s.mode });
+    duel: d.key.toString(), mode: s.mode };
+  if (worldFight) {
+    if (event.detail !== liveSettlement) return;
+    const commit = prepareBossWin(localStorage, client.key, result);
+    if (commit) pendingWorldWin = { detail: event.detail, commit };
+  } else {
+    s.campaign = persistBossWin(localStorage, client.key, result);
+  }
+});
+window.addEventListener('demon-duels:finisher-done', ({ detail }) => {
+  if (!pendingWorldWin || detail?.opponentKind !== pendingWorldWin.detail.opponentKind || fightId() !== pendingWorldWin.detail.duel) return;
+  s.campaign = pendingWorldWin.commit();
+  pendingWorldWin = undefined;
+  clearSavedRoom(s.room);
 });
 window.addEventListener('storage', (event) => {
   if (event.key !== campaignKey(client.key)) return;
