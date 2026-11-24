@@ -1059,6 +1059,13 @@ function openWorldArena(detail) {
   sound.unlock(s.sound);
 }
 
+function enterWorldVault() {
+  const room = localStorage.getItem(activeRoomKey);
+  worldFight = room ? readWorldJSON(localStorage, worldEncounterKey(room)) : null;
+  openWorldArena(worldFight);
+  action('enter').catch(() => {});
+}
+
 function syncWorldArena() {
   app.querySelector('.hunt-arena-link')?.remove();
   const nav = app.querySelector('.nav-right');
@@ -1095,7 +1102,7 @@ async function openWorld(savedEncounter) {
         const url = new URL(location.href); url.searchParams.delete('world'); history.replaceState(null, '', url);
         showMap();
       },
-      vault: () => { openWorldArena(); action('enter').catch(() => {}); },
+      vault: enterWorldVault,
       market: () => openBounties(client.base, client.key, localStorage),
       ledger: () => hunterLedger(client.base),
       post: () => {
@@ -1115,12 +1122,7 @@ async function openWorld(savedEncounter) {
         await navigator.clipboard.writeText(url.href);
         return 'Invite link copied.';
       },
-      resume: () => {
-        const room = localStorage.getItem(activeRoomKey);
-        worldFight = readWorldJSON(localStorage, worldEncounterKey(room));
-        if (worldFight) { s.requestedOpponent = worldFight.opponentKind; s.returnToMap = true; }
-        openWorldArena(worldFight); action('enter').catch(() => {});
-      },
+      resume: enterWorldVault,
       returnToWorld: () => action('return-map').catch(() => {}),
     } });
     if (!livePresence) startGuestPresence();
