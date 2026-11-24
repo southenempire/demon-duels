@@ -1,4 +1,4 @@
-import { coverZones, herald, inside, spawn, surfaceAt } from './layout.js';
+import { coverZones, herald, inInvestigationLane, inside, spawn, surfaceAt } from './layout.js';
 import { buildSpire } from './scenery.js';
 import { createTracks } from './tracks.js';
 
@@ -96,7 +96,7 @@ export const FROST_HERALD = {
         drawnTail = tail;
         drawnLength = active.length;
       }
-      return active.map(({ pos, until }) => ({ pos, until }));
+      return active.filter(({ pos }) => inInvestigationLane(pos)).map(({ pos, until }) => ({ pos, until }));
     },
   },
 };

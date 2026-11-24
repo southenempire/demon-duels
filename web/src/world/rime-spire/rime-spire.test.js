@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as T from 'three';
-import { canStrike, inside as paddedInside, mantleTarget } from '../../ash-gate/stealth.js';
+import { canStrike, inside as paddedInside, mantleTarget, obstruction } from '../../ash-gate/stealth.js';
 import { huntProfile } from '../../ash-gate/encounter.js';
 import { resolveWorldCircle, worlds } from '../../worlds.js';
 import { FROST_HERALD as circle } from './index.js';
@@ -65,8 +65,8 @@ test('only snow steps leave visible investigation targets that each expire after
   circle.scenery(T, scene);
   const prints = scene.getObjectByName('Snow footprints');
   const { onStep, investigateTargets } = circle.hooks;
-  const first = { x: -3, z: 8 };
-  const second = { x: -2.5, z: 7 };
+  const first = { x: -4.1, z: 5 };
+  const second = { x: -4.45, z: 5.8 };
 
   onStep(circle.spawn, { running: true });
   onStep({ x: 3, z: 5 }, { running: true });
@@ -83,4 +83,21 @@ test('only snow steps leave visible investigation targets that each expire after
   assert.equal(prints.count, 1);
   assert.deepEqual(investigateTargets(21), []);
   assert.equal(prints.count, 0);
+});
+
+test('snow east of the spawn buttress leaves a print but cannot strand a patrol', () => {
+  const scene = new T.Scene();
+  const { colliders } = circle.scenery(T, scene);
+  const blocked = { x: 4, z: 12.9 };
+  const reachable = { x: -4.1, z: 5 };
+  const canWalkTo = ([x, z], pos) => obstruction(x, z, pos.x, pos.z, colliders, .12) === 1;
+  const waypoints = circle.patrols.flatMap(({ route }) => route);
+  assert.equal(surfaceAt(blocked), 'snow');
+  assert.ok(waypoints.some((point) => !canWalkTo(point, blocked)));
+  assert.ok(waypoints.every((point) => canWalkTo(point, reachable)));
+
+  circle.hooks.onStep(blocked);
+  circle.hooks.onStep(reachable);
+  assert.deepEqual(circle.hooks.investigateTargets(1), [{ pos: reachable, until: 9 }]);
+  assert.equal(scene.getObjectByName('Snow footprints').count, 2);
 });

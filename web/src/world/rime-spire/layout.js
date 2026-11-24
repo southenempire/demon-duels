@@ -67,3 +67,9 @@ export const surfaceAt = (pos) => {
       coverZones.some((area) => inside(pos, area))) return 'stone';
   return ice.some((area) => inside(pos, area)) ? 'ice' : 'snow';
 };
+
+export function inInvestigationLane({ x, z }) {
+  // Targets are shared by all thralls. This convex snow lane clears each patrol loop.
+  const along = (z - 4.8) / 1.7;
+  return along >= 0 && along <= 1 && x >= -4.38 - .44 * along && x <= -3.6 - .97 * along;
+}
