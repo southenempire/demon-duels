@@ -5,7 +5,18 @@ export function worldFrameRuns(menu, active, duelOpen) {
 }
 
 export function usesWorldKey({ code, target }) {
+  if (target?.isContentEditable || target?.closest?.('input, select, textarea')) return false;
   return code !== 'Space' || !target?.closest?.('button, a[href], input, select, textarea, [role="button"]');
+}
+
+export const movementBindings = {
+  forward: ['KeyW', 'ArrowUp'], backward: ['KeyS', 'ArrowDown'],
+  right: ['KeyD', 'ArrowRight'], left: ['KeyA', 'ArrowLeft'],
+};
+
+export function movementAxis(keys, positive, negative) {
+  return Number(movementBindings[positive].some((key) => keys.has(key))) -
+    Number(movementBindings[negative].some((key) => keys.has(key)));
 }
 
 export function inside(x, z, { x: cx, z: cz, w, d }, padding = 0) {

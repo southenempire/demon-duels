@@ -94,6 +94,7 @@ test('Ash Gate HUD exposes delegated actions and escapes the live hunter name', 
   assert.match(strike, /data-objective>Find the Warden/);
   assert.match(strike, /data-state="suspicious"/);
   assert.match(strike, /2 HUNTERS NEARBY/);
+  assert.match(strike, /<kbd>WASD \/ ↑↓←→<\/kbd> Move/);
   assert.match(hunt({ key: 'Space', label: 'Climb' }), /<div class="dd-context-prompt"><kbd>Space/);
   assert.match(hunt({ key: 'F', label: 'Challenge <hunter>', action: 'challenge' }), /data-hunt="challenge"><kbd>F<\/kbd> Challenge &lt;hunter&gt;/);
 });

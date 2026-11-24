@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ASH_WARDEN, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees, usesWorldKey, worldFrameRuns } from './stealth.js';
+import { ASH_WARDEN, blocksStep, bossPatrol, cameraSweep, canStrike, circleRules, dampVelocity, inside, mantleTarget, movementAxis, nextPatrolWaypoint, obstruction, outcomeOnReturn, sees, usesWorldKey, worldFrameRuns } from './stealth.js';
 import { isAshGate } from '../route.js';
 import { bossMove } from '../world/bot-profile.js';
 import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
@@ -24,6 +24,22 @@ test('Space jumps off the HUD but preserves native button activation', () => {
   assert.equal(usesWorldKey({ code: 'Space', target: canvas }), true);
   assert.equal(usesWorldKey({ code: 'Space', target: pause }), false);
   assert.equal(usesWorldKey({ code: 'KeyE', target: pause }), true);
+});
+
+test('arrows mirror WASD without doubling movement or taking over form controls', () => {
+  const axes = (...codes) => {
+    const keys = new Set(codes);
+    return [movementAxis(keys, 'forward', 'backward'), movementAxis(keys, 'right', 'left')];
+  };
+  assert.deepEqual(axes('ArrowUp', 'ArrowRight'), [1, 1]);
+  assert.deepEqual(axes('ArrowDown', 'ArrowLeft'), [-1, -1]);
+  assert.deepEqual(axes('KeyS', 'KeyA'), [-1, -1]);
+  assert.deepEqual(axes('ArrowUp', 'KeyW', 'ArrowRight', 'KeyD'), [1, 1]);
+  assert.deepEqual(axes('ArrowUp', 'KeyS'), [0, 0]);
+  const input = { closest: (selector) => selector.split(', ').includes('input') ? input : null };
+  assert.equal(usesWorldKey({ code: 'ArrowLeft', target: input }), false);
+  assert.equal(usesWorldKey({ code: 'ArrowUp', target: { isContentEditable: true } }), false);
+  assert.equal(usesWorldKey({ code: 'ArrowUp', target: { closest: () => null } }), true);
 });
 
 test('a patrol returning from pursuit skips waypoints blocked by a pillar', () => {
