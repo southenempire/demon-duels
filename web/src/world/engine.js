@@ -178,6 +178,7 @@ export function mountWorld(el, { wallet, chain }) {
         '><span>' + rom[i] + ' / ' + (i < progress ? 'CLEARED' : i === progress ? 'OPEN' : 'SEALED') +
         '</span><strong>' + level.name + '</strong><small>' + demons[i].name + '</small></button>').join('') +
       '</div><div class="hunt-refuge"><p>Move with WASD or the arrow keys to approach another hunter.</p><canvas width="512" height="256" aria-label="Hunters in The Pit"></canvas>' +
+      '<div class="hunt-touch"><div class="hunt-stick" data-hunt-stick aria-label="Movement joystick"><i></i></div></div>' +
       '<button type="button" class="button secondary" data-hunt="pit-challenge" hidden></button></div>' +
       '<section class="hunt-market" aria-label="Open Pit market"><h2>The Bounty Board</h2>' +
       '<p>Every bounty is a demon on the table. Answer it with yours. The winner takes both.</p><div class="hunt-pit-actions">' +

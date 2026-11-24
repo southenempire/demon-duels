@@ -1,4 +1,4 @@
-.hunt-refuge { display: grid; justify-items: center; margin: 18px auto; }
+.hunt-refuge { position: relative; display: grid; justify-items: center; margin: 18px auto; }
 .hunt-refuge canvas { width: min(100%, 512px); aspect-ratio: 2; background: radial-gradient(ellipse at 50% 44%, #2b202c, #110c14 68%); border: 1px solid #422f42; border-radius: 12px; }
 .hunt-market { margin-top: 28px; padding: clamp(16px, 3vw, 28px); background: #1a111c; border: 1px solid #473145; border-radius: 12px; }
 .hunt .hunt-market h2 { margin-top: 16px; }
@@ -66,6 +66,7 @@
 @media (pointer: coarse) {
   .hunt-touch { position: absolute; bottom: 55px; inset-inline: 12px; display: flex; align-items: end; justify-content: space-between; pointer-events: none; z-index: 3; }
   .hunt-touch > * { pointer-events: auto; }
+  .hunt-refuge .hunt-touch { bottom: 10px; inset-inline: 10px; justify-content: start; }
   .hunt-touch > div:last-child { display: flex; flex-direction: column; align-items: end; gap: 5px; }
   .hunt-touch .button { min-height: 35px; background: #241724df; }
   .hunt-touch .button[aria-pressed=true] { border-color: #ffb592; }
