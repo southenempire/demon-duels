@@ -57,6 +57,9 @@ const RIME_SPIRE = {
     speedAt(pos) {
       return surfaceAt(pos) === 'ice' ? 1.3 : 1;
     },
+    tractionAt(pos) {
+      return surfaceAt(pos) === 'ice' ? .18 : 1;
+    },
     concealedAt(pos) {
       return (pos.y ?? 0) < 1.8 && coverZones.some((zone) => inside(pos, zone));
     },

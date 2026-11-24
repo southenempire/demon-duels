@@ -36,6 +36,14 @@ test('ice changes ground speed and only the cave interior provides ground concea
   assert.equal(circle.hooks.concealedAt(circle.spawn), false);
 });
 
+test('only ground-level ice reduces traction', () => {
+  const { tractionAt } = circle.hooks;
+  assert.ok(tractionAt({ x: 3, z: 5 }) > 0 && tractionAt({ x: 3, z: 5 }) < 1);
+  assert.equal(tractionAt({ x: 3, y: 2, z: 5 }), 1);
+  assert.equal(tractionAt({ x: -3, z: 8 }), 1);
+  assert.equal(tractionAt(circle.spawn), 1);
+});
+
 test('only snow steps leave visible investigation targets that each expire after eight seconds', () => {
   const scene = new T.Scene();
   circle.scenery(T, scene);
