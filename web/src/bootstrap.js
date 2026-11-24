@@ -15,30 +15,47 @@ function failed(error) {
   console.error(error);
 }
 
-async function enterAshGate() {
-  app.querySelector('button').disabled = true;
-  app.querySelector('[role=status]').textContent = 'Opening Ash Gate…';
-  const { getWorldCampaign, launchFight, setExploring } = await import('./main.js');
+async function loadWorld() {
+  const { getWorldCampaign, launchFight, setExploring, setWorldUnavailable } = await import('./main.js');
   const circle = resolveWorldCircle(params, getWorldCampaign());
   const [descriptor, { mountCircle }] = await Promise.all([worlds[circle](), import('./ash-gate/index.js')]);
-  try {
-    mountCircle(descriptor, { getCampaign: getWorldCampaign, setExploring, startInPlay: true });
-  } catch (error) {
-    const notice = document.createElement('p');
-    notice.setAttribute('role', 'status');
-    notice.textContent = descriptor.name + ' needs WebGL 2. You can still challenge its guardian below.';
-    app.before(notice);
-    launchFight({ opponentKind: descriptor.opponentKind, mode: 'chain', returnToMap: true });
-    console.error(error);
-  }
+  return { name: descriptor.name, enter: () => mountCircle(descriptor, {
+    getCampaign: getWorldCampaign,
+    setExploring,
+    startInPlay: true,
+    onRendererUnavailable(error) {
+      setWorldUnavailable();
+      launchFight({ opponentKind: descriptor.opponentKind, mode: 'chain', returnToMap: true });
+      console.error(error);
+    },
+  }) };
+}
+
+function showTitle(name, enter) {
+  app.innerHTML = '<div class="ash-title-shell">' + titleScreen({
+    actions: '<button type="button" class="dd-primary"></button><a href="?world=arena">Enter the Pit</a>',
+    loading: 'Loading circle…',
+  }) + '</div>';
+  const button = app.querySelector('button');
+  const status = app.querySelector('[role=status]');
+  button.textContent = name ? 'Enter ' + name : 'Enter circle';
+  button.disabled = !enter;
+  if (name) status.textContent = name + ' awaits.';
+  if (enter) button.addEventListener('click', () => {
+    button.disabled = true;
+    status.textContent = 'Opening ' + name + '…';
+    Promise.resolve().then(enter).catch(failed);
+  }, { once: true });
 }
 
 if (isAshGate(params)) {
-  app.innerHTML = '<div class="ash-title-shell">' + titleScreen({
-    actions: '<button type="button" class="dd-primary">Enter Ash Gate</button><a href="?world=arena">Enter the Pit</a>',
-    loading: 'Ash Gate awaits.',
-  }) + '</div>';
-  app.querySelector('button').addEventListener('click', () => enterAshGate().catch(failed), { once: true });
+  const requested = params.get('circle');
+  if (requested === null || /^0+$/.test(requested)) {
+    showTitle('Ash Gate', async () => (await loadWorld()).enter());
+  } else {
+    showTitle(null);
+    loadWorld().then(({ name, enter }) => showTitle(name, enter)).catch(failed);
+  }
 } else {
   import('./main.js').catch(failed);
 }

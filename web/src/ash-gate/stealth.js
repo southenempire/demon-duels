@@ -1,14 +1,39 @@
 export const ASH_WARDEN = Object.freeze({ opponentKind: 0, mode: 'chain', returnToMap: true });
 
+export function worldFrameRuns(menu, active, duelOpen) {
+  return active && !duelOpen && ['play', 'loading', 'title'].includes(menu);
+}
+
+export function usesWorldKey({ code, target }) {
+  if (target?.isContentEditable || target?.closest?.('input, select, textarea')) return false;
+  return code !== 'Space' || !target?.closest?.('button, a[href], input, select, textarea, [role="button"]');
+}
+
+export const movementBindings = {
+  forward: ['KeyW', 'ArrowUp'], backward: ['KeyS', 'ArrowDown'],
+  right: ['KeyD', 'ArrowRight'], left: ['KeyA', 'ArrowLeft'],
+};
+
+export function movementAxis(keys, positive, negative) {
+  return Number(movementBindings[positive].some((key) => keys.has(key))) -
+    Number(movementBindings[negative].some((key) => keys.has(key)));
+}
+
 export function inside(x, z, { x: cx, z: cz, w, d }, padding = 0) {
   return Math.abs(x - cx) < w / 2 + padding && Math.abs(z - cz) < d / 2 + padding;
 }
 
 export function blocksStep(x, z, toX, toZ, wall) {
   if (!inside(toX, toZ, wall, .28)) return false;
-  if (inside(toX, toZ, wall) || !inside(x, z, wall, .28)) return true;
+  if (!inside(x, z, wall, .28)) return true;
   const clearance = (px, pz) => Math.max(Math.abs(px - wall.x) - wall.w / 2, Math.abs(pz - wall.z) - wall.d / 2);
-  return clearance(toX, toZ) < clearance(x, z);
+  const from = clearance(x, z), to = clearance(toX, toZ);
+  return to < 0 ? to <= from : to < from;
+}
+
+export function blocksRadiusStep(x, z, toX, toZ, center, radius) {
+  const to = Math.hypot(toX - center.x, toZ - center.z);
+  return to < radius && to <= Math.hypot(x - center.x, z - center.z);
 }
 
 export function bossPatrol({ points, speed = 1.4, pause = .7 } = {}) {

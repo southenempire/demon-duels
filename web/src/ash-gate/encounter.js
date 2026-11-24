@@ -18,6 +18,10 @@ export function savedProfile(storage, duel) {
   catch { return null; }
 }
 
+export function blocksHuntReturn({ worldMounted, profile, unsettled }) {
+  return Boolean(!worldMounted && profile && unsettled);
+}
+
 export function huntProfile(spotted, watched, tells) {
   if (tells) {
     const grade = spotted ? 'exposed' : watched ? 'shadow' : 'ghost';

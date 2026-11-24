@@ -12,14 +12,16 @@ import { arenaCardSide, confirmedFight, confirmedSettlement, defaultStake, fight
 import { mount as mountDuel } from './duel3d/index.js';
 import { bossHeight } from './duel3d/fighter.js';
 import { meleeTimeline } from './duel3d/timeline.js';
+import { cancelTutorialLaunch, createTutorialGate } from './duel3d/tutorial.js';
+import { showTutorial } from './duel3d/tutorial-view.js';
 import './duel3d/style.css';
 import { PitSound } from './sound.js';
 import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, prepareBossWin, carryCampaign } from './campaign.js';
 import { storyView, mapView, codexView, campaignResult } from './campaign-view.js';
 import { startPresence } from './presence-live.js';
 import { initialJourney, isAshGate } from './route.js';
-import { worlds } from './worlds.js';
-import { profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
+import { opensWorldHunt, worlds } from './worlds.js';
+import { blocksHuntReturn, profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
 import { bossMove } from './world/bot-profile.js';
 import { duelHud, installDialogKeys, movePicker } from './game-ui.js';
 import './game-ui.css';
@@ -27,6 +29,7 @@ import './game-overlays.css';
 
 const app = document.getElementById('app');
 installDialogKeys(app);
+const combatTutorial = createTutorialGate(localStorage, showTutorial);
 const params = new URLSearchParams(location.search);
 const ashGate = isAshGate(params);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
@@ -53,6 +56,11 @@ const roomBotKey = (room) => 'demon-duels:room-bot:' + room;
 const ASSET = import.meta.env.BASE_URL + 'art/';
 const sound = new PitSound(import.meta.env.BASE_URL + 'audio/');
 let worldName = null;
+let worldUnavailable = false;
+export function setWorldUnavailable() {
+  worldUnavailable = true;
+  draw();
+}
 export function setExploring(active, name) {
   if (name) worldName = name;
   sound.unlock(!active && s.sound);
@@ -132,6 +140,9 @@ function isBoundBossSettlement(detail, duel) {
 let liveSettlement;
 let ashEncounter = null;
 const returnWorldName = () => ashEncounter?.worldName ?? worldName;
+const worldReturnBlocked = (profile) => blocksHuntReturn({
+  worldMounted: Boolean(worldName), profile, unsettled: activeDuel() || checkingBossSettlement(),
+});
 let hostingRival = false;
 const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
 const guardianFinisher = bossFinisher(window, finishers, (campaign, duel) => {
@@ -246,7 +257,7 @@ function controls() {
   if (s.duel?.phase === 3) return '<div class="control"><h2>Reading the settlement…</h2></div>';
   if (s.mode === 'landing') return '<div class="control intro"><div><span class="eyebrow">THE STAKES ARE REAL. THE SOL IS NOT.</span><h2>One demon in. Two demons out.</h2><p>Get a free starter pack and stake one demon against the bot. No wallet extension or real SOL.</p></div><div class="actions">' +
     button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') + button('practice', 'Offchain tutorial', 'secondary', 'spark') +
-    '<a class="button secondary" href="?world=3d">Enter Ash Gate (3D)</a>' +
+    (worldUnavailable ? '' : '<a class="button secondary" href="?world=3d">Enter Ash Gate (3D)</a>') +
     button('enter', 'Open devnet vault', 'text') + '</div></div>';
   if (s.mode === 'practice') return '<div class="control"><div class="control-title"><div><span class="eyebrow">OFFCHAIN PRACTICE · NO REAL STAKES</span><h2>' +
     (s.practiceCards.length ? 'Seal your move' : 'Summon your starter pack') + '</h2></div>' + button(s.returnToMap ? 'return-map' : 'leave', s.returnToMap ? 'Return to map' : 'Exit practice', 'text') + '</div>' +
@@ -366,7 +377,8 @@ function modal() {
       (playerGeneration > 0 ? button('recover-sol', 'Move SOL from previous guests', 'text') : '') + '</div>'
     :
       '<ol><li><b>Stake.</b> Open a free starter pack, then each player stakes one owned card.</li><li><b>Seal.</b> Rend beats Ward. Ward beats Hex. Hex beats Rend. The private rollup hides both moves until they are locked.</li><li><b>Settle.</b> Each move starts with 2 damage. Advantage adds 1; a 25% crit adds 2. VRF breaks ties; the winner gets both cards on devnet.</li></ol>' +
-      '<p>Devnet cards have no monetary value. The practice mode uses no blockchain.</p>') + '</section></div>';
+      '<p>Devnet cards have no monetary value. The practice mode uses no blockchain.</p>' +
+      (!s.busy && !s.playing && !hostingRival && !activeDuel() ? button('tutorial-replay', 'Replay combat tutorial') : '')) + '</section></div>';
 }
 
 function feedback() {
@@ -383,7 +395,8 @@ function duelScreen() {
     ashEncounter.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></div></section>' : '';
   return '<main class="duel-screen">' + battlefield() +
     '<nav class="duel-tools" aria-label="Duel options">' +
-      (destination && s.returnToMap ? button('return-map', 'Return to ' + esc(destination), 'secondary', 'arrow') :
+      (s.returnToMap && worldReturnBlocked(ashEncounter) ? '' :
+        destination && s.returnToMap ? button('return-map', 'Return to ' + esc(destination), 'secondary', 'arrow') :
         button('map', 'Map', 'secondary', 'arrow')) +
       '<button type="button" class="button secondary" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
       icon(s.sound ? 'volume' : 'mute', 16) + '</button>' +
@@ -650,7 +663,7 @@ export async function ensureBossCard(demonId) {
         const topUp = packFunds - await bot.balance();
         if (topUp > 0) await client.transfer(bot.key, topUp);
       }
-      progress('Opening an Ash Gate rival pack with MagicBlock VRF…');
+      progress('Opening the ' + (returnWorldName() ?? circles[demonId]?.realm ?? 'Ash Gate') + ' rival pack with MagicBlock VRF…');
       await ensurePack(bot, pack, until, progress);
       const cards = (await readCards(keys(bot))).filter((card) => stakeable(card, bot));
       localStorage.setItem(BOSS_GENERATIONS, String(++total));
@@ -811,6 +824,7 @@ export async function recoverGuestCards() {
 }
 
 async function startQuickDuel() {
+  if (combatTutorial.defer('chain', () => startQuickDuel().catch(() => {}))) return;
   if (s.mode === 'practice') setRoom(null);
   s.mode = 'chain';
   s.quick = true;
@@ -823,7 +837,7 @@ async function startQuickDuel() {
       if (s.duel.phase < 3) {
         if (ashGate && s.requestedOpponent !== null && (!s.solo || loadRoomBot(s.room)?.demonId !== s.requestedOpponent)) {
           setRoom(null);
-          throw new Error('You have another open duel. Finish or cancel it from the arena before striking the Warden.');
+          throw new Error('You have another open duel. Finish or cancel it from the arena before striking this guardian.');
         }
         if (s.solo && s.duel.phase === 0) await readyBot();
         return;
@@ -866,6 +880,7 @@ async function resolveChain() {
 }
 
 async function action(name) {
+  if (combatTutorial.active) return;
   sound.unlock(s.sound);
   if (name === 'sound') {
     s.sound = !s.sound;
@@ -892,6 +907,12 @@ async function action(name) {
     s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); return;
   }
   if (s.busy || s.playing) return;
+  if (name === 'tutorial-replay' && !hostingRival && !activeDuel()) {
+    s.modal = null;
+    draw();
+    combatTutorial.replay(() => draw());
+    return;
+  }
   if (name === 'begin') {
     localStorage.setItem('demon-duels:story-seen', '1'); showMap(); return;
   }
@@ -920,7 +941,7 @@ async function action(name) {
   if (name.startsWith('boss:')) {
     const id = Number(name.slice(5));
     if (!Number.isInteger(id) || !circles[id] || circleState(s.campaign, id) === 'locked') return;
-    if (!activeDuel() && !readKey(localStorage.getItem(activeRoomKey)) && Object.hasOwn(worlds, id)) {
+    if (opensWorldHunt(id, { rendererUnavailable: worldUnavailable, hasOpenDuel: activeDuel() || readKey(localStorage.getItem(activeRoomKey)) })) {
       location.href = '?world=3d&circle=' + id;
       return;
     }
@@ -937,6 +958,7 @@ async function action(name) {
   if (name === 'return-map') {
     if (guardianFinisher.pending) await presentFinisher();
     const savedWorld = s.room && savedProfile(localStorage, s.room);
+    if (worldReturnBlocked(savedWorld)) return;
     const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof,
       circle: savedWorld?.circle ?? ashEncounter?.circle };
     if (activeDuel() || checkingBossSettlement()) {
@@ -1070,12 +1092,14 @@ async function action(name) {
   }
   if (name === 'bot' || name === 'create') {
     const solo = name === 'bot';
+    if (combatTutorial.defer(solo ? 'chain' : 'pvp', () => action(name).catch(() => {}))) return;
     await run(solo ? 'Staking a card on Solana…' : 'Creating your duel…',
       () => startDuel(solo, solo ? campaignBoss() ?? undefined : undefined));
     return;
   }
   if (name === 'bot-resume') { await run('Resuming the bot…', readyBot); return; }
   if (name === 'join') {
+    if (combatTutorial.defer('pvp', () => action(name).catch(() => {}))) return;
     await run('Staking your card and preparing the private arena…', async () => {
       if (!anyCard()) throw new Error('Choose an unstaked demon first.');
       await client.joinDuel(s.duel, anyCard().key);
@@ -1096,15 +1120,19 @@ async function action(name) {
 }
 
 // Campaign integration: launch a selected boss without coupling the arena to a map.
-export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade, tells, circle } = {}) {
-  if (s.busy || s.playing || hostingRival || guardianFinisher.pending) return false;
+export function launchFight(options = {}) {
+  const { opponentKind, mode = 'practice', returnToMap = true, room, join = false, grade, tells, circle } = options;
+  if (combatTutorial.active || s.busy || s.playing || hostingRival || guardianFinisher.pending) return false;
   if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
   const profile = ashGate ? profileFor({ mode, opponentKind, grade, tells, circle, worldName }) : null;
   const hunt = profile && Object.hasOwn(worlds, profile.circle) && circleState(s.campaign, profile.circle) !== 'locked' ? profile : null;
   if (circle !== undefined && !hunt) return false;
+  const deferLaunch = () => combatTutorial.defer(mode, () => launchFight(options),
+    () => cancelTutorialLaunch(window, returnToMap));
   if (activeDuel()) {
     if (mode === 'chain' && roomBoss(s.room) === String(opponentKind)) {
+      if (hunt && deferLaunch()) return true;
       s.journey = 'arena'; s.mode = 'chain';
       if (hunt) startQuickDuel().catch(() => {});
       else draw();
@@ -1117,6 +1145,7 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
     s.notice = 'Resume or finish your saved duel before challenging this guardian.'; draw(); return false;
   }
   if (mode === 'chain' && circleState(s.campaign, opponentKind) === 'locked') return false;
+  if (deferLaunch()) return true;
   s.journey = 'arena';
   setRoom(null);
   ashEncounter = hunt;
@@ -1158,6 +1187,8 @@ function launchRivalDuel(room, join, returnToMap) {
     s.notice = 'Resume or finish your saved duel before opening another hunter duel.';
     draw(); return false;
   }
+  if (combatTutorial.defer('pvp', () => launchRivalDuel(room, join, returnToMap),
+    () => cancelTutorialLaunch(window, returnToMap))) return true;
   ashEncounter = null;
   setRoom(room);
   s.journey = 'arena';
@@ -1177,10 +1208,10 @@ function launchRivalDuel(room, join, returnToMap) {
 }
 
 async function rivalReady() {
-  if (guardianFinisher.pending) return { ok: false, reason: 'Claim your Ash Gate seal before challenging a hunter.' };
+  if (guardianFinisher.pending) return { ok: false, reason: 'Claim your guardian seal before challenging a hunter.' };
   assertCurrentGuest();
   if (client !== presenceGuest) return { ok: false, reason: 'Reload to challenge hunters with your recovered guest.' };
-  if (s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
+  if (combatTutorial.active || s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
   const active = readKey(localStorage.getItem(activeRoomKey));
   const boss = active && roomBoss(active);
   const open = active && await readDuel(active).catch(() => null);
@@ -1206,6 +1237,12 @@ async function hostRivalDuel(stillWanted) {
   assertCurrentGuest();
   hostingRival = true;
   try {
+    const proceed = await new Promise((resolve) => {
+      if (!combatTutorial.defer('pvp', () => resolve(true), () => resolve(false))) resolve(true);
+    });
+    if (!proceed) throw new Error('Challenge cancelled. Your card was not staked.');
+    if (!stillWanted()) throw new Error('The other hunter backed out before you staked.');
+    assertCurrentGuest();
     const { duel } = await client.openDuel(anyCard().key);
     audio('stake');
     localStorage.setItem(activeRoomKey, duel.toBase58());
@@ -1268,7 +1305,7 @@ setInterval(() => {
     : 'Devnet is slow. Keep this tab open; setup continues before any card is staked.';
 }, 1000);
 setInterval(async () => {
-  if (!safeMode() || s.busy || polling || document.hidden) return;
+  if (combatTutorial.active || !safeMode() || s.busy || polling || document.hidden) return;
   if (!s.room && !s.packPending) return;
   polling = true;
   try {
