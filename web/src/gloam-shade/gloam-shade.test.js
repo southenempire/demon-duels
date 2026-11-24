@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as T from 'three';
-import { canStrike, inside, mantleTarget, obstruction, sees } from '../ash-gate/stealth.js';
+import { canStrike, circleRules, inside, mantleTarget, obstruction, sees } from '../ash-gate/stealth.js';
 import { bossModel } from '../duel3d/fighter.js';
 import { resolveWorldCircle, worlds } from '../worlds.js';
 import { GLOAM_SHADE as gloam } from './index.js';
@@ -70,6 +70,19 @@ test('the west roofs are mantleable in order and lead to a hidden flank Strike',
   assert.equal(canStrike(x, z, shade, hall.colliders, false), true);
   assert.equal(canStrike(x, z, shade, hall.colliders, true), false);
   assert.equal(canStrike(shade.x, shade.z + 2, shade, hall.colliders, false), false);
+});
+
+test('stepping off the third roof allows escape from its padding without allowing entry', () => {
+  const rules = circleRules(gloam.hooks);
+  const roof = hall.roofs[2];
+  const edge = roof.z - roof.d / 2;
+  const fall = { x: roof.x, y: roof.h - .10, z: edge - .08 };
+  const outward = { ...fall, z: edge - .13 };
+  assert.equal(inside(fall.x, fall.z, roof), false);
+  assert.equal(rules.canTraverse(fall), false);
+  assert.equal(rules.canTraverse(outward, fall), true);
+  assert.equal(rules.canTraverse(fall, outward), false);
+  assert.equal(rules.canTraverse(fall, { ...fall, z: edge - .31 }), false);
 });
 
 test('the patrols loop over clear ground without crossing any solid scenery', () => {

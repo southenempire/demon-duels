@@ -244,7 +244,7 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
   }
   const keys = new Set();
   const controls = new Set([...Object.values(movementBindings).flat(), 'KeyC', 'KeyQ', 'KeyE', 'KeyF', 'Space', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight']);
-  const canMoveTo = (toX, toZ) => within(toX, toZ, bounds) && rules.canTraverse({ x: toX, y: height, z: toZ })
+  const canMoveTo = (toX, toZ) => within(toX, toZ, bounds) && rules.canTraverse({ x: toX, y: height, z: toZ }, { x, z })
     && !walls.some((b) => b.h > height + .03 && blocksStep(x, z, toX, toZ, b))
     && (outcome === 'won' || Math.abs(height - bossGround) > .7 || !blocksRadiusStep(x, z, toX, toZ, boss, .74));
   let x = spawn.x, z = spawn.z, facing = spawn.facing ?? 0, yaw = facing, tilt = .16, height = spawn.y ?? 0, falling = 0, climb = null, ledge = null;

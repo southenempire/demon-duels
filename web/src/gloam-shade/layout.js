@@ -1,4 +1,4 @@
-import { inside } from '../ash-gate/stealth.js';
+import { blocksStep, inside } from '../ash-gate/stealth.js';
 
 export const limits = { left: -12.5, right: 12.5, far: -22, near: 17.5 };
 export const spawn = { x: -8, z: 14.5 };
@@ -46,6 +46,8 @@ export function concealedAt({ x, y = 0, z }) {
   return coverZones.some((zone) => Math.abs(y - zone.h) < .32 && inside(x, z, zone));
 }
 
-export function canTraverse({ x, y, z }) {
-  return roofs.every((roof) => roof.h <= y + .03 || !inside(x, z, roof, .28));
+export function canTraverse({ x, y, z }, from) {
+  return roofs.every((roof) => roof.h <= y + .03 || !(from
+    ? blocksStep(from.x, from.z, x, z, roof)
+    : inside(x, z, roof, .28)));
 }
