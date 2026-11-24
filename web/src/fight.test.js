@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { arenaCardSide, confirmedFight, confirmedSettlement, defaultStake, fightReason, privateMoveRetryMessage } from './fight.js';
+import { arenaCardSide, confirmedFight, confirmedSettlement, defaultStake, fightReason, privateMoveRetryMessage, sealedMoveNotice } from './fight.js';
 import { bossHeight, bossModel } from './duel3d/fighter.js';
 import { meleeActions, meleeTimeline } from './duel3d/timeline.js';
 import { characters, characterArt } from './characters.js';
@@ -10,6 +10,20 @@ import { demons, resolve } from './rules.js';
 const p1 = { equals: (other) => other === p1 };
 const p2 = { equals: (other) => other === p2 };
 const duel = { key: 'confirmed-room', phase: 3, p1, p2, winner: p2, moves: [0, 1], crits: [false, true], scores: [3, 4] };
+
+test('only the waiting participant sees the sealed move notice, and only while their room is staked', () => {
+  const staked = { ...duel, phase: 1 };
+  for (const player of [p1, p2]) {
+    assert.equal(sealedMoveNotice(staked, player, duel.key), 'Your move is sealed. Waiting for your opponent.');
+    assert.equal(sealedMoveNotice(staked, player, null), '');
+    assert.equal(sealedMoveNotice(staked, player, 'old-room'), '');
+    for (const phase of [0, 2, 3, 4]) {
+      assert.equal(sealedMoveNotice({ ...duel, phase }, player, duel.key), '');
+    }
+  }
+  assert.equal(sealedMoveNotice(staked, {}, duel.key), '');
+  assert.equal(sealedMoveNotice(duel, {}, duel.key), '');
+});
 
 test('open invites put the host stake on the opposing side until the invitee joins', () => {
   const empty = { equals: (other) => other === empty };
