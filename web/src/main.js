@@ -17,8 +17,11 @@ import { startPresence } from './presence-live.js';
 import { isAshGate } from './route.js';
 import { profileFor, profileKey, savedProfile } from './ash-gate/encounter.js';
 import { bossMove } from './world/bot-profile.js';
+import { installDialogKeys } from './game-ui.js';
+import './game-ui.css';
 
 const app = document.getElementById('app');
+installDialogKeys(app);
 const params = new URLSearchParams(location.search);
 const ashGate = isAshGate(params);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
@@ -360,12 +363,14 @@ function modal() {
       '<p>Devnet cards have no monetary value. The practice mode uses no blockchain.</p>') + '</section></div>';
 }
 
+let dialogReturnAction;
 function draw() {
   if (s.journey === 'arena' && s.mode !== 'landing') preloadFighters();
   const page = campaignPage();
   const focus = document.activeElement?.dataset?.action;
   const hadDialog = Boolean(app.querySelector('[role=dialog]'));
   const kind = s.mode === 'practice' ? 'PRACTICE MODE' : 'SOLANA DEVNET';
+  app.dataset.screen = s.journey === 'story' ? 'prologue' : s.journey === 'arena' ? 'arena' : 'campaign';
   app.innerHTML = '<header><div class="nav"><button type="button" class="wordmark" data-action="home"><img src="' + ASSET + 'sigil.svg" alt=""><span>DEMON<span>DUELS</span></span></button><div class="nav-right">' +
     statusText(kind) + (ashGate && s.returnToMap ? button('return-map', 'Return to Ash Gate', 'secondary') : '') +
     '<button type="button" class="square sound" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
@@ -380,8 +385,15 @@ function draw() {
     '<span><b>WINNER TAKES BOTH</b><small>Solana card ownership</small></span></div></div></main>' +
     '<footer><div><span>DEMON DUELS</span> <span>·</span> <span>MAGICBLOCK BLITZ V10</span></div><a href="' + addressExplorer(PROGRAM) +
     '" target="_blank" rel="noreferrer">Devnet program ' + icon('outside', 13) + '</a></footer>' + modal();
-  if (s.modal && !hadDialog) app.querySelector('.modal .close')?.focus({ preventScroll: true });
-  else if (focus) [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === focus)?.focus({ preventScroll: true });
+  if (s.modal && !hadDialog) {
+    dialogReturnAction = focus;
+    app.querySelector('.modal .close')?.focus({ preventScroll: true });
+  } else if (!s.modal && hadDialog) {
+    [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === dialogReturnAction)?.focus({ preventScroll: true });
+  } else if (focus) {
+    const previous = [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === focus && !element.disabled);
+    (previous || (s.modal && app.querySelector('.modal .close')))?.focus({ preventScroll: true });
+  }
   effects.mount(app.querySelector('.pit-particles'));
   sound.setScene(s.playing || s.mode === 'practice' || s.duel?.phase === 1 || s.duel?.phase === 2 ? 'fight' : 'menu');
   if (s.journey === 'arena' && roundResult() && !s.busy && s.playedId !== fightId()) {

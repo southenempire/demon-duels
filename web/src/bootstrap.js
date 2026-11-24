@@ -16,6 +16,7 @@ import('./main.js').then(async ({ hasAshSeal, setExploring }) => {
     console.error(error);
   }
 }).catch((error) => {
-  document.getElementById('app').textContent = 'The arena could not load. Refresh to try again.';
+  document.getElementById('app').innerHTML = '<div class="boot-screen" role="alert"><strong>THE GATES ARE SILENT</strong><small>The arena could not load. Check your connection and try again.</small><button type="button" id="boot-retry">Try again</button></div>';
+  document.getElementById('boot-retry').addEventListener('click', () => location.reload());
   console.error(error);
 });

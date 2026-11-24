@@ -1,18 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { installDialogKeys, worldHud } from './game-ui.js';
-
-test('Ash Gate HUD exposes delegated actions and escapes the live hunter name', () => {
-  const hunt = (prompt) => worldHud({ objective: 'Find the Warden', awareness: 'suspicious', hunters: 2, prompt });
-  const strike = hunt({ key: 'E', label: 'Strike Ash Warden' });
-  assert.match(strike, /data-hunt="strike"/);
-  assert.match(strike, /data-hunt="pause".*data-hunt="exit"/s);
-  assert.match(strike, /data-objective>Find the Warden/);
-  assert.match(strike, /data-state="suspicious"/);
-  assert.match(strike, /2 HUNTERS NEARBY/);
-  assert.match(hunt({ key: 'Space', label: 'Climb' }), /<div class="dd-context-prompt"><kbd>Space/);
-  assert.match(hunt({ key: 'F', label: 'Challenge <hunter>', action: 'challenge' }), /data-hunt="challenge"><kbd>F<\/kbd> Challenge &lt;hunter&gt;/);
-});
+import { installDialogKeys, worldHud, duelHud, movePicker, vaultPanel, storyPanel, titleScreen } from './game-ui.js';
 
 function dialogHarness() {
   let listener;
@@ -60,4 +48,47 @@ test('hidden game surfaces do not trap the active world keyboard', () => {
   const h = dialogHarness();
   h.hide();
   assert.equal(h.tab(), false);
+});
+
+test('3D move overlay preserves the three chain action IDs and sealed state', () => {
+  const html = movePicker({ selected: 1, locked: true });
+  assert.deepEqual([...html.matchAll(/data-action="(move:\d)"/g)].map((match) => match[1]), ['move:0', 'move:1', 'move:2']);
+  assert.equal((html.match(/ disabled/g) || []).length, 3);
+  assert.match(html, /data-action="move:1" aria-pressed="true" disabled/);
+  assert.match(html, /Rend<\/b><small>BEATS Ward/);
+  assert.match(html, /Ward<\/b><small>BEATS Hex/);
+  assert.match(html, /Hex<\/b><small>BEATS Rend/);
+});
+
+test('world overlays bound meters and retain agreed interaction hooks', () => {
+  const html = worldHud({ health: -5, seals: 99, awareness: 'alert', hunters: 2, prompt: { key: 'E', label: 'Strike' }, objective: 'Find the gate' });
+  assert.match(html, /aria-valuenow="0"/);
+  assert.match(html, /6 \/ 6 SEALS BROKEN/);
+  assert.match(html, /data-state="alert"/);
+  for (const action of ['pause', 'exit', 'strike']) assert.match(html, new RegExp(`data-hunt="${action}"`));
+  assert.match(html, /data-objective/);
+  assert.match(html, /2 HUNTERS NEARBY/);
+  assert.doesNotMatch(duelHud({ player: { name: 'Hunter' }, phase: 'clash' }), /role="meter"/);
+  assert.match(duelHud({ phase: 'clash' }), /THE CLASH/);
+});
+
+test('overlay text cannot inject markup or attributes, and title leaves art to the 3D renderer', () => {
+  const injected = '\"><img src=x onerror=alert(1)>';
+  for (const html of [storyPanel({ speaker: injected, text: injected }), vaultPanel({ cards: [{ id: injected, name: injected, type: injected }] }), worldHud({ objective: injected })]) {
+    assert.doesNotMatch(html, /<img src=x/);
+    assert.match(html, /&lt;img/);
+  }
+  assert.doesNotMatch(titleScreen(), /title-hunter|title-landscape|<img|<canvas/);
+});
+
+test('Ash Gate HUD exposes delegated actions and escapes the live hunter name', () => {
+  const hunt = (prompt) => worldHud({ objective: 'Find the Warden', awareness: 'suspicious', hunters: 2, prompt });
+  const strike = hunt({ key: 'E', label: 'Strike Ash Warden' });
+  assert.match(strike, /data-hunt="strike"/);
+  assert.match(strike, /data-hunt="pause".*data-hunt="exit"/s);
+  assert.match(strike, /data-objective>Find the Warden/);
+  assert.match(strike, /data-state="suspicious"/);
+  assert.match(strike, /2 HUNTERS NEARBY/);
+  assert.match(hunt({ key: 'Space', label: 'Climb' }), /<div class="dd-context-prompt"><kbd>Space/);
+  assert.match(hunt({ key: 'F', label: 'Challenge <hunter>', action: 'challenge' }), /data-hunt="challenge"><kbd>F<\/kbd> Challenge &lt;hunter&gt;/);
 });
