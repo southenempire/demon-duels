@@ -394,15 +394,13 @@ async function prepareBot() {
     localStorage.setItem(BOT_GENERATION, String(generation));
     pack = undefined;
   }
-  const choose = (cards) => cards.find((item) => s.requestedOpponent === null || item.kind === s.requestedOpponent);
-  let card = choose(cards);
-  if (cards.length && !card) throw new Error('The bot does not own that boss demon. Try offchain practice or the open pit. No card was staked.');
+  let card = cards[0];
   if (await bot.balance() < 0.02) await client.transfer(bot.key, 0.03);
   if (!card) {
     await ensurePack(bot, pack);
-    card = choose((await bot.inventory()).filter((item) => keyed(item.lock, ZERO)));
+    card = (await bot.inventory()).find((item) => keyed(item.lock, ZERO));
   }
-  if (!card) throw new Error(s.requestedOpponent === null ? 'The bot’s vault is not ready. Retry to prepare a card.' : 'The bot’s random pack did not include that boss. No player card was staked.');
+  if (!card) throw new Error('The bot’s vault is not ready. Retry to prepare a card.');
   return { bot, card, generation };
 }
 
@@ -552,7 +550,7 @@ async function startQuickDuel() {
     await prepareGuest(client, progress);
     await refreshWallet();
     if (!anyCard()) throw new Error('This guest vault has no unstaked cards.');
-    await startDuel(true);
+    await startDuel(true, s.requestedOpponent ?? undefined);
   });
 }
 
