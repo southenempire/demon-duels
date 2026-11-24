@@ -33,6 +33,7 @@
 .duel-text-only .duel-mode { margin-top: 10px; }
 
 .duel-screen {
+  --duel-tools-top: max(61px, env(safe-area-inset-top));
   position: fixed;
   inset: 0;
   isolation: isolate;
@@ -45,7 +46,7 @@
 .duel-screen .duel-mode { position: absolute; inset-inline: 0; padding: 0; }
 .duel-screen .duel-banner { margin-bottom: 24px; }
 .duel-tools {
-  position: absolute; top: max(61px, env(safe-area-inset-top)); left: 50%;
+  position: absolute; top: var(--duel-tools-top); left: 50%;
   transform: translateX(-50%); display: flex; gap: 6px;
 }
 .duel-tools .button { min-height: 32px; padding: 0 10px; background: #141018ca; }
@@ -82,9 +83,9 @@
 }
 .duel-stakes button[aria-pressed="true"] { border-color: #ffbd78; background: #4c3028; }
 .duel-screen .duel-text-only .duel-overlay, .duel-screen .duel-text-only .duel-banner { position: absolute; }
-.duel-screen .duel-text-only .duel-no-webgl { position: absolute; top: 21%; inset-inline: 0; text-align: center; }
+.duel-screen .duel-text-only .duel-no-webgl { position: absolute; top: calc(var(--duel-tools-top) + 46px); inset-inline: 0; text-align: center; }
 @media (max-width: 580px) {
-  .duel-screen .duel-tools { top: 112px; }
+  .duel-screen { --duel-tools-top: max(112px, env(safe-area-inset-top)); }
   .duel-screen .duel-banner, .duel-screen .duel-mode { bottom: max(27vh, 155px); }
   .duel-panels { max-height: 49vh; }
   .duel-panels.is-result { grid-template-columns: minmax(0, 1fr); }
