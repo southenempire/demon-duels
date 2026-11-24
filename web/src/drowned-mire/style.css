@@ -1,0 +1,26 @@
+.ash-gate[aria-label^="Drowned Mire,"] .dd-world-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.ash-gate[aria-label^="Drowned Mire,"] :is(.dd-vitals, .dd-objective) {
+  position: relative;
+  top: auto;
+  left: auto;
+  margin-inline-start: max(28px, env(safe-area-inset-left));
+}
+
+.ash-gate[aria-label^="Drowned Mire,"] .dd-vitals {
+  margin-top: max(26px, env(safe-area-inset-top));
+}
+
+.ash-gate[aria-label^="Drowned Mire,"] .dd-objective {
+  margin-top: 18px;
+}
+
+@media (max-width: 740px) {
+  .ash-gate[aria-label^="Drowned Mire,"] :is(.dd-vitals, .dd-objective) {
+    margin-inline-start: max(20px, env(safe-area-inset-left));
+  }
+}
