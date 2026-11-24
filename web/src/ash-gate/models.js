@@ -17,7 +17,7 @@ export async function installModel(actor, file) {
     });
     const mixer = new T.AnimationMixer(scene);
     const actions = new Map(animations.map((clip) => [clip.name.toLowerCase(), mixer.clipAction(clip)]));
-    for (const name of ['strike', 'death']) {
+    for (const name of ['strike', 'block', 'death']) {
       const action = actions.get(name);
       if (!action) continue;
       action.setLoop(T.LoopOnce, 1);

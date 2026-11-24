@@ -31,10 +31,10 @@ body:has(.ash-gate:not([hidden]))::after { display: none; }
 .ash-controls { background: #071010a8; pointer-events: auto; }
 .ash-title-shell { position: fixed; inset: 0; background: radial-gradient(ellipse at 70% 42%, #41302c, #111819 55%, #090c0e); }
 .ash-title-shell button, .ash-title-shell a, .ash-gate .dd-ui button { min-width: 44px; min-height: 44px; }
-.ash-gate .dd3d-hud :is(button, small, .dd-kicker, .dd-key-hints, kbd, .dd-awareness, .dd-context-prompt, .dd-objective p) { font-size: 12px; }
+.ash-gate .dd3d-hud :is(button, small, .dd-kicker, .dd-key-hints, kbd, .dd-awareness, .dd-context-prompt, .dd-objective p, .dd-world-message) { font-size: 12px; }
 .ash-gate .dd-hud-actions { gap: 3px; }
 .ash-gate .dd-hud-actions button { padding-inline: 8px; }
-.ash-gate .dd-key-hints { gap: 10px; }
+.ash-gate .dd-key-hints { gap: 6px 10px; flex-wrap: wrap; }
 .ash-touch .dd-key-hints { display: none; }
 .ash-touch .dd-awareness { bottom: max(135px, calc(env(safe-area-inset-bottom) + 125px)); }
 .ash-touch .dd-context-prompt { bottom: max(156px, calc(env(safe-area-inset-bottom) + 145px)); }

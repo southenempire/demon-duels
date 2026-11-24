@@ -179,12 +179,13 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
     });
   }
   const keys = new Set();
-  const controls = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC', 'KeyE', 'KeyF', 'Space', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight']);
+  const controls = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC', 'KeyQ', 'KeyE', 'KeyF', 'Space', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight']);
   const canMoveTo = (x, z) => x > limits.left && x < limits.right && z > limits.far && z < limits.near
     && !walls.some((b) => b.h > height + .03 && inside(x, z, b, .28))
     && (outcome === 'won' || Math.hypot(x - boss.x, z - boss.z) >= .74);
   let x = spawn.x, z = spawn.z, facing = 0, yaw = 0, tilt = .16, height = 0, falling = 0, climb = null, ledge = null;
   let active = true, crouch = false, gait = 0, bend = 0, step = 0, alert = 0, attack = 0;
+  let block = 0, blockLearned = false, blockPrompt = false;
   let wardenSees = false, sneaking = false, searchGuard = null;
   let duelOpen = false, frameRequest = null;
   let seal = hasAshSeal();
@@ -203,8 +204,8 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
   const focus = new T.Vector3();
   const pivot = new T.Vector3();
   const cameraGoal = new T.Vector3();
-  const controlsGuide = touch ? 'Drag the left stick to move or sprint. Drag the scene to look.\nTap Crouch to hide in ash. Tap Jump or Climb at a ledge.\nCircle behind the Warden and tap Strike.'
-    : 'WASD: move · Drag mouse: look · Shift: sprint\nC or Ctrl: crouch · Space: jump or climb\nE: strike · F: challenge a nearby hunter';
+  const controlsGuide = touch ? 'Drag the left stick to move or sprint. Drag the scene to look.\nTap Crouch to hide in ash. Tap Jump or Climb at a ledge.\nPractice Block, then circle behind the Warden and tap Strike.'
+    : 'WASD: move · Drag mouse: look · Shift: sprint\nC or Ctrl: crouch · Space: jump or climb\nQ: hand-block · E: strike · F: challenge a nearby hunter';
   const button = (action, label, aria = '') => '<button type="button" data-hunt="' + action + '"' + aria + '>' + label + '</button>';
   const exit = button('exit', 'Enter the Pit');
 
@@ -218,7 +219,8 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
       speaker: 'Hunter’s journal', text: controlsGuide, actions: button('resume', 'Resume memory'),
     });
     else {
-      const prompt = ready && !touch ? { key: 'E', label: 'Strike Ash Warden' } : ledge && !touch ? { key: 'Space', label: ledge.vaultable ? 'Vault' : 'Climb' }
+      const prompt = blockPrompt ? { key: touch ? 'Tap' : 'Q', label: 'Practice hand-block', action: 'block' }
+        : ready && !touch ? { key: 'E', label: 'Strike Ash Warden' } : ledge && !touch ? { key: 'Space', label: ledge.vaultable ? 'Vault' : 'Climb' }
         : nearbyPeer && !attack && !climb && !alert && !sneaking ? { key: touch ? 'Tap' : 'F', label: 'Challenge ' + (nearbyPeer.name || 'hunter'), action: 'challenge' } : null;
       const objective = outcome === 'won' ? 'The first flame is yours.' : outcome === 'lost' ? 'The Warden still holds the gate.'
         : (z < -6 ? 'Circle behind the Warden and strike from outside his sight.'
@@ -258,7 +260,6 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
 
   function resize() {
     camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
     camera.fov = camera.aspect < .75 ? 67 : 55;
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(Math.min(devicePixelRatio, low ? .85 : 1.5, Math.sqrt(1800000 / (window.innerWidth * window.innerHeight))));
@@ -277,12 +278,20 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
     show('You took my name. I’m taking your card.');
   }
   function jumpOrClimb() {
-    if (climb || attack || falling) return;
+    if (climb || attack || falling || block) return;
     cue('leap');
     if (!ledge) { falling = -5.2; return; }
     const to = ledge.exit && canMoveTo(ledge.exit.x, ledge.exit.z) ? { ...ledge, ...ledge.exit } : ledge;
     climb = { to, x, z, height, t: 0, duration: to.vaultable ? .4 : .82 };
     facing = Math.atan2(x - to.x, z - to.z);
+  }
+  function practiceBlock() {
+    if (!blockPrompt || block) return;
+    blockLearned = true;
+    blockPrompt = false;
+    block = .72;
+    facing = Math.atan2(x - boss.x, z - boss.z);
+    show('Ward raises a hand to block in the duel. Now circle behind.', 3);
   }
   function enterArena(kind) {
     pending = kind;
@@ -384,10 +393,12 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
     }
     if (menu !== 'play') return;
     if (noticeTime > 0 && (noticeTime -= dt) <= 0) show('');
+    block = Math.max(0, block - dt);
     if (attack) {
+      const faded = attack >= .79;
       attack += dt;
       fade.style.opacity = T.MathUtils.smoothstep(attack, .49, .77);
-      if (attack >= .79) {
+      if (faded) {
         attack = 0;
         enterArena('boss');
         const launched = window.dispatchEvent(new CustomEvent('demon-duels:launch', {
@@ -402,7 +413,7 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
     const running = !sneak && (Math.hypot(touchX, touchY) > .85 || keys.has('ShiftLeft') || keys.has('ShiftRight'));
     const vertical = Number(keys.has('KeyW')) - Number(keys.has('KeyS')) + touchY;
     const horizontal = Number(keys.has('KeyD')) - Number(keys.has('KeyA')) + touchX;
-    const wantsMove = Math.hypot(vertical, horizontal) > .12 && !attack && !climb;
+    const wantsMove = Math.hypot(vertical, horizontal) > .12 && !attack && !block && !climb;
     const initialX = x, initialZ = z;
     const [fx, fz] = forward(yaw), sx = -fz, sz = fx;
     if (wantsMove) {
@@ -444,10 +455,10 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
     gait = approach(gait, moving ? (sneak ? .39 : running ? 1.14 : .68) : 0, 11, dt);
     bend = approach(bend, sneak && !attack ? 1 : 0, 12, dt);
     step += dt * (moving ? (sneak ? 7 : running ? 12 : 9) : 3);
-    hunter.pose(step, gait, bend, Math.min(1, attack / .79), climb ? Math.min(1, climb.t / climb.duration) : falling ? .27 : 0);
-    const hunterClip = attack ? 'Strike' : climb ? 'Climb' : sneak ? (moving ? 'CrouchWalk' : 'Crouch')
+    hunter.pose(step, gait, bend, Math.min(1, attack / .79), climb ? Math.min(1, climb.t / climb.duration) : falling ? .27 : 0, block / .72);
+    const hunterClip = attack ? 'Strike' : block ? 'Block' : climb ? 'Climb' : sneak ? (moving ? 'CrouchWalk' : 'Crouch')
       : moving ? (running ? 'Run' : 'Walk') : 'Idle';
-    hunter.model?.update(hunterClip, dt, attack ? .79 : climb?.duration);
+    hunter.model?.update(hunterClip, dt, attack ? .79 : block ? .72 : climb?.duration);
     const hidden = height > 2.35 || sneak && shade.some((b) => inside(x, z, b)) &&
       braziers.every(([bx, bz]) => Math.hypot(x - bx, z - bz) > 2.05);
     const bossBearing = Math.atan2(boss.x - x, boss.z - z);
@@ -497,7 +508,8 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
       searchGuard.pursuit = null;
       searchGuard = null;
     }
-    ready = !attack && !wardenSees && height < .30 && outcome !== 'won' && canStrike(x, z, boss, walls, alert > 0);
+    blockPrompt = !blockLearned && !attack && outcome !== 'won' && height < .3 && Math.hypot(x - boss.x, z - boss.z) < 4.6;
+    ready = blockLearned && !block && !attack && !wardenSees && height < .30 && outcome !== 'won' && canStrike(x, z, boss, walls, alert > 0);
     ledge = !climb && !attack && !falling ? mantleTarget(x, z, height, mantleSurfaces) : null;
     nearbyPeer = peers.update(dt, x, z, height);
     if (now - lastPose >= 90) {
@@ -566,11 +578,12 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
       if (!attack) setMenu(menu === 'play' ? 'pause' : 'play');
       return;
     }
-    if (menu !== 'play' || !controls.has(e.code) || e.code === 'Space' && e.target.closest?.('button, a')) return;
+    if (menu !== 'play' || !controls.has(e.code)) return;
     useAudio();
     e.preventDefault();
     keys.add(e.code);
     if (!e.repeat && e.code === 'KeyC') toggleCrouch();
+    if (!e.repeat && e.code === 'KeyQ') practiceBlock();
     if (!e.repeat && e.code === 'KeyE') beginStrike();
     if (!e.repeat && e.code === 'KeyF') challenge();
     if (!e.repeat && e.code === 'Space') jumpOrClimb();
@@ -584,6 +597,7 @@ export function mountAshGate({ hasAshSeal, setExploring, startInPlay = false }) 
     if (action === 'guide') setMenu('guide');
     if (action === 'strike') beginStrike();
     if (action === 'jump') jumpOrClimb();
+    if (action === 'block') practiceBlock();
     if (action === 'crouch') toggleCrouch();
     if (action === 'challenge') challenge();
     if (action === 'sound') { audioEnabled = !audioEnabled; useAudio(); emit('mute', { enabled: audioEnabled }); }
