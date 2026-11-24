@@ -19,6 +19,11 @@ const PLAYER_GENERATION = 'demon-duels:player-generation';
 const playerFor = (generation) => new ArenaClient(localKey(generation ? 'player-' + generation : 'player'));
 let playerGeneration = botGeneration(localStorage.getItem(PLAYER_GENERATION));
 let client = playerFor(playerGeneration);
+function assertCurrentGuest() {
+  if (botGeneration(localStorage.getItem(PLAYER_GENERATION)) !== playerGeneration) {
+    throw new Error('Your guest changed in another tab. Reload to use that guest and resume its duel.');
+  }
+}
 const BOT_GENERATION = 'demon-duels:rival-generation';
 const BOSS_GENERATIONS = 'demon-duels:boss-generations';
 const activeRoomKey = 'demon-duels:active';
@@ -402,7 +407,7 @@ async function run(label, action) {
   s.waitSince = Date.now();
   s.notice = '';
   draw();
-  try { await action(); }
+  try { assertCurrentGuest(); await action(); }
   catch (error) {
     const message = String(error?.message || error);
     s.notice = /insufficient|insufficientfunds|no record of a prior credit/i.test(message) ?
@@ -602,7 +607,8 @@ function restoreRoom() {
 export async function recoverGuestCards() {
   let recovered = false;
   await run('Checking whether your guest needs new cards…', async () => {
-    const saved = readKey(localStorage.getItem(activeRoomKey));
+    const savedRoom = localStorage.getItem(activeRoomKey);
+    const saved = readKey(savedRoom);
     for (const key of [saved, s.room]) {
       if (!key) continue;
       const duel = await readDuel(key);
@@ -616,6 +622,10 @@ export async function recoverGuestCards() {
       recovered = await recoverGuestPack(client, {
         progress,
         replace() {
+          assertCurrentGuest();
+          if (localStorage.getItem(activeRoomKey) !== savedRoom) {
+            throw new Error('Another tab changed your saved duel. Reload before recovering your guest.');
+          }
           const next = playerGeneration + 1;
           const replacement = playerFor(next);
           // Save before switching keys, even if funding or VRF later fails.
