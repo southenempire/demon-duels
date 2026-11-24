@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ASH_WARDEN, canStrike, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { ASH_WARDEN, cameraSweep, canStrike, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
 import { isAshGate } from '../route.js';
 import { bossMove } from '../world/bot-profile.js';
 import { huntProfile, profileFor, profileKey, savedProfile } from './encounter.js';
+import { separateStep } from './hunters.js';
 
 const guard = { x: 0, z: 0, yaw: 0, range: 6, halfAngle: .5 };
 const wall = { x: 0, z: -2, w: 1, d: 1 };
@@ -57,6 +58,27 @@ test('Ash Gate is the default without replacing explicit backup or invite URLs',
   for (const query of ['world=2d', 'world=arena', 'room=invite', 'world=3d&room=invite']) {
     assert.equal(isAshGate(new URLSearchParams(query)), false);
   }
+});
+
+test('a low marked barrier offers a vault landing on its far side', () => {
+  const barrier = { x: 0, z: 0, w: 3, d: 1.2, h: 1.28, vaultable: true };
+  assert.deepEqual(mantleTarget(.5, 1.25, 0, [barrier])?.exit, { x: .5, z: -1.03, land: 0 });
+  assert.equal(mantleTarget(.5, 1.25, 0, [{ ...barrier, vaultable: false }])?.exit, undefined);
+});
+
+test('a camera sphere contracts before a wall and clears it above the top', () => {
+  const blocker = { ...wall, h: 1.28 };
+  assert.equal(cameraSweep({ x: 0, y: 2, z: 0 }, { x: 0, y: 2, z: -4 }, [blocker]), 1);
+  const hit = cameraSweep({ x: 0, y: 1.4, z: 0 }, { x: 0, y: 1.4, z: -4 }, [blocker]);
+  assert.ok(Math.abs(hit - .33) < .00001);
+});
+
+test('nearby hunters deflect forward movement without blocking it or affecting another level', () => {
+  const peer = { x: 0, y: -.4, height: 0 };
+  const [dx, dz] = separateStep(0, 0, 0, 0, -.1, [peer]);
+  assert.notEqual(dx, 0);
+  assert.equal(dz, -.1);
+  assert.deepEqual(separateStep(0, 0, 3, 0, -.1, [peer]), [0, -.1]);
 });
 
 test('a graded Ash Warden hunt persists only valid chain intel and weights the house bot', () => {

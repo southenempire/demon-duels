@@ -5,9 +5,9 @@ export async function installModel(actor, file) {
   try {
     const url = new URL(import.meta.env.BASE_URL + 'models/' + file, location.href);
     const response = await fetch(url);
-    if (!response.ok) return;
+    if (!response.ok) throw new Error('HTTP ' + response.status);
     const data = await response.arrayBuffer();
-    if (data.byteLength < 12 || new DataView(data).getUint32(0, true) !== 0x46546c67) return;
+    if (data.byteLength < 12 || new DataView(data).getUint32(0, true) !== 0x46546c67) throw new Error('Response is not a GLB');
     const { scene, animations } = await new GLTFLoader().parseAsync(data, new URL('.', url).href);
     scene.rotation.y = Math.PI;
     scene.traverse((node) => {
@@ -39,7 +39,7 @@ export async function installModel(actor, file) {
         mixer.update(dt);
       },
     };
-  } catch {
-    // An optional asset should not stop the world from loading.
+  } catch (error) {
+    console.warn('Ash Gate is using a procedural stand-in for ' + file, error);
   }
 }

@@ -25,6 +25,29 @@ export function obstruction(x, z, toX, toZ, blockers, padding = 0) {
   return nearest;
 }
 
+export function cameraSweep(from, to, blockers, radius = .18) {
+  let nearest = 1;
+  for (const b of blockers) {
+    let enter = 0, exit = nearest;
+    for (const [start, end, min, max] of [
+      [from.x, to.x, b.x - b.w / 2 - radius, b.x + b.w / 2 + radius],
+      [from.y, to.y, -radius, b.h + radius],
+      [from.z, to.z, b.z - b.d / 2 - radius, b.z + b.d / 2 + radius],
+    ]) {
+      const delta = end - start;
+      if (!delta) {
+        if (start < min || start > max) { enter = 2; break; }
+        continue;
+      }
+      const a = (min - start) / delta, c = (max - start) / delta;
+      enter = Math.max(enter, Math.min(a, c));
+      exit = Math.min(exit, Math.max(a, c));
+    }
+    if (enter <= exit && enter > 0) nearest = enter;
+  }
+  return nearest;
+}
+
 export function sees(watcher, x, z, blockers, hidden) {
   if (hidden) return false;
   const dx = x - watcher.x, dz = z - watcher.z;
@@ -54,7 +77,14 @@ export function mantleTarget(x, z, height, roofs) {
       x: Math.max(roof.x - roof.w / 2 + .44, Math.min(roof.x + roof.w / 2 - .44, edgeX)),
       z: Math.max(roof.z - roof.d / 2 + .44, Math.min(roof.z + roof.d / 2 - .44, edgeZ)),
       h: roof.h,
+      ...(roof.vaultable ? { vaultable: true } : {}),
     };
+    if (roof.vaultable) {
+      const dx = x - edgeX, dz = z - edgeZ;
+      closest.exit = Math.abs(dx) > Math.abs(dz)
+        ? { x: roof.x - Math.sign(dx) * (roof.w / 2 + .43), z: closest.z, land: height }
+        : { x: closest.x, z: roof.z - Math.sign(dz || 1) * (roof.d / 2 + .43), land: height };
+    }
     distance = gap;
   }
   return closest;

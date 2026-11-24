@@ -1,22 +1,40 @@
 import { Buffer } from 'buffer';
+import { titleScreen } from './game-ui.js';
 import { isAshGate } from './route.js';
+import './game-overlays.css';
+import './ash-gate/style.css';
 
 globalThis.Buffer ??= Buffer;
 const params = new URLSearchParams(location.search);
-import('./main.js').then(async ({ hasAshSeal, setExploring }) => {
-  if (!isAshGate(params)) return;
+const app = document.getElementById('app');
+
+function failed(error) {
+  app.innerHTML = '<div class="boot-screen" role="alert"><strong>THE GATES ARE SILENT</strong><small>The arena could not load. Check your connection and try again.</small><button type="button" id="boot-retry">Try again</button></div>';
+  document.getElementById('boot-retry').addEventListener('click', () => location.reload());
+  console.error(error);
+}
+
+async function enterAshGate() {
+  app.querySelector('button').disabled = true;
+  app.querySelector('[role=status]').textContent = 'Opening Ash Gate…';
+  const [{ hasAshSeal, setExploring }, { mountAshGate }] = await Promise.all([import('./main.js'), import('./ash-gate/index.js')]);
   try {
-    const { mountAshGate } = await import('./ash-gate/index.js');
-    mountAshGate({ hasAshSeal, setExploring });
+    mountAshGate({ hasAshSeal, setExploring, startInPlay: true });
   } catch (error) {
     const notice = document.createElement('p');
     notice.setAttribute('role', 'status');
     notice.textContent = 'Ash Gate needs a browser with WebGL 2. You can still play in the arena below.';
-    document.getElementById('app').before(notice);
+    app.before(notice);
     console.error(error);
   }
-}).catch((error) => {
-  document.getElementById('app').innerHTML = '<div class="boot-screen" role="alert"><strong>THE GATES ARE SILENT</strong><small>The arena could not load. Check your connection and try again.</small><button type="button" id="boot-retry">Try again</button></div>';
-  document.getElementById('boot-retry').addEventListener('click', () => location.reload());
-  console.error(error);
-});
+}
+
+if (isAshGate(params)) {
+  app.innerHTML = '<div class="ash-title-shell">' + titleScreen({
+    actions: '<button type="button" class="dd-primary">Enter Ash Gate</button><a href="?world=arena">Enter the Pit</a>',
+    loading: 'Ash Gate awaits.',
+  }) + '</div>';
+  app.querySelector('button').addEventListener('click', () => enterAshGate().catch(failed), { once: true });
+} else {
+  import('./main.js').catch(failed);
+}
