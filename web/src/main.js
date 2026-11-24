@@ -17,8 +17,11 @@ import { PitSound } from './sound.js';
 import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin, carryCampaign } from './campaign.js';
 import { storyView, mapView, codexView, journeyNav, encounterHeading, campaignResult } from './campaign-view.js';
 import { startPresence } from './presence-live.js';
+import { installDialogKeys } from './game-ui.js';
+import './game-ui.css';
 
 const app = document.getElementById('app');
+installDialogKeys(app);
 const params = new URLSearchParams(location.search);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
 const PLAYER_GENERATION = 'demon-duels:player-generation';
@@ -398,11 +401,13 @@ function duelScreen() {
       networkProgress() + vault + '</div></main>';
 }
 
+let dialogReturnAction;
 function draw() {
   const page = campaignPage();
   const focus = document.activeElement?.dataset?.action;
   const hadDialog = Boolean(app.querySelector('[role=dialog]'));
   const kind = s.mode === 'practice' ? 'PRACTICE MODE' : 'SOLANA DEVNET';
+  app.dataset.screen = s.journey === 'story' ? 'prologue' : s.journey === 'arena' ? 'arena' : 'campaign';
   app.innerHTML = (page === null && s.mode !== 'landing' ? duelScreen() :
     '<header><div class="nav"><button type="button" class="wordmark" data-action="home"><img src="' + ASSET + 'sigil.svg" alt=""><span>DEMON<span>DUELS</span></span></button><div class="nav-right">' +
     statusText(kind) + '<button type="button" class="square sound" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
@@ -414,8 +419,15 @@ function draw() {
     '<span><b>WINNER TAKES BOTH</b><small>Solana card ownership</small></span></div></div></main>' +
     '<footer><div><span>DEMON DUELS</span> <span>·</span> <span>MAGICBLOCK BLITZ V10</span></div><a href="' + addressExplorer(PROGRAM) +
     '" target="_blank" rel="noreferrer">Devnet program ' + icon('outside', 13) + '</a></footer>') + modal();
-  if (s.modal && !hadDialog) app.querySelector('.modal .close')?.focus({ preventScroll: true });
-  else if (focus) [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === focus)?.focus({ preventScroll: true });
+  if (s.modal && !hadDialog) {
+    dialogReturnAction = focus;
+    app.querySelector('.modal .close')?.focus({ preventScroll: true });
+  } else if (!s.modal && hadDialog) {
+    [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === dialogReturnAction)?.focus({ preventScroll: true });
+  } else if (focus) {
+    const previous = [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === focus && !element.disabled);
+    (previous || (s.modal ? app.querySelector('.modal .close') : null))?.focus({ preventScroll: true });
+  }
   syncDuelView();
   const sceneOpen = Boolean(app.querySelector('.duel-screen'));
   if (sceneOpen !== duelSceneOpen) {
