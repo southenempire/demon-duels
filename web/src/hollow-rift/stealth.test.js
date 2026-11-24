@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import { inside, mantleTarget } from '../ash-gate/stealth.js';
+import { circleRules, inside, mantleTarget } from '../ash-gate/stealth.js';
 import { VOID_WRAITH } from './index.js';
 import { boss, cover, hasGround, patrols, rift, roofDecks, roofs, shade, spawn, tears } from './layout.js';
 import { canStrikeWraith, hearsWraith, tearDestination } from './stealth.js';
@@ -50,6 +50,24 @@ test('crouching through the last rift shadow allows a close strike from the fron
   assert.equal(canStrikeWraith({ ...approach, sneak: false }), false);
   assert.equal(canStrikeWraith({ ...approach, alert: true }), false);
   assert.equal(canStrikeWraith({ ...approach, walls: [{ x: -3.1, z: -10.3, w: .8, d: .8 }] }), false);
+});
+
+test('the Wraith prevents strikes while it hears the crouched hunter', () => {
+  const rules = circleRules(VOID_WRAITH.hooks);
+  const colliders = [...cover, ...roofs];
+  const exposed = { x: boss.x, y: 0, z: boss.z - 1.5 };
+  const shadow = { x: -3.9, y: 0, z: -9.75 };
+  for (const { pos, moving, concealed, heard } of [
+    { pos: exposed, moving: true, concealed: false, heard: true },
+    { pos: exposed, moving: false, concealed: false, heard: false },
+    { pos: shadow, moving: true, concealed: true, heard: false },
+  ]) {
+    const state = { moving, crouched: true, running: false };
+    assert.equal(rules.concealed(pos, state, () => false), concealed);
+    const detected = rules.detectsBoss(pos, { ...state, concealed }, () => false);
+    assert.equal(detected, heard);
+    assert.equal(rules.canStrikeBoss({ ...pos }, { crouched: true, alert: false, colliders }, () => !detected), !heard);
+  }
 });
 
 test('the engine descriptor builds Hollow Rift for opponent 1 with the Wraith model', () => {

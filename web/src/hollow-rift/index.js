@@ -3,6 +3,8 @@ import { barriers, boss, cover, hasGround, limits, patrols, roofDecks, roofs, sh
 import { buildRift } from './scenery.js';
 import { canStrikeWraith, hearsWraith, tearDestination } from './stealth.js';
 
+let heardAt = null;
+
 export const VOID_WRAITH = {
   id: 1,
   opponentKind: 1,
@@ -27,10 +29,14 @@ export const VOID_WRAITH = {
   hooks: {
     concealedAt: ({ x, y = 0, z }, { crouched }) => y > 2.35 || crouched && y < .3 && shade.some((patch) => inside(x, z, patch)),
     canTraverse: ({ x, z }) => hasGround(x, z),
-    detectsBoss: ({ x, y = 0, z }, { moving, crouched, running, concealed }) =>
-      hearsWraith({ x, z, height: y, moving, sneak: crouched, running, hidden: concealed }),
+    detectsBoss({ x, y = 0, z }, { moving, crouched, running, concealed }) {
+      const heard = hearsWraith({ x, z, height: y, moving, sneak: crouched, running, hidden: concealed });
+      heardAt = heard ? { x, y, z } : null;
+      return heard;
+    },
     canStrikeBoss: ({ x, y = 0, z }, { crouched, alert, colliders }) =>
-      canStrikeWraith({ x, z, height: y, sneak: crouched, alert, walls: colliders }),
+      !(heardAt?.x === x && heardAt.y === y && heardAt.z === z)
+      && canStrikeWraith({ x, z, height: y, sneak: crouched, alert, walls: colliders }),
     interactionAt({ x, y = 0, z }) {
       const destination = tearDestination(x, z, y);
       return destination ? { label: 'Enter void tear', destination } : null;
