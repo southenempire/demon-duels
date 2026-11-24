@@ -89,6 +89,16 @@
 .duel-text-only .duel-tools { transform: none; justify-content: center; margin-top: 12px; }
 .duel-text-only .duel-no-webgl { margin: 12px 18px; color: #d8c5b0; text-align: center; }
 .duel-text-only .duel-panels { transform: none; max-height: none; overflow: visible; margin-inline: auto; }
+html:has(.duel-tutorial[open]) { overflow: hidden; }
+.duel-tutorial {
+  width: 100%; max-width: none; max-height: none; height: 100%; padding: 0; border: 0;
+  background: #19151b; color: #ead8c4;
+}
+.duel-tutorial .duel-panels { max-height: 64vh; }
+.duel-tutorial.duel-text-only .duel-panels { max-height: none; margin-top: 16px; }
+.duel-tutorial-rules { color: #ffdfb5; font-weight: 700; }
+.duel-tutorial-caption { min-height: 2.8em; }
+.duel-tutorial-text { padding-inline-start: 20px; }
 @media (max-width: 580px) {
   .duel-screen { --duel-tools-top: max(112px, env(safe-area-inset-top)); }
   .duel-screen .duel-banner, .duel-screen .duel-mode { bottom: max(27vh, 155px); }

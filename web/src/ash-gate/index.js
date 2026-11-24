@@ -431,6 +431,9 @@ export function mountAshGate({ hasAshSeal, setExploring }) {
   window.addEventListener('demon-duels:finisher-done', ({ detail }) => {
     if (active && detail?.opponentKind === ASH_WARDEN.opponentKind && detail.duel) showVictory();
   });
+  window.addEventListener('demon-duels:duel3d-close', ({ detail }) => {
+    if (pending && detail?.tutorialCancelled) returnToGate();
+  });
   window.addEventListener('demon-duels:return', ({ detail }) => {
     if (!pending) return;
     const encounter = pending;
