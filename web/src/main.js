@@ -1,4 +1,6 @@
 import './style.css';
+import './finishers/style.css';
+import { campaignApproval, matchesBossStake, previewFinisher, settlementCinematics } from './finishers/index.js';
 import './arena.css';
 import { PublicKey } from '@solana/web3.js';
 import { ArenaClient, PROGRAM, ZERO, addressExplorer, cardKey, explorer, localKey, packKey, proof, readCard, readCards, readDuel, readRound, until, sleep } from './chain.js';
@@ -11,6 +13,7 @@ import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
 import { circles, campaignKey, encounterKey, readCampaign, circleState, pitUnlocked, persistBossWin, carryCampaign } from './campaign.js';
 import { storyView, mapView, codexView, journeyNav, encounterHeading, campaignResult } from './campaign-view.js';
+import { startPresence } from './presence-live.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
@@ -110,8 +113,20 @@ function bossOutcome() {
   return campaignResult(boss, keyed(s.duel.winner, client.key), s.campaign, button);
 }
 
-const roundResult = () => s.result || confirmedFight(s.duel, mySide());
+const roundResult = () => s.result || (bossEncounter() && !emittedSettlements.has(fightId()) ? null : confirmedFight(s.duel, mySide()));
 const fightId = () => s.result ? 'practice:' + s.resultId : s.duel?.key?.toString();
+const bossEncounter = () => s.mode === 'chain' && s.solo && Number.isInteger(s.requestedOpponent) && participant();
+function isBoundBossSettlement(detail, duel) {
+  if (!bossEncounter() || !keyed(duel.p1, client.key)) return false;
+  try {
+    const saved = loadRoomBot(duel.key);
+    const binding = saved && { kind: saved.demonId, player: saved.bot.key.toString(), card: saved.key?.toString() };
+    return matchesBossStake(detail, s.requestedOpponent, fightId(), duel.p2.toString(), duel.card2.toString(), binding);
+  } catch { return false; }
+}
+let liveSettlement;
+const finishers = settlementCinematics(window, (detail) => detail === liveSettlement, audio);
+const presentFinisher = () => finishers.play(fightId()).catch(() => {});
 const fighterKinds = () => [
   s.mode === 'practice' ? s.practiceStake : s.mode === 'landing' ? 0 : s.staked?.kind ?? anyCard()?.kind,
   s.mode === 'practice' ? s.practiceRival : s.mode === 'landing' ? 1 : s.opposing?.kind,
@@ -348,6 +363,10 @@ async function playFight() {
   await preloadFighters();
   for (const frame of fightTimeline(result)) {
     if (sequence !== s.sequence) return;
+    if (frame.stage === 'spoils') {
+      await presentFinisher();
+      if (sequence !== s.sequence) return;
+    }
     s.frame = frame;
     if (frame.sound && !(s.duel && !participant() && (frame.sound === 'victory' || frame.sound === 'defeat'))) audio(frame.sound);
     if (frame.stage === 'windup') audio(moves[result.moves[frame.attacker]].name.toLowerCase());
@@ -402,10 +421,21 @@ async function refreshRoom() {
       await refreshWallet().catch(() => {});
       if (room !== s.room || owner !== client) return;
     }
-    const detail = confirmedSettlement(d, client.key, s.opposing?.kind ?? null, s.proof);
+    const settled = confirmedSettlement(d, client.key, s.opposing?.kind ?? null, s.proof);
+    const detail = settled && !s.solo ? { ...settled, mode: 'pvp' } : settled;
     if (detail && !emittedSettlements.has(detail.duel)) {
       emittedSettlements.add(detail.duel);
-      window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail }));
+      const boundBoss = isBoundBossSettlement(detail, d);
+      const approval = boundBoss && detail.won ? campaignApproval(localStorage, detail) : null;
+      if (boundBoss && (previous !== undefined || approval)) {
+        liveSettlement = detail;
+      }
+      try { window.dispatchEvent(new CustomEvent('demon-duels:settled', { detail })); }
+      finally { liveSettlement = undefined; }
+      if (finishers.has(detail.duel) && approval && !approval()) finishers.clear();
+      if (previous === undefined && finishers.has(detail.duel)) {
+        s.playedId = null; s.frame = null;
+      }
     }
   }
   if (d.phase === 4) clearSavedRoom(room);
@@ -428,6 +458,7 @@ async function run(label, action, recoveryMessage) {
 }
 
 function setRoom(key) {
+  finishers.clear();
   document.querySelectorAll('.capture-card').forEach((card) => card.remove());
   s.sequence++;
   s.playing = false;
@@ -740,7 +771,10 @@ async function action(name) {
   }
   if (name === 'skip' && s.playing) {
     document.querySelectorAll('.capture-card').forEach((card) => card.remove());
-    s.sequence++; s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); return;
+    const sequence = ++s.sequence;
+    await presentFinisher();
+    if (sequence !== s.sequence) return;
+    s.playing = false; s.frame = { stage: 'finish', attacks: 2 }; draw(); return;
   }
   if (s.busy || s.playing) return;
   if (name === 'begin') {
@@ -928,8 +962,9 @@ async function action(name) {
 }
 
 // Campaign integration: launch a selected boss without coupling the arena to a map.
-export function launchFight({ opponentKind, mode = 'practice', returnToMap = true } = {}) {
+export function launchFight({ opponentKind, mode = 'practice', returnToMap = true, room, join = false } = {}) {
   if (s.busy || s.playing) return false;
+  if (mode === 'pvp') return launchRivalDuel(readKey(room), join, returnToMap);
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
   if (activeDuel()) {
     if (mode === 'chain' && localStorage.getItem(encounterKey(s.room)) === String(opponentKind)) {
@@ -967,18 +1002,82 @@ window.addEventListener('demon-duels:return', showMap);
 window.addEventListener('demon-duels:settled', (event) => {
   const d = s.duel;
   const bossId = campaignBoss();
-  if (!d || bossId === null || localStorage.getItem(encounterKey(d.key)) !== String(bossId) || event.detail?.duel !== d.key.toString()) return;
+  if (event.detail?.mode !== 'chain' || !event.detail.won || event.detail.player !== client.key.toString() ||
+    !d || bossId === null || localStorage.getItem(encounterKey(d.key)) !== String(bossId) || event.detail.duel !== d.key.toString()) return;
   const savedBot = loadRoomBot(d.key);
   if (!savedBot || savedBot.demonId !== bossId) return;
   s.campaign = persistBossWin(localStorage, client.key, { bossId, phase: d.phase, player: client.key.toString(), winner: d.winner.toString(),
     opponent: (mySide() ? d.p1 : d.p2).toString(), bot: savedBot.bot.key.toString(), opposingKind: s.opposing?.kind,
-    duel: d.key.toString(), mode: s.mode });
+    duel: d.key.toString(), mode: event.detail.mode });
 });
 window.addEventListener('storage', (event) => {
   if (event.key !== campaignKey(client.key)) return;
   s.campaign = readCampaign(localStorage, client.key);
   draw();
 });
+
+// Live hunters: a challenge accepted in the world becomes an ordinary open/join PvP duel.
+function launchRivalDuel(room, join, returnToMap) {
+  if (!room) return false;
+  const saved = readKey(localStorage.getItem(activeRoomKey));
+  if ((activeDuel() && !keyed(s.room, room)) || (saved && !keyed(saved, room))) {
+    s.notice = 'Resume or finish your saved duel before opening another hunter duel.';
+    draw(); return false;
+  }
+  setRoom(room);
+  s.journey = 'arena';
+  s.mode = 'chain'; s.solo = false; s.quick = false; s.notice = '';
+  s.requestedOpponent = null; s.returnToMap = returnToMap;
+  localStorage.setItem(activeRoomKey, room.toBase58());
+  run(join ? 'Staking your card and preparing the private arena…' : 'Opening your duel…', async () => {
+    await Promise.all([refreshRoom(), refreshWallet()]);
+    if (join && s.duel.phase === 0 && !participant()) {
+      if (!anyCard()) throw new Error('Choose an unstaked demon first.');
+      await client.joinDuel(s.duel, anyCard().key);
+      audio('stake');
+      await refreshRoom(); await client.delegate(s.duel); await refreshWallet();
+    }
+  });
+  return true;
+}
+
+async function rivalReady() {
+  assertCurrentGuest();
+  if (client !== presenceGuest) return { ok: false, reason: 'Reload to challenge hunters with your recovered guest.' };
+  if (s.busy || s.playing) return { ok: false, reason: 'Finish your current duel first.' };
+  const active = readKey(localStorage.getItem(activeRoomKey));
+  const open = active && await readDuel(active).catch(() => null);
+  if (open && open.phase < 3 && (keyed(open.p1, client.key) || keyed(open.p2, client.key))) {
+    return { ok: false, reason: 'Finish or cancel your open duel first.' };
+  }
+  if (open?.phase >= 3) clearSavedRoom(active);
+  await refreshWallet();
+  if (!anyCard()) return { ok: false, reason: 'You need an unstaked demon card to duel another hunter.' };
+  if (s.balance < 0.006) return { ok: false, reason: 'Fund the guest wallet to stake a card.' };
+  return { ok: true };
+}
+
+async function hostRivalDuel(stillWanted) {
+  const ready = await rivalReady();
+  if (!ready.ok) throw new Error(ready.reason);
+  if (!stillWanted()) throw new Error('The other hunter backed out before you staked.');
+  assertCurrentGuest();
+  const { duel } = await client.openDuel(anyCard().key);
+  audio('stake');
+  localStorage.setItem(activeRoomKey, duel.toBase58());
+  return duel.toBase58();
+}
+
+async function verifyRivalDuel(room, challenger) {
+  const key = readKey(room);
+  const duel = key && await until(() => readDuel(key), 20000).catch(() => null);
+  if (!duel || duel.phase !== 0 || !duel.p1.equals(new PublicKey(challenger)) || !keyed(duel.p2, ZERO)) {
+    throw new Error('That duel is not open on chain. No card was taken.');
+  }
+}
+
+const presenceGuest = client;
+startPresence({ keypair: presenceGuest.keypair, host: hostRivalDuel, check: rivalReady, verify: verifyRivalDuel });
 
 let ignorePointerUntil = 0;
 app.addEventListener('click', (event) => {
@@ -1000,6 +1099,7 @@ document.addEventListener('keydown', (event) => {
 restoreRoom();
 if (s.room) s.journey = 'arena';
 draw();
+if (import.meta.env.DEV) previewFinisher(params)?.catch(() => {});
 if (s.room) {
   s.solo = localStorage.getItem('demon-duels:solo:' + s.room) === '1';
   setRoom(s.room);

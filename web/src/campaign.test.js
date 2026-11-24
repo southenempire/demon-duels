@@ -7,7 +7,7 @@ const result = (bossId = 0) => ({ bossId, mode: 'chain', phase: 3, player: 'play
 
 test('only a settled win against the exact next boss advances the descent', () => {
   const progress = freshCampaign();
-  for (const patch of [{ phase: 0 }, { phase: 1 }, { phase: 2 }, { phase: 4 }, { mode: 'practice' },
+  for (const patch of [{ phase: 0 }, { phase: 1 }, { phase: 2 }, { phase: 4 }, { mode: 'practice' }, { mode: 'pvp' },
     { winner: 'boss-wallet' }, { opponent: 'human' }, { opposingKind: 3 }, { bossId: 2 }, { bossId: null },
     { player: 'spectator' }, { player: 'boss-wallet', winner: 'boss-wallet' }, { duel: '' }]) {
     assert.equal(recordBossWin(progress, { ...result(), ...patch }), progress, JSON.stringify(patch));
