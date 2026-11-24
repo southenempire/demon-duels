@@ -31,6 +31,11 @@ export function ashHunters(scene, world, { circle, bounds, roofs = [] }) {
   const actors = new Map();
   const framePoint = new Vector3();
   let peers = [];
+  const remove = (id, { actor, label }) => {
+    actor.dispose();
+    label.remove();
+    actors.delete(id);
+  };
   window.addEventListener('demon-duels:hunters', ({ detail }) => {
     if (detail?.circle !== circle || !Array.isArray(detail.hunters)) return;
     peers = detail.hunters.filter((peer) => typeof peer.id === 'string' && Object.hasOwn(headings, peer.dir)
@@ -39,7 +44,11 @@ export function ashHunters(scene, world, { circle, bounds, roofs = [] }) {
   });
   return {
     count() { return peers.length; },
-    leave() { peers = []; emit('hunter-pose', { circle: null }); },
+    leave() {
+      peers = [];
+      for (const [id, slot] of actors) remove(id, slot);
+      emit('hunter-pose', { circle: null });
+    },
     separate(x, z, height, dx, dz) { return separateStep(x, z, height, dx, dz, peers, roofs); },
     publish(x, z, height, yaw, anim) {
       const names = ['up', 'left', 'down', 'right'];
@@ -51,9 +60,7 @@ export function ashHunters(scene, world, { circle, bounds, roofs = [] }) {
       const ids = new Set(peers.map((peer) => peer.id));
       for (const [id, slot] of actors) {
         if (ids.has(id)) continue;
-        slot.actor.root.removeFromParent();
-        slot.label.remove();
-        actors.delete(id);
+        remove(id, slot);
       }
       for (const peer of peers) {
         const yaw = Number.isFinite(peer.heading) ? peer.heading : headings[peer.dir];
