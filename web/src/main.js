@@ -12,10 +12,11 @@ import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightR
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
 import { startPresence } from './presence-live.js';
+import { isAshGate } from './route.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
-const ashGate = params.get('world') === '3d' && !params.has('room');
+const ashGate = isAshGate(params);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
 const PLAYER_GENERATION = 'demon-duels:player-generation';
 const playerFor = (generation, options) => {

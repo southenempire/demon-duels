@@ -1,9 +1,10 @@
 import { Buffer } from 'buffer';
+import { isAshGate } from './route.js';
 
 globalThis.Buffer ??= Buffer;
 const params = new URLSearchParams(location.search);
 import('./main.js').then(async () => {
-  if (params.get('world') !== '3d' || params.has('room')) return;
+  if (!isAshGate(params)) return;
   try {
     const { mountAshGate } = await import('./ash-gate/index.js');
     mountAshGate();

@@ -8,6 +8,7 @@
   font: 500 14px/1.4 "Segoe UI", system-ui, sans-serif;
 }
 
+body:has(.ash-gate:not([hidden]))::after { display: none; }
 .ash-gate[hidden], .ash-gate [hidden] { display: none; }
 .ash-gate canvas { display: block; cursor: grab; touch-action: none; }
 .ash-gate canvas:active { cursor: grabbing; }
@@ -62,6 +63,7 @@
 .ash-awareness i { display: block; width: 8px; height: 8px; border: 1px solid currentColor; transform: rotate(45deg); }
 .ash-awareness[data-state="hidden"] { color: #b9c7d8; }
 .ash-awareness[data-state="hidden"] i { background: currentColor; }
+.ash-awareness[data-state="roof"] { color: #c4d1de; }
 .ash-awareness[data-state="seen"] { color: #ffc185; }
 .ash-awareness[data-state="alert"] { color: #ff9c86; }
 .ash-keys { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 6px 16px; color: #d9cdbf; font-size: 12px; }
@@ -93,3 +95,14 @@
   font: inherit;
 }
 .ash-strike:hover { background: #35251d; }
+.ash-mantle {
+  position: absolute;
+  bottom: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 13px;
+  border-bottom: 1px solid #b58b60;
+  background: #181416c9;
+  color: #eee0d0;
+  pointer-events: none;
+}

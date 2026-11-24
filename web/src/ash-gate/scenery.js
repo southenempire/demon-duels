@@ -13,6 +13,11 @@ export const cover = [
 ];
 export const shade = [{ x: -4.6, z: 9.25, w: 5.8, d: 3.1 }, { x: -8.9, z: 2.3, w: 3.35, d: 8.4 },
   { x: 8.9, z: -5.6, w: 3.6, d: 5.5 }, { x: -6.1, z: -2.6, w: 4.6, d: 2.45 }];
+export const roofs = [
+  { x: -7.65, z: 2.5, w: 3.05, d: 3.1, h: 2.94 },
+  { x: -8, z: .7, w: 2.34, d: 1.32, h: 4.12 },
+  { x: 8.82, z: 3.1, w: 3.15, d: 3.5, h: 2.94 },
+];
 
 export function buildGate(scene) {
   let seed = 12731;
@@ -88,6 +93,14 @@ export function buildGate(scene) {
     for (let i = 0; i < 4; i++) box(scene, stone(), x - 2.8 + i * 1.9, 6.82, -15.7, .96, .8, 1.92);
   }
   for (const { x, z, w, d, h } of cover) wall(x, z, w, d, Math.round(h / .58));
+  for (const { x, z, w, d, h } of roofs) {
+    wall(x, z, w, d, Math.round(h / .58));
+    box(scene, lip, x, h - .12, z, w + .04, .24, d + .04);
+    for (const offset of [-.65, .65]) {
+      box(scene, iron, x + offset, h * .50, z + d / 2 + .068, .25, .7, .035);
+      box(scene, brass, x + offset, h * .50, z + d / 2 + .092, .044, .66, .04);
+    }
+  }
   for (const { x, z, w, d } of shade) {
     for (let i = 0; i < 14; i++) {
       const a = random() * .22 + .07;
@@ -95,10 +108,22 @@ export function buildGate(scene) {
         x + (random() - .5) * w, a * .36, z + (random() - .5) * d).scale.set(1.45, .54, 1);
     }
   }
-  for (let i = 0; i < 13; i++) {
-    const x = (random() - .5) * 48;
-    const z = -24 - random() * 20, h = 4 + random() * 16;
-    box(scene, basalt, x, h / 2, z, 1.4 + random() * 4, h, 2);
+  for (let i = 0; i < 30; i++) {
+    const x = (i < 15 ? -1 : 1) * (8.2 + random() * 22);
+    const z = 9 - (i % 15) * 4 - random() * 4, h = 4 + random() * 15;
+    const w = 2.7 + random() * 3.8, d = 2.6 + random() * 3.5;
+    if (Math.abs(x) < 15 && z > -20) continue;
+    box(scene, stone(), x, h / 2, z, w, h, d);
+    box(scene, lip, x, h - .05, z, w + .27, .27, d + .32);
+    for (let n = 0; n < 4; n++) {
+      box(scene, basalt, x - w * .4 + n * w * .267, h + .26, z + d * .41, w / 7, .52, .44);
+    }
+    if (i % 3 === 0) {
+      const lamp = new T.MeshBasicMaterial({ color: i % 2 === 0 ? 0xffb47a : 0xb56540 });
+      box(scene, lamp, x, h - 1.1, z + d / 2 + .025, .14, .48, .018);
+      box(scene, lamp, x - w * .498, h - 1.1, z, .018, .48, .14);
+      box(scene, lamp, x + w * .498, h - 1.1, z, .018, .48, .14);
+    }
   }
 
   const gateZ = -15.48;

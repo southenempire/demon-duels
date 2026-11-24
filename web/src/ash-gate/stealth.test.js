@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ASH_WARDEN, canStrike, inside, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { ASH_WARDEN, canStrike, inside, mantleTarget, obstruction, outcomeOnReturn, sees } from './stealth.js';
+import { isAshGate } from '../route.js';
 
 const guard = { x: 0, z: 0, yaw: 0, range: 6, halfAngle: .5 };
 const wall = { x: 0, z: -2, w: 1, d: 1 };
@@ -36,4 +37,22 @@ test('the same bound chain duel must settle before the map credits its result', 
   assert.equal(outcomeOnReturn({ ...settled, mode: 'practice' }, returned), null);
   assert.equal(outcomeOnReturn({ ...settled, bossBound: false }, returned), null);
   assert.equal(outcomeOnReturn({ ...settled, opponentKind: 1 }, returned), null);
+});
+
+test('nearby ledges are mounted in stages instead of teleporting to arbitrary roofs', () => {
+  const roof = { x: 0, z: 0, w: 3, d: 3, h: 2.94 };
+  const tower = { ...roof, z: -2.9, h: 4.12 };
+  assert.deepEqual(mantleTarget(0, 2, 0, [roof, tower]), { x: 0, z: 1.06, h: 2.94 });
+  assert.equal(mantleTarget(0, 2.5, 0, [roof]), null);
+  assert.equal(mantleTarget(0, -1, 0, [tower]), null);
+  const upper = mantleTarget(0, -1, 2.94, [roof, tower]);
+  assert.equal(upper.h, 4.12);
+  assert.ok(Math.abs(upper.z - (-1.84)) < .0001);
+});
+
+test('Ash Gate is the default without replacing explicit backup or invite URLs', () => {
+  for (const query of ['', 'world=3d']) assert.equal(isAshGate(new URLSearchParams(query)), true);
+  for (const query of ['world=2d', 'world=arena', 'room=invite', 'world=3d&room=invite']) {
+    assert.equal(isAshGate(new URLSearchParams(query)), false);
+  }
 });

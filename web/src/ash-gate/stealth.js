@@ -41,6 +41,25 @@ export function canStrike(x, z, boss, blockers, alert) {
     && obstruction(x, z, boss.x, boss.z, blockers) === 1;
 }
 
+export function mantleTarget(x, z, height, roofs) {
+  let closest = null, distance = .86;
+  for (const roof of roofs) {
+    const rise = roof.h - height;
+    if (rise < .25 || rise > 3.10) continue;
+    const edgeX = Math.max(roof.x - roof.w / 2, Math.min(roof.x + roof.w / 2, x));
+    const edgeZ = Math.max(roof.z - roof.d / 2, Math.min(roof.z + roof.d / 2, z));
+    const gap = Math.hypot(edgeX - x, edgeZ - z);
+    if (gap >= distance) continue;
+    closest = {
+      x: Math.max(roof.x - roof.w / 2 + .44, Math.min(roof.x + roof.w / 2 - .44, edgeX)),
+      z: Math.max(roof.z - roof.d / 2 + .44, Math.min(roof.z + roof.d / 2 - .44, edgeZ)),
+      h: roof.h,
+    };
+    distance = gap;
+  }
+  return closest;
+}
+
 export function outcomeOnReturn(settlement, returned) {
   if (settlement?.mode !== 'chain' || settlement.opponentKind !== ASH_WARDEN.opponentKind ||
       !settlement.bossBound || !settlement.duel || settlement.duel !== returned?.duel ||
