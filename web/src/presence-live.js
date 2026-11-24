@@ -97,11 +97,12 @@ export function startPresence({ keypair, host, check, verify, brokers = BROKERS 
       window.dispatchEvent(new CustomEvent('demon-duels:hunters', { detail: { circle, hunters } }));
     }
     if (!pose) return;
-    const state = JSON.stringify([pose.x.toFixed(2), pose.y.toFixed(2), pose.dir, pose.anim, talks.busy()]);
+    const state = JSON.stringify([pose.x.toFixed(2), pose.y.toFixed(2), pose.dir, pose.anim, pose.heading, pose.height, talks.busy()]);
     if (now - sentAt >= (state === sentPose ? HEARTBEAT : POSE_INTERVAL)) {
       sentAt = now;
       sentPose = state;
-      publish(circleTopic(circle), { k: 'pose', c: circle, x: +pose.x.toFixed(2), y: +pose.y.toFixed(2), d: pose.dir, a: pose.anim, b: talks.busy() ? 1 : 0 });
+      publish(circleTopic(circle), { k: 'pose', c: circle, x: +pose.x.toFixed(2), y: +pose.y.toFixed(2), d: pose.dir, a: pose.anim,
+        r: pose.heading, h: pose.height, b: talks.busy() ? 1 : 0 });
     }
   }
 
@@ -218,6 +219,8 @@ export function startPresence({ keypair, host, check, verify, brokers = BROKERS 
     if (detail.circle === null || detail.circle === undefined) { pose = null; enter(null); return; }
     if (!validCircle(detail.circle) || !Number.isFinite(detail.x) || !Number.isFinite(detail.y)) return;
     pose = { x: detail.x, y: detail.y, dir: detail.dir || 'down', anim: /^[a-z-]{1,16}$/.test(detail.anim) ? detail.anim : 'idle' };
+    if (Number.isFinite(detail.heading)) pose.heading = Math.trunc(Math.atan2(Math.sin(detail.heading), Math.cos(detail.heading)) * 1000) / 1000;
+    if (Number.isFinite(detail.height) && detail.height >= 0 && detail.height <= 8) pose.height = +detail.height.toFixed(2);
     enter(detail.circle);
   });
   window.addEventListener('demon-duels:challenge-hunter', (event) => challenge(event.detail?.id));

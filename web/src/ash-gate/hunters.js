@@ -1,3 +1,4 @@
+import { Vector3 } from 'three';
 import { figure } from './figures.js';
 import { limits, roofs } from './scenery.js';
 import { inside } from './stealth.js';
@@ -5,8 +6,31 @@ import { inside } from './stealth.js';
 const headings = { up: 0, left: Math.PI / 2, down: Math.PI, right: -Math.PI / 2 };
 export const emit = (name, detail) => window.dispatchEvent(new CustomEvent('demon-duels:' + name, { detail }));
 
-export function ashHunters(scene) {
-  const slots = [];
+function peerHeight(peer) {
+  if (Number.isFinite(peer.height)) return peer.height;
+  if (!peer.anim?.startsWith('roof-')) return 0;
+  return roofs.reduce((y, roof) => inside(peer.x, peer.y, roof) ? Math.max(y, roof.h) : y, 0);
+}
+
+export function separateStep(x, z, height, dx, dz, peers) {
+  const distance = Math.hypot(dx, dz);
+  if (!distance) return [dx, dz];
+  let steering = 0;
+  for (const peer of peers) {
+    if (Math.abs(height - peerHeight(peer)) > .65) continue;
+    const px = peer.x - x, pz = peer.y - z;
+    const gap = Math.hypot(px, pz);
+    if (gap >= .9 || px * dx + pz * dz <= 0) continue;
+    const side = Math.sign(dx * pz - dz * px) || 1;
+    steering -= side * (1 - gap / .9);
+  }
+  const steer = Math.max(-.7, Math.min(.7, steering));
+  return [dx - dz * steer, dz + dx * steer];
+}
+
+export function ashHunters(scene, world) {
+  const actors = new Map();
+  const framePoint = new Vector3();
   let peers = [];
   window.addEventListener('demon-duels:hunters', ({ detail }) => {
     if (detail?.circle !== 0 || !Array.isArray(detail.hunters)) return;
@@ -17,31 +41,68 @@ export function ashHunters(scene) {
   return {
     count() { return peers.length; },
     leave() { peers = []; emit('hunter-pose', { circle: null }); },
+    separate(x, z, height, dx, dz) { return separateStep(x, z, height, dx, dz, peers); },
     publish(x, z, height, yaw, anim) {
       const names = ['up', 'left', 'down', 'right'];
       const dir = names[(Math.round(yaw / (Math.PI / 2)) % 4 + 4) % 4];
-      emit('hunter-pose', { circle: 0, x, y: z, dir, anim: height > 2.3 ? 'roof-' + anim : anim });
+      emit('hunter-pose', { circle: 0, x, y: z, height, heading: yaw, dir, anim: height > 2.3 ? 'roof-' + anim : anim });
     },
-    update(time, x, z, height) {
+    update(dt, x, z, height) {
       let near = null, closest = 2.3;
-      for (const [i, peer] of peers.entries()) {
-        const actor = slots[i] ??= figure(scene, 'hunter', 0x70828b);
+      const ids = new Set(peers.map((peer) => peer.id));
+      for (const [id, slot] of actors) {
+        if (ids.has(id)) continue;
+        slot.actor.root.removeFromParent();
+        slot.label.remove();
+        actors.delete(id);
+      }
+      for (const peer of peers) {
+        const yaw = Number.isFinite(peer.heading) ? peer.heading : headings[peer.dir];
+        const top = peerHeight(peer);
+        let slot = actors.get(peer.id);
+        if (!slot) {
+          const label = document.createElement('span');
+          label.className = 'ash-nameplate';
+          label.textContent = peer.name || 'Hunter';
+          world.append(label);
+          slot = { actor: figure(scene, 'hunter', 0x70828b), label, yaw, top, warp: peer.warp, phase: 0, gait: 0, crouch: 0 };
+          actors.set(peer.id, slot);
+        } else if (slot.warp !== peer.warp) {
+          Object.assign(slot, { yaw, top, warp: peer.warp, phase: 0, gait: 0, crouch: 0 });
+        }
+        const { actor } = slot;
         const elevated = peer.anim?.startsWith('roof-');
         const motion = elevated ? peer.anim.slice(5) : peer.anim;
-        const top = elevated ? roofs.reduce((y, roof) => inside(peer.x, peer.y, roof) ? Math.max(y, roof.h) : y, 0) : 0;
-        actor.root.visible = true;
-        actor.root.position.set(peer.x, top, peer.y);
-        actor.root.rotation.y = headings[peer.dir];
-        actor.pose(time * 9, ({ sprint: 1.1, walk: .68, sneak: .39 })[motion] || 0,
-          motion === 'sneak' || motion === 'hide' ? 1 : 0);
+        const blend = 1 - Math.exp(-dt * 12);
+        slot.top += (top - slot.top) * blend;
+        slot.yaw += Math.atan2(Math.sin(yaw - slot.yaw), Math.cos(yaw - slot.yaw)) * blend;
+        slot.gait += ((({ sprint: 1.1, walk: .68, sneak: .39 })[motion] || 0) - slot.gait) * blend;
+        slot.crouch += (Number(motion === 'sneak' || motion === 'hide') - slot.crouch) * blend;
+        slot.phase += dt * (3 + slot.gait * 8);
+        actor.root.position.set(peer.x, slot.top, peer.y);
+        actor.root.rotation.y = slot.yaw;
+        actor.pose(slot.phase, slot.gait, slot.crouch);
         const distance = Math.hypot(x - peer.x, z - peer.y);
+        slot.distance = Math.hypot(distance, height - top);
         if (!peer.busy && Math.abs(height - top) < 1.1 && distance < closest) {
           near = peer;
           closest = distance;
         }
       }
-      for (let i = peers.length; i < slots.length; i++) slots[i].root.visible = false;
       return near;
+    },
+    drawLabels(camera, target) {
+      for (const [id, { actor, label, distance }] of actors) {
+        framePoint.copy(actor.root.position);
+        framePoint.y += 2.07;
+        framePoint.project(camera);
+        label.hidden = distance > 7.5 || Math.abs(framePoint.x) >= 1 || Math.abs(framePoint.y) >= 1 || Math.abs(framePoint.z) >= 1;
+        if (label.hidden) continue;
+        label.classList.toggle('is-target', target === id);
+        label.style.opacity = Math.min(1, (7.5 - distance) / 4);
+        label.style.left = (framePoint.x + 1) * 50 + '%';
+        label.style.top = (1 - framePoint.y) * 50 + '%';
+      }
     },
   };
 }

@@ -11,6 +11,7 @@ export const CHALLENGE_TTL = 25000;
 export const STAKE_TTL = 90000;
 export const CHALLENGE_RANGE = 1.5;
 const DIRS = ['down', 'left', 'right', 'up'];
+const HEADINGS = { up: 0, left: Math.PI / 2, down: Math.PI, right: -Math.PI / 2 };
 const KINDS = ['pose', 'bye', 'challenge', 'accept', 'decline', 'cancel', 'staked'];
 const SNAP_DISTANCE = 4;
 const encoder = new TextEncoder();
@@ -41,6 +42,8 @@ function wellFormed(body) {
   if (body?.v !== 1 || !KINDS.includes(body.k) || !Number.isSafeInteger(body.t)) return false;
   if (body.k === 'pose') {
     return validCircle(body.c) && finite(body.x) && finite(body.y) && DIRS.includes(body.d) &&
+      (body.r === undefined || finite(body.r) && Math.abs(body.r) <= Math.PI) &&
+      (body.h === undefined || finite(body.h) && body.h >= 0 && body.h <= 8) &&
       typeof body.a === 'string' && /^[a-z-]{1,16}$/.test(body.a);
   }
   if (body.k === 'bye') return true;
@@ -66,9 +69,13 @@ export function interpolate(samples, time) {
   while (index > 0 && samples[index].at > time) index--;
   const from = samples[index];
   const to = samples[index + 1];
-  if (!to || time <= from.at) return { x: from.x, y: from.y, d: from.d, a: from.a };
+  const start = from.r ?? HEADINGS[from.d];
+  if (!to || time <= from.at) return { x: from.x, y: from.y, d: from.d, a: from.a, heading: start, height: from.h };
   const f = (time - from.at) / (to.at - from.at);
-  return { x: from.x + (to.x - from.x) * f, y: from.y + (to.y - from.y) * f, d: from.d, a: from.a };
+  const turn = (to.r ?? HEADINGS[to.d]) - start;
+  const height = from.h !== undefined && to.h !== undefined ? from.h + (to.h - from.h) * f : from.h;
+  return { x: from.x + (to.x - from.x) * f, y: from.y + (to.y - from.y) * f, d: from.d, a: from.a,
+    heading: start + Math.atan2(Math.sin(turn), Math.cos(turn)) * f, height };
 }
 
 export class PeerTable {
@@ -83,12 +90,15 @@ export class PeerTable {
     if (peer && body.t <= peer.t) return false;
     if (body.k === 'bye') return this.peers.delete(body.id);
     if (!peer || peer.circle !== body.c) {
-      peer = { id: body.id, name: hunterName(body.id), hue: hunterHue(body.id), circle: body.c, samples: [] };
+      peer = { id: body.id, name: hunterName(body.id), hue: hunterHue(body.id), circle: body.c, samples: [], warp: at };
       this.peers.set(body.id, peer);
     }
     const last = peer.samples.at(-1);
-    if (last && Math.hypot(body.x - last.x, body.y - last.y) > SNAP_DISTANCE) peer.samples = [];
-    peer.samples.push({ at, x: body.x, y: body.y, d: body.d, a: body.a });
+    if (last && Math.hypot(body.x - last.x, body.y - last.y) > SNAP_DISTANCE) {
+      peer.samples = [];
+      peer.warp = at;
+    }
+    peer.samples.push({ at, x: body.x, y: body.y, d: body.d, a: body.a, r: body.r, h: body.h });
     if (peer.samples.length > 8) peer.samples.shift();
     peer.t = body.t;
     peer.seen = at;
@@ -102,7 +112,8 @@ export class PeerTable {
       if (now - peer.seen > PEER_TTL) { this.peers.delete(id); continue; }
       if (peer.circle !== circle) continue;
       const pose = interpolate(peer.samples, now - INTERP_DELAY);
-      hunters.push({ id, name: peer.name, hue: peer.hue, busy: peer.busy, x: pose.x, y: pose.y, dir: pose.d, anim: pose.a });
+      hunters.push({ id, name: peer.name, hue: peer.hue, busy: peer.busy, x: pose.x, y: pose.y, dir: pose.d, anim: pose.a,
+        heading: pose.heading, height: pose.height, warp: peer.warp });
     }
     return hunters.sort((a, b) => (a.id < b.id ? -1 : 1));
   }
