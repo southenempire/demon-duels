@@ -77,7 +77,7 @@ function showMap() {
 
 function campaignPage() {
   if (s.journey === 'story') return storyView(button);
-  if (s.journey === 'map') return mapView(s.campaign, s.circle, button, activeDuel());
+  if (s.journey === 'map') return mapView(s.campaign, s.circle, button, activeDuel() || Boolean(readKey(localStorage.getItem(activeRoomKey))));
   if (s.journey === 'codex') return codexView(s.campaign);
   return null;
 }
@@ -363,7 +363,7 @@ async function refreshRoom() {
     if (previous === undefined) { s.playedId = d.key.toString(); s.frame = { stage: 'finish', attacks: 2 }; }
     s.proof ||= await proof(d.key, 'Demon Duels: winner').catch(() => null);
     if (previous !== 3) {
-      localStorage.removeItem(activeRoomKey);
+      if (localStorage.getItem(activeRoomKey) === d.key.toString()) localStorage.removeItem(activeRoomKey);
       await refreshWallet().catch(() => {});
     }
     const detail = confirmedSettlement(d, client.key, s.opposing?.kind ?? null, s.proof);
@@ -660,7 +660,14 @@ async function action(name) {
     if (Number.isInteger(id) && circles[id]) { s.circle = id; draw(); }
     return;
   }
-  if (name === 'resume') { s.journey = 'arena'; s.mode = 'chain'; draw(); return; }
+  if (name === 'resume') {
+    s.journey = 'arena'; s.mode = 'chain';
+    await run('Resuming your saved duel…', async () => {
+      const saved = readKey(localStorage.getItem(activeRoomKey));
+      if (saved && !keyed(s.room, saved)) { setRoom(null); restoreRoom(); }
+      await Promise.all([refreshRoom(), refreshWallet()]);
+    }); return;
+  }
   if (name === 'pit') {
     if (!pitUnlocked(s.campaign)) { showMap(); s.notice = 'Defeat all six guardians to unlock the open pit.'; draw(); return; }
     if (activeDuel()) { s.journey = 'arena'; s.mode = 'chain'; draw(); return; }
@@ -670,8 +677,6 @@ async function action(name) {
   if (name.startsWith('boss:')) {
     const id = Number(name.slice(5));
     if (!Number.isInteger(id) || !circles[id] || circleState(s.campaign, id) === 'locked') return;
-    if (activeDuel()) { s.journey = 'arena'; s.mode = 'chain'; draw(); return; }
-    s.journey = 'arena';
     window.dispatchEvent(new CustomEvent('demon-duels:launch', { detail: { opponentKind: id, mode: 'chain', returnToMap: true } }));
     return;
   }
@@ -804,7 +809,16 @@ async function action(name) {
 export function launchFight({ opponentKind, mode = 'practice', returnToMap = true } = {}) {
   if (s.busy || s.playing) return false;
   if (!Number.isInteger(opponentKind) || !demons[opponentKind] || !['practice', 'chain'].includes(mode)) return false;
-  if (activeDuel()) { s.journey = 'arena'; s.mode = 'chain'; draw(); return false; }
+  if (activeDuel()) {
+    if (mode === 'chain' && localStorage.getItem(encounterKey(s.room)) === String(opponentKind)) {
+      s.journey = 'arena'; s.mode = 'chain'; draw(); return true;
+    }
+    s.notice = 'Finish or cancel your current duel before challenging another guardian.'; draw(); return false;
+  }
+  const saved = readKey(localStorage.getItem(activeRoomKey));
+  if (mode === 'chain' && saved && localStorage.getItem(encounterKey(saved)) !== String(opponentKind)) {
+    s.notice = 'Resume or finish your saved duel before challenging this guardian.'; draw(); return false;
+  }
   if (mode === 'chain' && circleState(s.campaign, opponentKind) === 'locked') return false;
   s.journey = 'arena';
   setRoom(null);
