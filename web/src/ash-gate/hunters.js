@@ -15,6 +15,7 @@ export function ashHunters(scene) {
       && Number.isFinite(peer.y) && peer.y >= limits.far && peer.y <= limits.near).slice(0, 8);
   });
   return {
+    count() { return peers.length; },
     leave() { peers = []; emit('hunter-pose', { circle: null }); },
     publish(x, z, height, yaw, anim) {
       const names = ['up', 'left', 'down', 'right'];
