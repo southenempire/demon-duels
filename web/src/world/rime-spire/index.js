@@ -32,6 +32,11 @@ export const FROST_HERALD = {
   boss: {
     name: 'Frost Herald', model: 'frost-herald.glb', height: 3,
     pos: herald, facing: Math.PI,
+    patrol: {
+      points: [herald, { x: herald.x, z: herald.z - 1.6 }],
+      speed: .45,
+      pause: 8,
+    },
   },
   patrols: [
     { route: [[-4.1, 8.8], [-1.5, 8.8], [-1.5, 6.1], [-4.1, 6.1]], facing: -Math.PI / 2 },

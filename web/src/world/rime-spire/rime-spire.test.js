@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as T from 'three';
-import { canStrike, inside as paddedInside, mantleTarget, obstruction } from '../../ash-gate/stealth.js';
+import { bossPatrol, canStrike, inside as paddedInside, mantleTarget, obstruction } from '../../ash-gate/stealth.js';
 import { huntProfile } from '../../ash-gate/encounter.js';
 import { resolveWorldCircle, worlds } from '../../worlds.js';
 import { FROST_HERALD as circle } from './index.js';
@@ -30,6 +30,24 @@ test('Rime Spire sets the fifth guardian and has a stone and rooftop flank route
   const boss = { ...circle.boss.pos, yaw: circle.boss.facing, range: 6.4, halfAngle: .61 };
   assert.equal(canStrike(-.6, -10.95, boss, colliders, false), true);
   assert.equal(canStrike(boss.x, boss.z + 1.5, boss, colliders, false), false);
+});
+
+test('the Herald pauses between short bell-tower walks and leaves the west flank open', () => {
+  const { colliders, barriers } = circle.scenery(T, new T.Scene());
+  const { pos, facing, patrol } = circle.boss;
+  const [start, bell] = patrol.points;
+  const boss = { ...pos, yaw: facing, range: 6.4, halfAngle: .61 };
+  const update = bossPatrol(patrol);
+  const walls = [...colliders, ...barriers];
+  assert.equal(obstruction(start.x, start.z, bell.x, bell.z, walls, .74), 1);
+  for (let frame = 0; frame < 480; frame++) {
+    const yaw = update(boss, .05);
+    if (yaw !== null) boss.yaw = yaw;
+    if (frame === 100) assert.equal(boss.z, start.z);
+    if (frame === 300) assert.equal(boss.z, bell.z);
+    assert.equal(canStrike(-.25, -11.2, boss, walls, false), true);
+  }
+  assert.equal(boss.z, start.z);
 });
 
 test('ice changes ground speed and only the cave interior provides ground concealment', () => {
