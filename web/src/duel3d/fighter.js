@@ -2,7 +2,9 @@ import * as T from 'three';
 
 const bossModels = {
   0: 'ash-warden.glb',
+  2: 'marrow-king.glb',
   3: 'mire-phantom.glb',
+  4: 'frost-herald.glb',
   5: 'gloam-shade.glb',
 };
 export const bossModel = (id) => bossModels[id];
@@ -34,8 +36,8 @@ export function createFighter(scene, loader, base, { role, color, size }) {
   const stone = role !== 'hunter';
   const file = stone ? bossModel(role) : 'hunter.glb';
   const profile = stone ?
-    { guard: 'Idle', counter: 'Heavy', elbow: 'Forearm', weapon: 'R' } :
-    { guard: 'Guard', counter: 'CounterKill', elbow: 'Elbow', weapon: 'L' };
+    { guard: 'Idle', counter: 'Heavy', elbows: ['Forearm', 'Elbow'], weapon: 'R' } :
+    { guard: 'Guard', counter: 'CounterKill', elbows: ['Elbow'], weapon: 'L' };
   const mat = (value, metalness = .1) => new T.MeshStandardMaterial({ color: value, metalness, roughness: .55 });
   const dark = mat(stone ? 0x211c22 : 0x252331);
   const main = mat(stone ? new T.Color(color).multiplyScalar(.46) : 0x88818e, .33);
@@ -128,8 +130,14 @@ export function createFighter(scene, loader, base, { role, color, size }) {
     root.add(model);
     mixer = new T.AnimationMixer(model);
     tracks = new Map(animations.map((clip) => [clip.name, mixer.clipAction(clip)]));
+    const joint = (side, ...names) => {
+      for (const name of names) {
+        const match = model.getObjectByName(name + side) ?? model.getObjectByName(name + '.' + side);
+        if (match) return match;
+      }
+    };
     rig = Object.fromEntries(['L', 'R'].map((side) => [side,
-      ['Hand', profile.elbow, 'Arm'].map((name) => model.getObjectByName(name + side))]));
+      [joint(side, 'Hand'), joint(side, ...profile.elbows), joint(side, 'Arm', 'Shoulder')]]));
     if (lastAction === 'guard') lastAction = undefined;
   }, undefined, () => {});
   function pose(action, progress, time, reduced, contact) {

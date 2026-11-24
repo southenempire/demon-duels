@@ -22,7 +22,7 @@ test('open invites put the host stake on the opposing side until the invitee joi
 
 test('3D boss models map to their demon IDs and leave other bosses procedural', () => {
   assert.deepEqual(demons.map((_, id) => bossModel(id)), [
-    'ash-warden.glb', undefined, undefined, 'mire-phantom.glb', undefined, 'gloam-shade.glb',
+    'ash-warden.glb', undefined, 'marrow-king.glb', 'mire-phantom.glb', 'frost-herald.glb', 'gloam-shade.glb',
   ]);
 });
 
