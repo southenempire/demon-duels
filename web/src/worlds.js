@@ -2,6 +2,7 @@ import { circleState } from './campaign.js';
 
 export const worlds = Object.freeze({
   0: () => import('./ash-gate/index.js').then((module) => module.ASH_GATE),
+  2: () => import('./marrow-crypt/index.js').then((module) => module.MARROW_KING),
 });
 
 export function resolveWorldCircle(params, campaign, registered = worlds) {

@@ -48,28 +48,26 @@ export function buildCitadel(scene) {
       }
     }
   }
-  for (let i = 0; i < 3; i++) {
-    box(scene, ivory, 0, .09 + i * .16, -12.1, 4.8 - i * .48, .18, 3.9 - i * .48);
-  }
-  box(scene, gold, 0, 1.12, -11.49, 2.05, 2.1, .42);
-  box(scene, velvet, 0, 1.35, -11.24, 1.62, 1.63, .16);
-  mesh(scene, new T.TorusGeometry(1.17, .055, 6, 32), gold, 0, 3.15, -11.5);
-  for (const [x, z] of [[-8.7, 11.5], [8.7, 11.5], [-8.7, .2], [8.7, .2], [-2.8, -11.15], [2.8, -11.15]]) {
-    box(scene, mortar, x, .47, z, .42, .94, .42);
-    mesh(scene, new T.OctahedronGeometry(.25), light, x, 1.25, z);
+  box(scene, gold, 0, boss.y + 1.12, -11.81, 2.05, 2.1, .42);
+  box(scene, velvet, 0, boss.y + 1.35, -11.56, 1.62, 1.63, .16);
+  mesh(scene, new T.TorusGeometry(1.17, .055, 6, 32), gold, 0, boss.y + 3.15, -11.82);
+  for (const [x, z, y = 0] of [[-8.7, 11.5], [8.7, 11.5], [-8.7, .2], [8.7, .2], [-1.6, -11.18, boss.y], [1.6, -11.18, boss.y]]) {
+    box(scene, mortar, x, y + .47, z, .42, .94, .42);
+    mesh(scene, new T.OctahedronGeometry(.25), light, x, y + 1.25, z);
     const lantern = new T.PointLight(0x90f7cc, 17, 6);
-    lantern.position.set(x, 1.3, z);
+    lantern.position.set(x, y + 1.3, z);
     scene.add(lantern);
   }
-  const marker = mesh(scene, new T.RingGeometry(.72, .77, 28), gold, boss.x, .015, boss.z);
+  const marker = mesh(scene, new T.RingGeometry(.72, .77, 28), gold, boss.x, boss.y + .015, boss.z);
   marker.rotation.x = -Math.PI / 2;
   batchStonework(scene);
 
-  return crowd.flatMap((area) => Array.from({ length: 8 }, (_, i) => {
+  const courtiers = crowd.flatMap((area) => Array.from({ length: 8 }, (_, i) => {
     const courtier = figure(scene, 'guard', i % 2 ? 0x785d76 : 0x47394b);
     courtier.root.scale.setScalar(.65 + .04 * (i % 3));
     courtier.root.position.set(area.x + (i % 3 - 1) * .84, 0, area.z + (Math.floor(i / 3) - 1) * .92);
     courtier.root.rotation.y = .28 * (i % 3 - 1);
     return courtier;
   }));
+  return (time) => courtiers.forEach((actor, i) => actor.pose(time * 2.1 + i * .5));
 }

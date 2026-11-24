@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MARROW_KING, crowdCover, heardOnBone, nextLedge, strikeFrom, watchMarrowClear } from './stealth.js';
+import { outcomeOnReturn } from '../ash-gate/stealth.js';
+import { MARROW_KING } from './index.js';
+import { boss, crowdCover, heardOnBone, nextLedge, perch, strikeFrom } from './stealth.js';
+import { resolveWorldCircle, worlds } from '../worlds.js';
 
 test('the court conceals crouching hunters, but not upright hunters or hunters on a higher floor', () => {
   assert.equal(crowdCover(-2.8, 10.65, 0, true), true);
@@ -16,32 +19,38 @@ test('bone amplifies footsteps, but walls and the catwalk cut sound to the groun
   assert.equal(heardOnBone(guard, -3.4, 8, 0, 'walk'), false);
   assert.equal(heardOnBone(guard, -3, 8, 3.85, 'sprint'), false);
   assert.equal(heardOnBone({ x: 3, z: 4.7 }, 7, 4.7, 0, 'sprint'), false);
+  assert.equal(MARROW_KING.hooks.detectsBoss({ x: -3.2, y: boss.y, z: -9.2 }, { moving: true }), true);
+  assert.equal(MARROW_KING.hooks.detectsBoss({ x: -3.2, y: boss.y, z: -9.2 }, { moving: true, crouched: true }), false);
 });
 
-test('three mantles lead up to an aerial strike that is not available from the court floor', () => {
+test('three mantles lead to the throne and its hand-block prompt, then a perch allows an aerial strike', () => {
   assert.equal(nextLedge(-6.1, 10, 0)?.h, 1.35);
   assert.equal(nextLedge(-6.1, 6.51, 1.35)?.h, 2.65);
   assert.equal(nextLedge(-6.1, 2.69, 2.65)?.h, 3.85);
   assert.equal(nextLedge(-6.1, -1, 0), null);
-  assert.equal(strikeFrom(-2.05, -8.95, 3.85, false), 'above');
-  assert.equal(strikeFrom(-2.05, -8.95, 0, false), null);
-  assert.equal(strikeFrom(0, -10.6, 0, false), 'behind');
-  assert.equal(strikeFrom(-2.05, -8.95, 3.85, true), null);
-  assert.deepEqual(MARROW_KING, { opponentKind: 2, mode: 'chain', returnToMap: true });
+  const atThrone = { x: -4.1, z: -9.6, y: 3.85 };
+  assert.ok(Math.abs(atThrone.y - boss.y) < .3 && Math.hypot(atThrone.x - boss.x, atThrone.z - boss.z) < 4.6);
+  assert.equal(nextLedge(atThrone.x, atThrone.z, atThrone.y)?.h, perch.h);
+  assert.equal(strikeFrom(-2.16, -9.72, perch.h, false), 'above');
+  assert.equal(strikeFrom(-2.16, -9.72, 0, false), null);
+  assert.equal(strikeFrom(0, -10.6, boss.y, false), 'behind');
+  assert.equal(strikeFrom(-2.16, -9.72, perch.h, true), null);
 });
 
-test('only a bound win against Marrow King followed by its own finisher clears the court', () => {
-  const clear = watchMarrowClear();
-  const finish = { opponentKind: 2, duel: 'king-duel' };
-  const settlement = { ...finish, mode: 'chain', bossBound: true, won: true };
-  assert.equal(clear.finish(finish), false);
-  for (const wrong of [{ mode: 'practice' }, { mode: 'pvp' }, { opponentKind: 1 }, { won: false }, { bossBound: false }]) {
-    clear.settle({ ...settlement, ...wrong });
-    assert.equal(clear.finish(finish), false);
+test('only the matching bound Marrow King chain result is recognized on return', () => {
+  const returned = { opponentKind: 2, duel: 'king-duel', mode: 'chain' };
+  const settlement = { ...returned, bossBound: true, won: true };
+  for (const wrong of [{ mode: 'practice' }, { mode: 'pvp' }, { opponentKind: 1 }, { duel: 'other' }, { bossBound: false }]) {
+    assert.equal(outcomeOnReturn({ ...settlement, ...wrong }, returned, MARROW_KING.opponentKind), null);
   }
-  clear.settle(settlement);
-  assert.equal(clear.finish({ ...finish, duel: 'other' }), false);
-  assert.equal(clear.finish({ ...finish, opponentKind: 1 }), false);
-  assert.equal(clear.finish(finish), true);
-  assert.equal(clear.finish(finish), false);
+  assert.equal(outcomeOnReturn({ ...settlement, won: false }, returned, MARROW_KING.opponentKind), 'lost');
+  assert.equal(outcomeOnReturn(settlement, returned, MARROW_KING.opponentKind), 'won');
+});
+
+test('the registered Bone Citadel opens only after the first two wins', async () => {
+  const route = new URLSearchParams('world=3d&circle=2');
+  const wins = [{ bossId: 0 }, { bossId: 1 }];
+  assert.equal(resolveWorldCircle(route, { wins: wins.slice(0, 1) }), 0);
+  assert.equal(resolveWorldCircle(route, { wins }), 2);
+  assert.equal(await worlds[2](), MARROW_KING);
 });
