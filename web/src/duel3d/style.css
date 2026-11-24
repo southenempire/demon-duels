@@ -84,6 +84,10 @@
 .duel-stakes button[aria-pressed="true"] { border-color: #ffbd78; background: #4c3028; }
 .duel-screen .duel-text-only .duel-overlay, .duel-screen .duel-text-only .duel-banner { position: absolute; }
 .duel-screen .duel-text-only .duel-no-webgl { position: absolute; top: calc(var(--duel-tools-top) + 46px); inset-inline: 0; text-align: center; }
+.duel-screen:has(.duel-text-only) .duel-panels {
+  max-height: min(44vh, calc(100% - var(--duel-tools-top) - 104px));
+  overflow: auto;
+}
 @media (max-width: 580px) {
   .duel-screen { --duel-tools-top: max(112px, env(safe-area-inset-top)); }
   .duel-screen .duel-banner, .duel-screen .duel-mode { bottom: max(27vh, 155px); }
