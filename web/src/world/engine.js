@@ -1,0 +1,326 @@
+import './world.css';
+import { demons } from '../rules.js';
+import { levels, TILE } from './levels.js';
+import { acceptedWin, activeKey, campaignKey, gradeScore, readJSON, readWins, worldKey } from './progress.js';
+import { createPresence, worldEvent } from './presence.js';
+import { createRenderer } from './render.js';
+import { advance, interaction, newRun, throwEmber } from './simulation.js';
+import { gradeFor, distance } from './stealth.js';
+
+let current;
+const rom = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+const button = (label, action, cls = 'secondary') => '<button type="button" class="button ' + cls + '" data-hunt="' + action + '">' + label + '</button>';
+const keys = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', 'c', 'e', 'q', 'f', ' ', 'escape']);
+
+export function unmountWorld() {
+  current?.dispose();
+  current = null;
+}
+
+export function mountWorld(el, { wallet, chain }) {
+  unmountWorld();
+  const controller = new AbortController();
+  const { signal } = controller;
+  const listen = (target, event, fn) => target.addEventListener(event, fn, { signal });
+  const presence = createPresence(levels, signal);
+  const asset = import.meta.env.BASE_URL + 'art/';
+  const player = String(wallet);
+  const flavor = { intel: {}, bestGrade: {}, vantage: {}, checkpoint: null, ...readJSON(localStorage, worldKey(player)) };
+  const save = () => localStorage.setItem(worldKey(player), JSON.stringify(flavor));
+  const wins = () => readWins(localStorage, player);
+  const audio = (cue, pos) => worldEvent('audio', { cue, circle: kind, ...(pos ? { pos: { x: pos.x / TILE, y: pos.y / TILE } } : {}) });
+  let scene = 'title';
+  let kind = null;
+  let run;
+  let renderer;
+  let frame = 0;
+  let suspended = false;
+  let paused = false;
+  let sneaking = false;
+  let touchSight = false;
+  let sprinting = false;
+  let lastTime = 0;
+  let lastStep = 0;
+  let lastState = '';
+  let stick = { id: null, x: 0, y: 0 };
+  let encounter = null;
+  let striking = false;
+  let strikeTimer;
+  let finishTimer;
+  let pauseBoss = 0;
+  let objective = null;
+  const down = new Set();
+  const finished = new Set();
+  const query = (name) => el.querySelector('[data-hunt-' + name + ']');
+  const pitPose = { x: 8 * TILE, y: 4 * TILE, angle: Math.PI / 2, anim: 'idle' };
+  const message = (text) => { const node = query('notice'); if (node) node.textContent = text; };
+  const resetInput = () => {
+    down.clear(); stick = { id: null, x: 0, y: 0 }; touchSight = false;
+    query('stick')?.style.setProperty('--stick-x', '0px');
+    query('stick')?.style.setProperty('--stick-y', '0px');
+  };
+
+  function title() {
+    scene = 'title';
+    el.innerHTML = '<div class="hunt-title"><img src="' + asset + 'sigil.svg" alt=""><span class="hunt-kicker">DEMON DUELS / THE SEALED HAND</span><h1>UNDERWORLD<br><em>HUNT</em></h1><p>Six guardians stole your name. Take it back.</p>' +
+      button('Press start', 'start', 'primary') + button('Campaign map', 'exit', 'text') + '</div>';
+  }
+
+  function pit(notice = '') {
+    if (scene === 'circle') presence.leave();
+    scene = 'pit'; kind = null;
+    const progress = wins().length;
+    const saved = localStorage.getItem(activeKey);
+    el.innerHTML = '<div class="hunt-pit"><div class="hunt-top"><span class="hunt-kicker">DEMON DUELS / HUNTER’S REFUGE</span>' +
+      button('Campaign map', 'exit', 'text') + '</div><h1>THE <em>PIT</em></h1><p class="hunt-deck">Take the Hunter’s Oath, read the gates, and choose which demon to stake.</p>' +
+      '<div class="hunt-pit-actions">' + button('Hunter’s Oath · Open vault', 'vault', 'primary') +
+      (saved ? button('Resume your duel', 'resume') : '') + '</div><div class="hunt-gates">' +
+      levels.map((level, i) => '<button data-hunt="circle:' + i + '" type="button" ' + (i > progress ? 'disabled' : '') +
+        '><span>' + rom[i] + ' / ' + (i < progress ? 'CLEARED' : i === progress ? 'OPEN' : 'SEALED') +
+        '</span><strong>' + level.name + '</strong><small>' + demons[i].name + '</small></button>').join('') +
+      '</div><p class="hunt-notice" data-hunt-notice role="status"></p></div>';
+    message(notice);
+    if (!suspended) presence.publish('pit', pitPose, performance.now());
+  }
+
+  function enter(number, notice = '', cutscene = true) {
+    if (number > wins().length || !levels[number]) return;
+    if (scene === 'pit') presence.leave();
+    scene = 'circle'; kind = number; paused = false; resetInput(); sneaking = false; sprinting = false;
+    const level = levels[kind];
+    const checkpoint = level.checkpoints[flavor.checkpoint?.circle === kind ? flavor.checkpoint.index : 0] ?? level.start;
+    run = newRun(level, flavor.intel[kind], flavor.vantage[kind], checkpoint);
+    flavor.checkpoint = { circle: kind, index: level.checkpoints.indexOf(checkpoint) };
+    save();
+    el.innerHTML = '<div class="hunt-top"><div><span class="hunt-kicker">CIRCLE ' + rom[kind] + ' / UNDERWORLD HUNT</span><h1>' +
+      level.name + '</h1></div>' + button('The Pit', 'pit') + '</div><div class="hunt-stage" data-hunt-stage><canvas aria-label="Scrollable stealth level"></canvas>' +
+      '<div class="hunt-hud"><span data-hunt-watch>UNAWARE</span><progress aria-label="Highest watcher detection" data-hunt-meter max="100" value="0"></progress><small data-hunt-grade>GHOST</small></div>' +
+      '<div class="hunt-prompt" data-hunt-prompt hidden>' + button('', 'interact', 'primary') +
+      button('Practice strike', 'practice') + '</div><div class="hunt-touch"><div class="hunt-stick" data-hunt-stick aria-label="Movement joystick"><i></i></div>' +
+      '<div>' + button('Sneak', 'sneak') + button('Sight', 'sight') + button('Sprint', 'sprint') + '</div></div>' +
+      '<div class="hunt-pause" data-hunt-pause hidden><h2>Hunt paused</h2>' + button('Resume', 'pause', 'primary') + '</div></div>' +
+      '<div class="hunt-bottom"><span class="hunt-notice" data-hunt-notice role="status"></span><span class="hunt-controls">WASD / ARROWS · SHIFT SPRINT · C SNEAK · Q SIGHT · F EMBER · ESC PAUSE</span></div>';
+    renderer = createRenderer(el.querySelector('canvas'), asset);
+    objective = null;
+    message(notice || (kind === 0 ? 'Stay in shadow or ash grass. Douse braziers with E; the gold diamond marks your quarry.' :
+      kind === 1 ? 'The Wraith listens instead of looking. Sneak near it; E enters a purple void tear.' : 'Follow the gold diamond to your quarry.'));
+    if (cutscene) worldEvent('cutscene', { id: 'circle-' + kind + '-enter' });
+    audio(level.ambience);
+  }
+
+  function handleInteraction(isPractice) {
+    if (paused || striking || !objective || (isPractice && objective.name !== 'strike')) return;
+    const level = levels[kind];
+    const { name, target } = objective;
+    if (name === 'strike') {
+      const grade = gradeFor(run);
+      const tells = level.intel.filter((scroll) => run.intel.includes(scroll.id)).slice(0, gradeScore[grade]).map((scroll) => scroll.text);
+      const detail = { opponentKind: kind, mode: isPractice ? 'practice' : 'chain', returnToMap: true, source: 'world', grade, tells };
+      striking = true;
+      run.hunter.anim = 'strike'; run.hunter.animStart = performance.now();
+      run.strike = run.hunter.animStart;
+      presence.publish(kind, run.hunter, performance.now());
+      query('stage').classList.add('hunt-striking');
+      audio('strike', run.hunter);
+      strikeTimer = setTimeout(() => {
+        striking = false; run.strike = null;
+        query('stage')?.classList.remove('hunt-striking');
+        if (!window.dispatchEvent(new CustomEvent('demon-duels:launch', { detail, cancelable: true }))) {
+          message(localStorage.getItem(activeKey) ? 'Resume or finish your saved duel at the Pit first.' : 'The arena is busy. Try again shortly.');
+        }
+      }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 430);
+    } else if (name === 'douse') {
+      target.doused = true; message('Brazier doused. The lane darkens.'); audio('douse', target);
+    } else if (name === 'tear') {
+      Object.assign(run.hunter, target, { vx: 0, vy: 0 });
+      renderer.snap(); message('The void folded the path.');
+    } else if (name === 'intel') {
+      run.intel.push(target.id); flavor.intel[kind] = run.intel; save();
+      message(target.text); audio('intel', target);
+    } else if (name === 'vantage') {
+      run.synced = true; flavor.vantage[kind] = true; save();
+      pauseBoss = performance.now() + 550;
+      message('Synchronized. The map now shows the boss route and intel.'); audio('vantage-sync', level.vantage);
+    } else if (name === 'takedown') {
+      run.guards = run.guards.filter((guard) => guard !== target);
+      run.hunter.takedownUntil = performance.now() + 450;
+      message('Thrall silently removed.'); audio('takedown', target);
+    } else if (name === 'challenge') worldEvent('challenge-hunter', { id: target.id });
+  }
+
+  function loop(now) {
+    if (suspended) return;
+    frame = requestAnimationFrame(loop);
+    const dt = Math.min(0.035, (now - (lastTime || now)) / 1000);
+    lastTime = now;
+    if (scene !== 'circle' || !run) return;
+    const level = levels[kind];
+    const peers = presence.inCircle(kind);
+    if (!paused && !striking && now >= pauseBoss) {
+      const dx = Number(down.has('d') || down.has('arrowright')) - Number(down.has('a') || down.has('arrowleft')) + stick.x;
+      const dy = Number(down.has('s') || down.has('arrowdown')) - Number(down.has('w') || down.has('arrowup')) + stick.y;
+      const previouslyHidden = run.hunter.hidden;
+      const result = advance(level, run, { dx, dy, sneak: sneaking, sprint: sprinting || down.has('shift'), sight: touchSight || down.has('q') }, dt, now);
+      if (result.caught) {
+        const { intel, synced, checkpoint } = run;
+        run = newRun(level, intel, synced, checkpoint);
+        run.marked = true; run.boss.alert = true; run.boss.meter = 100;
+        renderer.snap(); audio('detect-alert');
+        message('Marked. You wake at the checkpoint. The guardian is now alerted.');
+      } else if (run.hunter.moving && now - lastStep > (sneaking ? 480 : 330)) {
+        lastStep = now; audio('step-' + result.surface, run.hunter);
+      }
+      if (!previouslyHidden && run.hunter.hidden) audio('hide', run.hunter);
+      const prompt = interaction(level, run, peers);
+      if (prompt?.name !== objective?.name || prompt?.label !== objective?.label) {
+        query('prompt').hidden = !prompt;
+        query('prompt').querySelector('[data-hunt=interact]').textContent = prompt ? 'E: ' + prompt.label : '';
+        query('prompt').querySelector('[data-hunt=practice]').hidden = prompt?.name !== 'strike';
+      }
+      objective = prompt;
+      const grade = gradeFor(run);
+      const state = run.watch + ':' + grade;
+      if (state !== lastState) {
+        const previous = lastState.split(':')[0];
+        lastState = state;
+        if (previous !== run.watch) {
+          if (run.watch !== 'unaware') audio('detect-' + run.watch);
+          else if (previous) audio('lose-trail');
+        }
+        query('watch').textContent = run.watch.toUpperCase() + (run.hunter.hidden ? ' · COVER' : '');
+        query('watch').dataset.watch = run.watch;
+        query('grade').textContent = grade.toUpperCase();
+        worldEvent('world-state', { circle: kind, alert: run.watch, grade });
+      }
+      query('meter').value = run.meter;
+    }
+    renderer.render(level, kind, run, peers, dt, now);
+    presence.publish(kind, run.hunter, now);
+  }
+
+  function pause() {
+    paused = !paused; resetInput();
+    query('pause').hidden = !paused;
+  }
+
+  function sneak() {
+    sneaking = !sneaking;
+    el.querySelector('[data-hunt=sneak]')?.setAttribute('aria-pressed', String(sneaking));
+    if (sneaking) audio('sneak-on', run?.hunter);
+  }
+
+  function act(action) {
+    if (action === 'exit') { chain.exit(); return; }
+    if (action === 'start' && scene === 'title') {
+      chain.start?.();
+      worldEvent('cutscene', { id: 'intro' });
+      pit();
+    } else if (action === 'vault' || action === 'resume') chain[action]();
+    else if (action === 'pit' && !striking) pit();
+    else if (action?.startsWith('circle:')) enter(Number(action.slice(7)));
+    else if (action === 'interact' || action === 'practice') handleInteraction(action === 'practice');
+    else if (action === 'pause') pause();
+    else if (action === 'sneak') sneak();
+    else if (action === 'sight') touchSight = !touchSight;
+    else if (action === 'sprint') sprinting = !sprinting;
+  }
+
+  listen(el, 'click', (event) => act(event.target.closest('[data-hunt]')?.dataset.hunt));
+  listen(window, 'keydown', (event) => {
+    if (suspended || event.altKey || event.ctrlKey || event.metaKey || /INPUT|TEXTAREA|SELECT|BUTTON/.test(event.target.tagName) && event.key === ' ') return;
+    if (scene === 'title' && event.key === 'Enter') { event.preventDefault(); act('start'); return; }
+    if (scene !== 'circle') return;
+    const key = event.key.toLowerCase();
+    if (!keys.has(key)) return;
+    event.preventDefault();
+    down.add(key);
+    if (event.repeat || striking) return;
+    if (key === 'escape') pause();
+    else if (!paused && key === 'c') sneak();
+    else if (!paused && key === 'e') handleInteraction(false);
+    else if (!paused && key === 'f' && throwEmber(levels[kind], run, performance.now())) audio('ember-throw', run.hunter);
+  });
+  listen(window, 'keyup', (event) => down.delete(event.key.toLowerCase()));
+  listen(window, 'blur', resetInput);
+  listen(el, 'pointerdown', (event) => {
+    const pad = event.target.closest('[data-hunt-stick]');
+    if (!pad || stick.id !== null) return;
+    pad.setPointerCapture(event.pointerId);
+    stick.id = event.pointerId;
+    updateStick(event, pad);
+  });
+  listen(el, 'pointermove', (event) => {
+    if (event.pointerId === stick.id) updateStick(event, query('stick'));
+  });
+  for (const type of ['pointerup', 'lostpointercapture', 'pointercancel']) listen(el, type, (event) => {
+    if (event.pointerId !== stick.id) return;
+    stick = { id: null, x: 0, y: 0 };
+    updateStick(null, query('stick'));
+  });
+  function updateStick(event, pad) {
+    if (!pad) return;
+    const rect = pad.getBoundingClientRect();
+    const x = event ? event.clientX - rect.left - rect.width / 2 : 0;
+    const y = event ? event.clientY - rect.top - rect.height / 2 : 0;
+    const divisor = Math.max(rect.width * 0.31, Math.hypot(x, y));
+    stick.x = x / divisor; stick.y = y / divisor;
+    pad.style.setProperty('--stick-x', stick.x * 23 + 'px');
+    pad.style.setProperty('--stick-y', stick.y * 23 + 'px');
+  }
+
+  function show(next, notice) {
+    el.hidden = false; suspended = false; lastTime = 0; lastState = '';
+    if (Number.isInteger(next)) enter(next, notice, false);
+    else pit(notice);
+    cancelAnimationFrame(frame); frame = requestAnimationFrame(loop);
+  }
+
+  listen(window, 'demon-duels:settled', ({ detail }) => {
+    queueMicrotask(() => {
+      if (signal.aborted || !acceptedWin(wins(), player, encounter, detail) || finished.has(detail.duel)) return;
+      finished.add(detail.duel);
+      const { opponentKind, grade } = encounter;
+      if (gradeScore[grade] > (gradeScore[flavor.bestGrade[opponentKind]] ?? -1)) {
+        flavor.bestGrade[opponentKind] = grade; save();
+      }
+      worldEvent('finisher', { opponentKind, grade, duel: detail.duel });
+    });
+  });
+  listen(window, 'demon-duels:finisher-done', ({ detail }) => {
+    if (!encounter?.duel || !finished.has(encounter.duel) || encounter.opponentKind !== detail?.opponentKind) return;
+    finishTimer = setTimeout(() => chain.returnToWorld(), 0);
+  });
+  listen(window, 'demon-duels:return', ({ detail }) => {
+    if (!suspended) return;
+    const last = encounter; encounter = null;
+    const won = last?.duel && finished.has(last.duel);
+    if (won) {
+      worldEvent('cutscene', { id: 'circle-' + last.opponentKind + '-clear' });
+      audio('gate-open');
+      show(null, 'Guardian down. Return to the gates.');
+    } else if (Number.isInteger(last?.opponentKind) || scene === 'circle') {
+      const note = last?.mode === 'practice' ? 'Practice grants no clear or cards.' : detail?.phase === 4 ? 'The boss fled. Your stake was returned.' :
+        detail?.mode === 'chain' && detail?.result?.winner === 1 ? 'Your demon fell. The guardian still waits.' : '';
+      show(last?.opponentKind ?? kind, note);
+    } else show(null);
+  });
+  listen(window, 'storage', ({ key }) => { if (key === campaignKey(player) && scene === 'pit' && !suspended) pit(); });
+
+  current = {
+    hide(detail) {
+      encounter = detail ?? null;
+      suspended = true; el.hidden = true; resetInput(); presence.leave();
+      cancelAnimationFrame(frame);
+    },
+    bind(duel) { if (encounter?.mode === 'chain') encounter.duel = duel; },
+    dispose() {
+      controller.abort(); cancelAnimationFrame(frame); clearTimeout(strikeTimer); clearTimeout(finishTimer);
+      presence.leave(); el.replaceChildren(); el.hidden = true;
+    },
+  };
+  el.classList.add('hunt');
+  el.hidden = false;
+  title();
+  frame = requestAnimationFrame(loop);
+  return current;
+}

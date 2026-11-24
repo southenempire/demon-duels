@@ -9,8 +9,17 @@ import { characters, characterArt } from './characters.js';
 import { confirmedFight, confirmedSettlement, fightTimeline, fighterPose, fightReason } from './fight.js';
 import { PitEffects } from './effects.js';
 import { PitSound } from './sound.js';
+import { bossMove } from './world/bot-profile.js';
+import { encounterKey as worldEncounterKey, readJSON as readWorldJSON } from './world/progress.js';
 
 const app = document.getElementById('app');
+const hunt = document.createElement('div');
+hunt.hidden = true;
+app.after(hunt);
+let world;
+let mountPromise;
+let worldFight = null;
+let worldArena = false;
 const params = new URLSearchParams(location.search);
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
 const client = new ArenaClient(localKey('player'));
@@ -270,6 +279,7 @@ function draw() {
   if (s.modal && !hadDialog) app.querySelector('.modal .close')?.focus({ preventScroll: true });
   else if (focus) [...app.querySelectorAll('[data-action]')].find((element) => element.dataset.action === focus)?.focus({ preventScroll: true });
   effects.mount(app.querySelector('.pit-particles'));
+  syncWorldArena();
   sound.setScene(s.playing || s.mode === 'practice' || s.duel?.phase === 1 || s.duel?.phase === 2 ? 'fight' : 'menu');
   if (roundResult() && !s.busy && s.playedId !== fightId()) {
     s.playedId = fightId();
@@ -368,6 +378,11 @@ function setRoom(key) {
     url.searchParams.set('room', key.toBase58());
     const saved = localStorage.getItem(moveKey());
     s.move = saved === null ? null : Number(saved);
+    if (s.solo && worldFight?.mode === 'chain' && !worldFight.duel) {
+      worldFight.duel = key.toString();
+      localStorage.setItem(worldEncounterKey(key), JSON.stringify(worldFight));
+      world?.bind(worldFight.duel);
+    }
   } else {
     url.searchParams.delete('room');
     s.duel = null;
@@ -418,7 +433,9 @@ async function readyBot(prepared) {
     bot ??= botFor(botGeneration(localStorage.getItem(roomBotKey(s.room))));
     if (!keyed(s.duel.p2, bot.key)) return;
     await bot.delegate(s.duel);
-    await bot.lock(s.duel, crypto.getRandomValues(new Uint8Array(1))[0] % 3);
+    const profile = readWorldJSON(localStorage, worldEncounterKey(s.duel.key));
+    const roll = crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
+    await bot.lock(s.duel, bossMove(profile?.opponentKind, profile?.grade, roll));
   }
 }
 
@@ -507,6 +524,8 @@ async function resolveChain() {
 }
 
 async function action(name) {
+  if (name === 'world-enter') { await openWorld(); return; }
+  if (worldArena && ['world-back', 'home', 'leave', 'map', 'campaign-return', 'reset'].includes(name)) name = 'return-map';
   if (s.returnToMap && (name === 'home' || name === 'leave')) name = 'return-map';
   sound.unlock(s.sound);
   if (name === 'sound') {
@@ -532,7 +551,11 @@ async function action(name) {
   }
   if (s.busy || s.playing) return;
   if (name === 'return-map') {
-    const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof };
+    const detail = { result: roundResult(), mode: s.mode, opponentKind: s.requestedOpponent, duel: s.duel?.key?.toString() || null, proof: s.proof, phase: s.duel?.phase };
+    if (worldArena) {
+      worldFight = null; worldArena = false;
+      app.hidden = true;
+    }
     setRoom(null); s.mode = 'landing'; s.returnToMap = false; s.requestedOpponent = null; draw();
     window.dispatchEvent(new CustomEvent('demon-duels:return', { detail }));
     return;
@@ -658,7 +681,85 @@ export function launchFight({ opponentKind, mode = 'practice', returnToMap = tru
   } else startQuickDuel().catch(() => {});
   return true;
 }
-window.addEventListener('demon-duels:launch', (event) => launchFight(event.detail));
+window.addEventListener('demon-duels:launch', (event) => {
+  const detail = event.detail;
+  if (detail?.mode === 'pvp' && detail.source === 'presence') {
+    const room = readKey(detail.room);
+    if (!world || !room || s.busy || s.playing) { event.preventDefault(); return; }
+    openWorldArena();
+    setRoom(null); s.solo = false; s.mode = 'chain'; s.quick = false; s.returnToMap = true;
+    setRoom(room);
+    run('Opening the hunter challenge…', async () => { await Promise.all([refreshRoom(), refreshWallet()]); })
+      .then(() => { if (detail.join && s.duel?.phase === 0 && !keyed(s.duel.p1, client.key) && anyCard()) return action('join'); }).catch(() => {});
+    return;
+  }
+  if (detail?.source !== 'world') { launchFight(detail); return; }
+  if (!world || worldArena || (detail.mode === 'chain' && localStorage.getItem(activeRoomKey))) { event.preventDefault(); return; }
+  worldFight = { ...detail, tells: Array.isArray(detail.tells) ? detail.tells.filter((line) => typeof line === 'string').slice(0, 2) : [] };
+  if (!launchFight(detail)) { worldFight = null; event.preventDefault(); return; }
+  sound.unlock(s.sound);
+  sound.play('strike');
+  openWorldArena(worldFight);
+  syncWorldArena();
+});
+
+function openWorldArena(detail) {
+  worldArena = true;
+  world?.hide(detail);
+  app.hidden = false;
+}
+
+function syncWorldArena() {
+  app.querySelector('.hunt-arena-link')?.remove();
+  const nav = app.querySelector('.nav-right');
+  if (!nav) return;
+  if (worldArena || (s.mode === 'landing' && !s.room)) {
+    nav.insertAdjacentHTML('afterbegin', '<span class="hunt-arena-link">' +
+      button(worldArena ? 'world-back' : 'world-enter', worldArena ? 'Return to hunt' : 'Hunt (Underworld)', 'secondary') + '</span>');
+  }
+  if (worldArena && worldFight?.tells?.length) {
+    app.querySelector('.hero')?.insertAdjacentHTML('afterend', '<section class="world-arena-intel"><b>HUNTER INTEL / ' +
+      esc(worldFight.grade.toUpperCase()) + '</b><ul>' + worldFight.tells.map((tell) => '<li>' + esc(tell) + '</li>').join('') + '</ul></section>');
+  }
+}
+
+async function openWorld(savedEncounter) {
+  if (params.get('world') === '0' || s.busy || s.playing) return false;
+  try {
+    const engine = await (mountPromise ??= import('./world/engine.js'));
+    const url = new URL(location.href);
+    url.searchParams.set('world', '1');
+    history.replaceState(null, '', url);
+    world = engine.mountWorld(hunt, { wallet: client.key, chain: {
+      start: () => { sound.unlock(s.sound); sound.setScene('menu'); },
+      exit: () => {
+        engine.unmountWorld(); world = null; app.hidden = false;
+        const url = new URL(location.href); url.searchParams.delete('world'); history.replaceState(null, '', url);
+      },
+      vault: () => { openWorldArena(); action('enter').catch(() => {}); },
+      resume: () => {
+        const room = localStorage.getItem(activeRoomKey);
+        worldFight = readWorldJSON(localStorage, worldEncounterKey(room));
+        if (worldFight) { s.requestedOpponent = worldFight.opponentKind; s.returnToMap = true; }
+        openWorldArena(worldFight); action('enter').catch(() => {});
+      },
+      returnToWorld: () => action('return-map').catch(() => {}),
+    } });
+    if (savedEncounter) {
+      worldFight = savedEncounter;
+      s.requestedOpponent = savedEncounter.opponentKind; s.returnToMap = true;
+      openWorldArena(savedEncounter);
+    } else {
+      app.hidden = true;
+    }
+    return true;
+  } catch {
+    mountPromise = null; world = null; hunt.hidden = true; app.hidden = false;
+    s.notice = 'The hunt is unavailable. The arena and campaign are still open.';
+    draw();
+    return false;
+  }
+}
 
 let ignorePointerUntil = 0;
 app.addEventListener('click', (event) => {
@@ -671,6 +772,7 @@ app.addEventListener('click', (event) => {
   else if (event.target.matches('[data-dismiss]')) { s.modal = null; draw(); }
 });
 document.addEventListener('keydown', (event) => {
+  if (app.hidden) return;
   if (event.key === 'Escape' && s.modal) { s.modal = null; draw(); return; }
   if (s.modal || event.repeat || event.altKey || event.ctrlKey || event.metaKey || /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
   if (/^[123]$/.test(event.key) && (s.mode === 'practice' && s.practiceCards.length || s.duel?.phase === 1 && participant())) {
@@ -678,11 +780,16 @@ document.addEventListener('keydown', (event) => {
   }
 });
 draw();
-if (s.room) {
-  s.solo = localStorage.getItem('demon-duels:solo:' + s.room) === '1';
-  setRoom(s.room);
-  run('Opening the duel invite…', async () => { await Promise.all([refreshRoom(), refreshWallet()]); });
+const savedHunt = s.room && readWorldJSON(localStorage, worldEncounterKey(s.room));
+async function openInitialSurface() {
+  if ((savedHunt || (!s.room && params.get('world') === '1')) && params.get('world') !== '0') await openWorld(savedHunt);
+  if (s.room) {
+    s.solo = localStorage.getItem('demon-duels:solo:' + s.room) === '1';
+    setRoom(s.room);
+    await run('Opening the duel invite…', async () => { await Promise.all([refreshRoom(), refreshWallet()]); });
+  }
 }
+openInitialSurface().catch(() => {});
 let polling = false;
 setInterval(() => {
   const elapsed = app.querySelector('[data-elapsed]');

@@ -1,0 +1,22 @@
+{
+  "id": 4,
+  "kind": 4,
+  "name": "Rime Spire",
+  "w": 64,
+  "h": 36,
+  "tileSize": 32,
+  "tileset": "world/4/tileset.png",
+  "layers": {"ground":[],"walls":[[8,10,4,18],[16,6,4,16],[24,16,16,4],[28,24,8,4],[24,6,4,6],[36,6,4,6],[44,14,4,16],[52,8,4,14]],"props":[]},
+  "spawn": [33,31],
+  "checkpoints": [[33,31]],
+  "vantage": [41,33],
+  "hideZones": [[12,22,8,6],[20,10,4,8],[22,26,4,6],[30,10,6,4],[38,26,6,6],[48,4,8,4],[50,24,8,6]],
+  "lights": [{"x":25,"y":31,"r":6,"douseable":false},{"x":41,"y":23,"r":6,"douseable":false},{"x":33,"y":13,"r":6,"douseable":false}],
+  "surfaces": {"snow":[[0,12,64,8]],"ice":[[26,21,12,5]]},
+  "patrols": [{"path":[[15,25],[25,25],[25,31],[15,31]],"speed":74,"cone":{"deg":90,"range":6}},{"path":[[21,13],[21,15],[43,15],[43,13]],"speed":74,"cone":{"deg":90,"range":6}},{"path":[[31,21],[43,21],[43,31],[37,31],[37,21]],"speed":74,"cone":{"deg":90,"range":6}},{"path":[[49,11],[51,11],[51,31],[49,31]],"speed":74,"cone":{"deg":90,"range":6}}],
+  "intel": [{"id":0,"x":25,"y":31,"text":"The Frost Herald favors Ward when you strike from stealth."},{"id":1,"x":21,"y":23,"text":"Against a Ghost, Ward is at least twice as likely as any other move."},{"id":2,"x":33,"y":13,"text":"Against a Ghost, Rend is the boss’s rarest choice."}],
+  "boss": {"patrol":[[33,5],[36,5]],"strikeRadius":1.5},
+  "signature": {},
+  "palette": ["#172432","#273c52","#90d7ff","#577d96"],
+  "ambience": "amb-circle-4"
+}

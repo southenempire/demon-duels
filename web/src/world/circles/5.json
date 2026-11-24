@@ -1,0 +1,22 @@
+{
+  "id": 5,
+  "kind": 5,
+  "name": "Gloam Throne",
+  "w": 64,
+  "h": 36,
+  "tileSize": 32,
+  "tileset": "world/5/tileset.png",
+  "layers": {"ground":[],"walls":[[10,6,4,16],[16,26,12,4],[20,10,4,12],[28,4,10,4],[32,14,4,14],[40,20,14,4],[44,8,4,8],[54,14,4,16]],"props":[]},
+  "spawn": [7,31],
+  "checkpoints": [[7,31]],
+  "vantage": [13,33],
+  "hideZones": [[6,22,8,6],[14,12,6,6],[24,20,6,6],[26,8,10,4],[38,12,6,6],[40,26,6,6],[50,6,6,6],[58,22,4,8]],
+  "lights": [{"x":15,"y":33,"r":6,"douseable":false},{"x":33,"y":31,"r":6,"douseable":false},{"x":53,"y":9,"r":6,"douseable":false}],
+  "surfaces": {},
+  "patrols": [{"path":[[15,9],[19,9],[19,23],[15,23]],"speed":78,"cone":{"deg":90,"range":6}},{"path":[[25,11],[31,11],[31,25],[25,25]],"speed":78,"cone":{"deg":90,"range":6}},{"path":[[37,17],[53,17],[53,19],[37,19]],"speed":78,"cone":{"deg":90,"range":6}},{"path":[[37,27],[51,27],[51,33],[37,33]],"speed":78,"cone":{"deg":90,"range":6}},{"path":[[45,5],[53,5],[53,13],[49,13],[49,5]],"speed":78,"cone":{"deg":90,"range":6}}],
+  "intel": [{"id":0,"x":15,"y":31,"text":"The Gloam Shade favors Rend when you strike from stealth."},{"id":1,"x":29,"y":31,"text":"Against a Ghost, Rend is at least twice as likely as any other move."},{"id":2,"x":49,"y":19,"text":"Against a Ghost, Hex is the boss’s rarest choice."}],
+  "boss": {"patrol":[[57,5],[60,5]],"strikeRadius":1.5},
+  "signature": {},
+  "palette": ["#201a2c","#383552","#f0a2ed","#6a678e"],
+  "ambience": "amb-circle-5"
+}

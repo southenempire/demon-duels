@@ -1,0 +1,22 @@
+{
+  "id": 2,
+  "kind": 2,
+  "name": "Bone Citadel",
+  "w": 64,
+  "h": 36,
+  "tileSize": 32,
+  "tileset": "world/2/tileset.png",
+  "layers": {"ground":[],"walls":[[48,8,4,18],[38,22,8,4],[36,8,8,4],[28,12,4,16],[14,0,4,12],[10,18,12,4],[16,28,8,4]],"props":[]},
+  "spawn": [59,31],
+  "checkpoints": [[59,31]],
+  "vantage": [55,33],
+  "hideZones": [[54,18,6,8],[40,14,6,6],[32,26,6,6],[20,8,6,6],[14,22,8,4],[4,12,6,6]],
+  "lights": [{"x":55,"y":31,"r":6,"douseable":false},{"x":35,"y":17,"r":6,"douseable":false},{"x":9,"y":13,"r":6,"douseable":false}],
+  "surfaces": {"bone":[[28,0,14,36]]},
+  "patrols": [{"path":[[55,13],[59,13],[59,25],[55,25]],"speed":66,"cone":{"deg":90,"range":6}},{"path":[[37,15],[47,15],[47,21],[37,21]],"speed":66,"cone":{"deg":90,"range":6}},{"path":[[7,23],[9,23],[9,27],[7,27]],"speed":66,"cone":{"deg":90,"range":6}},{"path":[[21,5],[33,5],[33,9],[21,9]],"speed":66,"cone":{"deg":90,"range":6}}],
+  "intel": [{"id":0,"x":53,"y":31,"text":"The Marrow King favors Rend when you strike from stealth."},{"id":1,"x":35,"y":31,"text":"Against a Ghost, Rend is at least twice as likely as any other move."},{"id":2,"x":11,"y":15,"text":"Against a Ghost, Ward is the boss’s rarest choice."}],
+  "boss": {"patrol":[[7,7],[10,7]],"strikeRadius":1.5},
+  "signature": {},
+  "palette": ["#28231d","#493b31","#f3c776","#8c7659"],
+  "ambience": "amb-circle-2"
+}
