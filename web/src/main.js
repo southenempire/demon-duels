@@ -15,6 +15,7 @@ import { startPresence } from './presence-live.js';
 
 const app = document.getElementById('app');
 const params = new URLSearchParams(location.search);
+const ashGate = params.get('world') === '3d' && !params.has('room');
 const readKey = (value) => { try { return value ? new PublicKey(value) : null; } catch { return null; } };
 const PLAYER_GENERATION = 'demon-duels:player-generation';
 const playerFor = (generation, options) => {
@@ -171,6 +172,7 @@ function controls() {
   if (s.result || s.duel?.phase === 3) return resultPanel();
   if (s.mode === 'landing') return '<div class="control intro"><div><span class="eyebrow">THE STAKES ARE REAL. THE SOL IS NOT.</span><h2>One demon in. Two demons out.</h2><p>Get a free starter pack and stake one demon against the bot. No wallet extension or real SOL.</p></div><div class="actions">' +
     button('quick-duel', 'Play a real devnet duel', 'primary', 'blade') + button('practice', 'Offchain tutorial', 'secondary', 'spark') +
+    '<a class="button secondary" href="?world=3d">Enter Ash Gate (3D)</a>' +
     button('enter', 'Open devnet vault', 'text') + '</div></div>';
   if (s.mode === 'practice') return '<div class="control"><div class="control-title"><div><span class="eyebrow">OFFCHAIN PRACTICE · NO REAL STAKES</span><h2>' +
     (s.practiceCards.length ? 'Seal your move' : 'Summon your starter pack') + '</h2></div>' + button(s.returnToMap ? 'return-map' : 'leave', s.returnToMap ? 'Return to map' : 'Exit practice', 'text') + '</div>' +
@@ -295,7 +297,8 @@ function draw() {
   const hadDialog = Boolean(app.querySelector('[role=dialog]'));
   const kind = s.mode === 'practice' ? 'PRACTICE MODE' : 'SOLANA DEVNET';
   app.innerHTML = '<header><div class="nav"><button type="button" class="wordmark" data-action="home"><img src="' + ASSET + 'sigil.svg" alt=""><span>DEMON<span>DUELS</span></span></button><div class="nav-right">' +
-    statusText(kind) + '<button type="button" class="square sound" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
+    statusText(kind) + (ashGate && s.returnToMap ? button('return-map', 'Return to Ash Gate', 'secondary') : '') +
+    '<button type="button" class="square sound" data-action="sound" aria-label="' + (s.sound ? 'Mute sound' : 'Enable sound') + '">' +
     icon(s.sound ? 'volume' : 'mute') + '</button><button type="button" class="square help" data-action="rules" aria-label="Duel rules">' + icon('info') + '</button><button type="button" class="button wallet secondary" data-action="wallet" aria-label="Guest wallet and devnet funding">' +
     icon('wallet', 16) + '<span>' + (safeMode() ? short(client.key) : 'Guest wallet') + '</span></button></div></div></header>' +
     '<main><div class="hero"><div class="superline"><span></span> THE UNDERWORLD ARCADE <span></span></div><h1>NO MERCY. <em>JUST DEMONS.</em></h1><p>Stake a demon. Seal a move. <strong>Fight for both.</strong></p></div>' +
@@ -389,6 +392,7 @@ async function refreshRoom() {
     if (detail && !emittedSettlements.has(detail.duel)) {
       emittedSettlements.add(detail.duel);
       const boundBoss = isBoundBossSettlement(detail, d);
+      if (ashGate && boundBoss) detail.bossBound = true;
       const approval = boundBoss && detail.won ? campaignApproval(localStorage, detail) : null;
       if (boundBoss && (previous !== undefined || approval)) {
         liveSettlement = detail;
@@ -663,6 +667,10 @@ async function startQuickDuel() {
     if (s.room) {
       await Promise.all([refreshRoom(), refreshWallet()]);
       if (s.duel.phase < 3) {
+        if (ashGate && s.requestedOpponent !== null && (!s.solo || loadRoomBot(s.room)?.demonId !== s.requestedOpponent)) {
+          setRoom(null);
+          throw new Error('You have another open duel. Finish or cancel it from the arena before striking the Warden.');
+        }
         if (s.solo && s.duel.phase === 0) await readyBot();
         return;
       }

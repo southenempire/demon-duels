@@ -1,0 +1,95 @@
+.ash-gate {
+  position: fixed;
+  inset: 0;
+  isolation: isolate;
+  overflow: hidden;
+  background: #222932;
+  color: #f0e8df;
+  font: 500 14px/1.4 "Segoe UI", system-ui, sans-serif;
+}
+
+.ash-gate[hidden], .ash-gate [hidden] { display: none; }
+.ash-gate canvas { display: block; cursor: grab; touch-action: none; }
+.ash-gate canvas:active { cursor: grabbing; }
+.ash-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 53% 43%, transparent 48%, #090a11a1 100%),
+    linear-gradient(0deg, #090a10c7, transparent 16%),
+    linear-gradient(125deg, #090a11a8 0%, transparent 32%);
+}
+.ash-shade::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse, transparent 57%, #d44223 100%);
+  opacity: var(--ash-alert, 0);
+}
+.ash-title {
+  position: absolute;
+  top: clamp(23px, 5.2vh, 64px);
+  left: clamp(20px, 3.45vw, 76px);
+  pointer-events: none;
+  text-shadow: 0 1px 8px #090a11;
+}
+.ash-title p { margin: 0 0 4px; color: #d4af89; font-size: 11px; font-weight: 700; letter-spacing: .25em; }
+.ash-title h1 { margin: 0; color: #eee4d9; font: 400 clamp(40px, 5vw, 76px)/1 Georgia, serif; letter-spacing: -.04em; }
+.ash-title > span { display: block; width: 42px; height: 1px; margin: 16px 0 11px; background: #bf9467; }
+.ash-title [data-objective] { color: #e6d8c9; }
+.ash-gate .ash-exit {
+  position: absolute;
+  top: clamp(24px, 5.2vh, 64px);
+  right: clamp(20px, 3.45vw, 76px);
+  color: #e1d1bd;
+  font-size: 12px;
+  text-underline-offset: 5px;
+  text-shadow: 0 1px 7px #090a11;
+}
+.ash-bottom {
+  position: absolute;
+  right: clamp(20px, 3.45vw, 76px);
+  left: clamp(20px, 3.45vw, 76px);
+  bottom: clamp(15px, 3.7vh, 42px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  pointer-events: none;
+  text-shadow: 0 1px 4px #090a11;
+}
+.ash-awareness { display: flex; gap: 9px; align-items: center; white-space: nowrap; }
+.ash-awareness i { display: block; width: 8px; height: 8px; border: 1px solid currentColor; transform: rotate(45deg); }
+.ash-awareness[data-state="hidden"] { color: #b9c7d8; }
+.ash-awareness[data-state="hidden"] i { background: currentColor; }
+.ash-awareness[data-state="seen"] { color: #ffc185; }
+.ash-awareness[data-state="alert"] { color: #ff9c86; }
+.ash-keys { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 6px 16px; color: #d9cdbf; font-size: 12px; }
+.ash-keys > span { white-space: nowrap; }
+.ash-gate kbd { color: #f1d6b4; font: inherit; font-weight: 700; font-size: 11px; margin-right: 3px; letter-spacing: .04em; }
+.ash-message {
+  position: absolute;
+  bottom: 17%;
+  left: 50%;
+  width: min(92%, 660px);
+  transform: translateX(-50%);
+  pointer-events: none;
+  text-align: center;
+  font: 400 clamp(17px, 2.4vw, 27px)/1.2 Georgia, serif;
+  text-shadow: 0 1px 10px #08080a, 0 1px 4px #08080a;
+}
+.ash-strike {
+  position: absolute;
+  bottom: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #c8a37c;
+  border-radius: 0;
+  background: #181416ee;
+  color: #eee0d0;
+  cursor: pointer;
+  font: inherit;
+}
+.ash-strike:hover { background: #35251d; }
