@@ -6,9 +6,6 @@ export const sprites = {
   hunter: Object.fromEntries(Object.keys(animations).map((animation) => [animation, 'world/hunter/' + animation + '.png'])),
   sentry: null,
   circles: levels.map((_, kind) => ({
-    floor: null,
-    wall: null,
-    cover: null,
     boss: characterArt(kind),
   })),
 };

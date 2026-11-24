@@ -16,7 +16,7 @@ const singleFrame = (durations, elapsed) => {
   return durations.length - 1;
 };
 
-export function createRenderer(canvas, assetBase) {
+export function createRenderer(canvas, assetBase, art, kind) {
   const ctx = canvas.getContext('2d');
   const camera = { x: 0, y: 0 };
   const images = new Map();
@@ -24,16 +24,38 @@ export function createRenderer(canvas, assetBase) {
   let snap = true;
   let terrain;
   let paintedLevel;
+  let environment;
+  let bossManifest;
+  let dirty = true;
+  art.circle(kind).then((slots) => { environment = slots; dirty = true; }).catch(() => {});
+  art.bosses.then((manifest) => { bossManifest = manifest; }).catch(() => {});
 
   function image(path) {
     if (!path) return null;
     if (!images.has(path)) {
       const img = new Image();
+      img.addEventListener('load', () => { dirty = true; }, { once: true });
       img.src = assetBase + path;
       images.set(path, img);
     }
     const img = images.get(path);
     return img.complete && img.naturalWidth ? img : null;
+  }
+
+  function texture(g, slot, x, y, w, h) {
+    if (!slot) return false;
+    const img = image(slot.file);
+    if (!img) return false;
+    if (slot.rect) g.drawImage(img, ...slot.rect, x, y, w, h);
+    else g.drawImage(img, x, y, w, h);
+    return true;
+  }
+
+  function prop(g, slot, x, y, scale = 1) {
+    if (!slot) return false;
+    const [w, h] = slot.size;
+    const [ax, ay] = slot.anchor ?? [w / 2, h];
+    return texture(g, slot, x - ax * scale, y - ay * scale, w * scale, h * scale);
   }
 
   function circle(g, x, y, r, fill) {
@@ -58,17 +80,31 @@ export function createRenderer(canvas, assetBase) {
     terrain.width = level.width;
     terrain.height = level.height;
     const g = terrain.getContext('2d');
+    g.imageSmoothingEnabled = false;
     const [ground, stone, accent, grass] = level.colors;
     g.fillStyle = ground;
     g.fillRect(0, 0, level.width, level.height);
     for (let y = 0; y < level.height; y += TILE) {
       for (let x = 0; x < level.width; x += TILE) {
         const n = (x * 47 + y * 137) % 97;
+        const name = Object.keys(level.surfaces).find((surface) => level.surfaces[surface].some((zone) =>
+          x + TILE / 2 >= zone.x && x + TILE / 2 < zone.x + zone.w && y + TILE / 2 >= zone.y && y + TILE / 2 < zone.y + zone.h));
+        const tile = environment?.surfaces[name] ?? environment?.ground[n % 6 < 4 ? 0 : n % environment.ground.length];
+        if (texture(g, tile, x, y, TILE, TILE)) continue;
         g.fillStyle = n % 4 === 0 ? '#ddb99b08' : '#07040b20';
         g.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
         if (n % 3) polygon(g, [[x + n % 27, y + n % 30], [x + n % 27 + 5, y + n % 30 + 1],
           [x + n % 27 + 1, y + n % 30 + 4]], n % 2 ? accent + '38' : '#05030b70');
       }
+    }
+    const lair = level.boss.path[0];
+    if (environment?.lair) {
+      const [w, h] = environment.lair.size;
+      const [ax, ay] = environment.lairAnchor ?? [w / 2, h * 0.49];
+      const lx = Math.max(0, Math.min(level.width - w, lair.x - ax));
+      const ly = Math.max(0, Math.min(level.height - h, lair.y - ay));
+      texture(g, environment.lair, lx, ly, w, h);
+      prop(g, environment.altar, lair.x, lair.y - 46, 0.75);
     }
     g.strokeStyle = accent + '6b';
     g.lineWidth = 2;
@@ -78,6 +114,14 @@ export function createRenderer(canvas, assetBase) {
     for (const { x, y, w, h } of level.cover) {
       g.fillStyle = '#070a0a64';
       g.fillRect(x, y, w, h);
+      if (environment?.shadow) texture(g, environment.shadow, x - 8, y - 12, w + 16, h + 24);
+      if (environment?.cover && image(environment.cover.file)) {
+        const aw = Math.min(72, w);
+        for (let ry = y + 9; ry < y + h; ry += 31) for (let rx = x + aw / 2; rx < x + w; rx += aw - 8) {
+          prop(g, environment.cover, rx, Math.min(y + h, ry + 23), aw / environment.cover.size[0]);
+        }
+        continue;
+      }
       for (let ry = y + 12; ry < y + h; ry += 14) {
         for (let rx = x + 9; rx < x + w - 4; rx += 12) {
           const tilt = (rx * 13 + ry * 7) % 11 - 5;
@@ -93,6 +137,14 @@ export function createRenderer(canvas, assetBase) {
       g.fillRect(x, y, w, h);
       g.fillStyle = stone;
       g.fillRect(x, y, w, h - 9);
+      if (environment?.wall && image(environment.wall.file)) {
+        for (let j = y; j < y + h; j += TILE) for (let i = x; i < x + w; i += TILE) {
+          texture(g, environment.wall, i, j, TILE, TILE);
+        }
+        prop(g, environment.prop, x + TILE / 2, y + h);
+        if (w > TILE * 2) prop(g, environment.prop, x + w - TILE / 2, y + h);
+        continue;
+      }
       g.strokeStyle = accent + '46';
       g.strokeRect(x + 1, y + 1, w - 2, h - 11);
       g.strokeStyle = '#05030964';
@@ -142,8 +194,9 @@ export function createRenderer(canvas, assetBase) {
     marker(actor.x, actor.y + 3, 13, '#0c0611a8', '#0c06114a');
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    if (actor.peer) ctx.filter = 'hue-rotate(' + actor.hue + 'deg) saturate(1.25)';
-    ctx.drawImage(sprite, frame * 48, row * 48, 48, 48, actor.x - 24, actor.y - 46, 48, 48);
+    ctx.filter = actor.peer ? 'hue-rotate(' + actor.hue + 'deg) saturate(1.25)' : 'brightness(1.23) drop-shadow(0 1px 1px #0d0714)';
+    const size = 64;
+    ctx.drawImage(sprite, frame * 48, row * 48, 48, 48, actor.x - size / 2, actor.y - size * 46 / 48, size, size);
     ctx.restore();
   }
 
@@ -167,32 +220,41 @@ export function createRenderer(canvas, assetBase) {
       canvas.height = Math.round(h * dpr);
     }
     const strikeZoom = run.strike ? Math.sin(Math.min(1, (now - run.strike) / 450) * Math.PI / 2) * 0.34 : 0;
-    const scale = Math.max(w / level.width, h / level.height, w < 600 ? 0.80 : 1) + strikeZoom;
+    const opening = run.lookoutUntil && now < run.lookoutUntil;
+    const openingZoom = opening ? Math.max(0, Math.min(1, (run.lookoutUntil - now) / 550)) * 0.22 : 0;
+    const scale = Math.max(w / level.width, h / level.height, w < 600 ? 0.92 : 1.10) + strikeZoom + openingZoom;
     view = { w: w / scale, h: h / scale };
     const ease = snap ? 1 : 1 - Math.exp(-dt * (run.strike ? 15 : 8));
-    camera.x += (clamp(hunter.x - view.w / 2, 0, level.width - view.w) - camera.x) * ease;
-    camera.y += (clamp(hunter.y - view.h / 2, 0, level.height - view.h) - camera.y) * ease;
+    const focus = opening ? boss : hunter;
+    camera.x += (clamp(focus.x - view.w / 2, 0, level.width - view.w) - camera.x) * ease;
+    camera.y += (clamp(focus.y - view.h / 2, 0, level.height - view.h) - camera.y) * ease;
     snap = false;
-    if (paintedLevel !== level) { paintTerrain(level); paintedLevel = level; }
+    if (dirty || paintedLevel !== level) { dirty = false; paintTerrain(level); paintedLevel = level; }
     const [ground, , accent] = level.colors;
     const slots = sprites.circles[kind];
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, -camera.x * dpr * scale, -camera.y * dpr * scale);
     ctx.fillStyle = ground;
     ctx.fillRect(camera.x, camera.y, view.w, view.h);
     ctx.drawImage(terrain, 0, 0);
-    const floor = image(slots.floor);
-    if (floor) ctx.drawImage(floor, 0, 0, level.width, level.height);
-    for (const [path, rects] of [[slots.wall, level.walls], [slots.cover, level.cover]]) {
-      const tile = image(path);
-      if (tile) for (const { x, y, w, h } of rects) ctx.drawImage(tile, x, y, w, h);
+    for (const layer of environment?.parallax ?? []) {
+      const [sw, sh] = layer.size;
+      ctx.save();
+      ctx.globalAlpha = 0.24;
+      const width = sw * 0.75;
+      const offset = camera.x - (camera.x * layer.scrollFactor % width);
+      for (let px = offset; px < camera.x + view.w; px += width) texture(ctx, layer, px, 0, width, Math.min(156, sh * 0.42));
+      ctx.restore();
     }
     for (const light of lights) {
-      if (light.doused) { circle(ctx, light.x, light.y, 5, '#4b464b'); continue; }
+      if (light.doused) { if (!prop(ctx, environment?.doused, light.x, light.y, 0.8)) circle(ctx, light.x, light.y, 5, '#4b464b'); continue; }
       const pool = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, light.r);
       pool.addColorStop(0, accent + '49'); pool.addColorStop(1, accent + '00');
       circle(ctx, light.x, light.y, light.r, pool);
-      circle(ctx, light.x, light.y, 5, '#0b060b');
-      circle(ctx, light.x, light.y - 3, 3, accent);
+      texture(ctx, environment?.light, light.x - light.r / 2, light.y - light.r / 2, light.r, light.r);
+      if (!prop(ctx, environment?.brazier, light.x, light.y + 3, 0.9)) {
+        circle(ctx, light.x, light.y, 5, '#0b060b');
+        circle(ctx, light.x, light.y - 3, 3, accent);
+      }
     }
     for (const guard of [...guards, boss]) {
       if (guard.soundOnly) continue;
@@ -207,9 +269,12 @@ export function createRenderer(canvas, assetBase) {
     marker(level.start.x, level.start.y, 29, '#57b3aa13', '#77c6b171');
     for (const tear of level.tears) marker(tear.x, tear.y, 20, '#825cd760', '#c69aff');
     marker(level.vantage.x, level.vantage.y, 20, '#92cfdb25', '#92cfdb');
+    prop(ctx, environment?.vantage, level.vantage.x, level.vantage.y, 0.9);
     for (const scroll of level.intel.filter((entry) => !intel.includes(entry.id))) {
       marker(scroll.x, scroll.y, 10, '#85d2ff28', '#9fdcff');
-      ctx.fillStyle = '#b6e7fa'; ctx.fillRect(scroll.x - 2, scroll.y - 7, 4, 8);
+      if (!prop(ctx, environment?.intel, scroll.x, scroll.y, 0.75)) {
+        ctx.fillStyle = '#b6e7fa'; ctx.fillRect(scroll.x - 2, scroll.y - 7, 4, 8);
+      }
       if (hunter.sight) marker(scroll.x, scroll.y, 23, '#75c4ff28', '#a0efff');
     }
     for (const ember of embers) marker(ember.x, ember.y, 18 + (ember.until - now) / 16, '#ffbe4938', '#ffd77a');
@@ -219,12 +284,23 @@ export function createRenderer(canvas, assetBase) {
     if (hunter.noise) marker(hunter.x, hunter.y, hunter.noise, '#00000000', '#d9ba962c');
     for (const actor of [boss, ...guards, ...peers, hunter].sort((a, b) => a.y - b.y)) {
       if (actor === boss) {
-        const art = image(slots.boss);
-        if (art) {
+        const profile = bossManifest?.bosses?.find(({ demonId }) => demonId === kind);
+        const anim = run.strike && now - run.strike > 345 ? 'hit' : boss.alert ? 'alert' : 'patrol';
+        const sheet = image(profile?.files[anim]);
+        if (sheet) {
+          const desc = bossManifest.animations[anim];
+          const { w: sw, h: sh } = bossManifest.frameSize;
+          const { x: px, y: py } = bossManifest.pivot;
+          const row = bossManifest.directions.indexOf(direction(boss.angle));
+          const frame = anim === 'hit' ? singleFrame(desc.durationsMs, now - run.strike - 345) : Math.floor(now * desc.fps / 1000) % desc.frames;
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(sheet, frame * sw, row * sh, sw, sh, x - px * 2, y - py * 2, sw * 2, sh * 2);
+          ctx.restore();
+        } else if (image(slots.boss)) {
           ctx.save();
           ctx.translate(x, y);
           if (Math.cos(boss.angle) < 0) ctx.scale(-1, 1);
-          ctx.drawImage(art, -42, -89, 96, 96);
+          ctx.drawImage(image(slots.boss), -42, -89, 96, 96);
           ctx.restore();
         }
         else hood({ x, y, angle: 0 }, accent, null);
@@ -237,7 +313,7 @@ export function createRenderer(canvas, assetBase) {
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#bce5ff';
-        ctx.fillText(actor.name, actor.x, actor.y - 37);
+        ctx.fillText(actor.name, actor.x, actor.y - 61);
       } else {
         hood(actor, hunter.sight || actor.meter >= 30 ? '#ff655e' : '#e8ab78', image(sprites.sentry), true);
       }
@@ -265,7 +341,7 @@ export function createRenderer(canvas, assetBase) {
       const mw = w < 600 ? 110 : 160;
       const mh = mw * level.height / level.width;
       const left = w - mw - 12;
-      const top = 12;
+      const top = 93;
       const k = mw / level.width;
       ctx.fillStyle = '#140b1aee'; ctx.fillRect(left, top, mw, mh);
       ctx.strokeStyle = '#e3b5a376'; ctx.strokeRect(left, top, mw, mh);

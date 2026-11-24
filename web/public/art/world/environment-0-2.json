@@ -1,0 +1,3290 @@
+{
+  "version": 1,
+  "tileSize": 32,
+  "circles": [
+    {
+      "id": 0,
+      "display": 1,
+      "kind": 0,
+      "name": "Ash Gate",
+      "boss": "Ash Warden",
+      "tileSize": 32,
+      "tileset": "world/0/tileset.png",
+      "palette": {
+        "ink": "#110b0d",
+        "deep": "#26181b",
+        "stone": "#403034",
+        "edge": "#69443c",
+        "trim": "#a0664c",
+        "accent": "#ff681f",
+        "highlight": "#ffd59a"
+      },
+      "lair": {
+        "background": "world/0/arena.png",
+        "size": [
+          448,
+          288
+        ],
+        "centerpiece": [
+          224,
+          137.5
+        ],
+        "gate": [
+          224,
+          267
+        ],
+        "boss": [
+          224,
+          175
+        ],
+        "bossDrawSize": 96
+      },
+      "referenceLayout": "previews/ash-warden-layout.json"
+    },
+    {
+      "id": 1,
+      "display": 2,
+      "kind": 1,
+      "name": "Hollow Rift",
+      "boss": "Void Wraith",
+      "tileSize": 32,
+      "tileset": "world/1/tileset.png",
+      "palette": {
+        "ink": "#0a0916",
+        "deep": "#1b1429",
+        "stone": "#31264b",
+        "edge": "#503d72",
+        "trim": "#8464ad",
+        "accent": "#ac50ff",
+        "highlight": "#e2caff"
+      },
+      "lair": {
+        "background": "world/1/arena.png",
+        "size": [
+          448,
+          288
+        ],
+        "centerpiece": [
+          224,
+          137.5
+        ],
+        "gate": [
+          224,
+          267
+        ],
+        "boss": [
+          224,
+          175
+        ],
+        "bossDrawSize": 96
+      },
+      "referenceLayout": "previews/void-wraith-layout.json"
+    },
+    {
+      "id": 2,
+      "display": 3,
+      "kind": 2,
+      "name": "Bone Citadel",
+      "boss": "Marrow King",
+      "tileSize": 32,
+      "tileset": "world/2/tileset.png",
+      "palette": {
+        "ink": "#130c0e",
+        "deep": "#2a1b1e",
+        "stone": "#493236",
+        "edge": "#744d46",
+        "trim": "#b08a63",
+        "accent": "#d83a36",
+        "highlight": "#f7ddab"
+      },
+      "lair": {
+        "background": "world/2/arena.png",
+        "size": [
+          448,
+          288
+        ],
+        "centerpiece": [
+          224,
+          137.5
+        ],
+        "gate": [
+          224,
+          267
+        ],
+        "boss": [
+          224,
+          175
+        ],
+        "bossDrawSize": 96
+      },
+      "referenceLayout": "previews/marrow-king-layout.json"
+    }
+  ],
+  "assets": {
+    "world/0/ground.png": {
+      "circle": 0,
+      "type": "tileset",
+      "size": [
+        224,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "floor": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-worn": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-inlaid": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "hazard": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": false,
+          "hazard": true
+        },
+        "hazard-rim": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "signature-floor": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "catwalk": {
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        }
+      }
+    },
+    "world/0/walls.png": {
+      "circle": 0,
+      "type": "tileset",
+      "size": [
+        288,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "wall": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": true,
+          "hazard": false
+        },
+        "edge-n": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-e": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-s": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-w": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-ne": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-se": {
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-sw": {
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-nw": {
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        }
+      }
+    },
+    "world/0/tileset.png": {
+      "circle": 0,
+      "type": "tileset",
+      "size": [
+        512,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "floor": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-worn": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-inlaid": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "hazard": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": false,
+          "hazard": true
+        },
+        "hazard-rim": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "signature-floor": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "catwalk": {
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "wall": {
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": true,
+          "hazard": false
+        },
+        "edge-n": {
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-e": {
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-s": {
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-w": {
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-ne": {
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-se": {
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-sw": {
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-nw": {
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        }
+      }
+    },
+    "world/0/parallax-far.png": {
+      "circle": 0,
+      "type": "parallax",
+      "size": [
+        448,
+        192
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "layer": "far",
+      "scrollFactor": 0.12
+    },
+    "world/0/parallax-mid.png": {
+      "circle": 0,
+      "type": "parallax",
+      "size": [
+        448,
+        192
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "layer": "mid",
+      "scrollFactor": 0.32
+    },
+    "world/0/parallax-near.png": {
+      "circle": 0,
+      "type": "parallax",
+      "size": [
+        448,
+        192
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "layer": "near",
+      "scrollFactor": 0.62
+    },
+    "world/0/slag-crate.png": {
+      "circle": 0,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/0/chain-winch.png": {
+      "circle": 0,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/0/smelter-brazier.png": {
+      "circle": 0,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false,
+      "light": {
+        "douseable": true,
+        "offAsset": "brazier-doused.png"
+      }
+    },
+    "world/0/iron-standard.png": {
+      "circle": 0,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -4,
+        -4,
+        8,
+        6
+      ]
+    },
+    "world/0/broken-anvil.png": {
+      "circle": 0,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/0/coal-basket.png": {
+      "circle": 0,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/0/props.png": {
+      "circle": 0,
+      "type": "prop-tileset",
+      "size": [
+        192,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "slag-crate": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "slag-crate.png"
+        },
+        "chain-winch": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "chain-winch.png"
+        },
+        "smelter-brazier": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "smelter-brazier.png"
+        },
+        "iron-standard": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "iron-standard.png"
+        },
+        "broken-anvil": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "broken-anvil.png"
+        },
+        "coal-basket": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "coal-basket.png"
+        }
+      }
+    },
+    "world/0/cover-wall.png": {
+      "circle": 0,
+      "type": "cover-wall",
+      "size": [
+        64,
+        50
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        43.5
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -29,
+        -8,
+        58,
+        10
+      ]
+    },
+    "world/0/cover-pillar.png": {
+      "circle": 0,
+      "type": "cover-pillar",
+      "size": [
+        36,
+        56
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        50.0
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -13,
+        -6,
+        26,
+        9
+      ]
+    },
+    "world/0/hide-zone.png": {
+      "circle": 0,
+      "type": "hide",
+      "size": [
+        64,
+        47
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        40.5
+      ],
+      "collision": false,
+      "cover": false,
+      "hideZone": [
+        -22,
+        -15,
+        44,
+        19
+      ],
+      "label": "Ash grass"
+    },
+    "world/0/hidden-overlay.png": {
+      "circle": 0,
+      "type": "hidden",
+      "size": [
+        64,
+        47
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        40.5
+      ],
+      "collision": false,
+      "cover": false,
+      "state": "hidden",
+      "role": "actor-overlay"
+    },
+    "world/0/centerpiece.png": {
+      "circle": 0,
+      "type": "lair-prop",
+      "size": [
+        128,
+        115
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64.0,
+        108.5
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -43,
+        -13,
+        86,
+        13
+      ],
+      "label": "The Furnace Seat"
+    },
+    "world/0/gate.png": {
+      "circle": 0,
+      "type": "lair-prop",
+      "size": [
+        128,
+        112
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64.0,
+        105.5
+      ],
+      "collision": false,
+      "cover": false,
+      "footprints": [
+        [
+          -57,
+          -8,
+          18,
+          10
+        ],
+        [
+          39,
+          -8,
+          18,
+          10
+        ]
+      ],
+      "role": "entry-gate"
+    },
+    "world/0/vantage.png": {
+      "circle": 0,
+      "type": "prop",
+      "size": [
+        64,
+        56
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        48.0
+      ],
+      "collision": true,
+      "cover": true,
+      "role": "sync-point",
+      "footprint": [
+        -20,
+        -6,
+        40,
+        8
+      ]
+    },
+    "world/0/intel-scroll.png": {
+      "circle": 0,
+      "type": "prop",
+      "size": [
+        64,
+        56
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        48.0
+      ],
+      "collision": false,
+      "cover": false,
+      "role": "intel"
+    },
+    "world/0/brazier-doused.png": {
+      "circle": 0,
+      "type": "prop",
+      "size": [
+        64,
+        56
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        48.0
+      ],
+      "collision": false,
+      "cover": false,
+      "light": {
+        "state": "off"
+      }
+    },
+    "world/0/light-overlay.png": {
+      "circle": 0,
+      "type": "lighting",
+      "size": [
+        128,
+        128
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64,
+        64
+      ],
+      "collision": false,
+      "cover": false,
+      "blend": "screen"
+    },
+    "world/0/shadow-overlay.png": {
+      "circle": 0,
+      "type": "lighting",
+      "size": [
+        128,
+        128
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64,
+        64
+      ],
+      "collision": false,
+      "cover": false,
+      "blend": "source-over"
+    },
+    "world/0/arena.png": {
+      "circle": 0,
+      "type": "lair-background",
+      "size": [
+        448,
+        288
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "label": "The Furnace Seat"
+    },
+    "previews/ash-warden-lair.png": {
+      "circle": 0,
+      "type": "preview",
+      "size": [
+        896,
+        576
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "runtime": false
+    },
+    "previews/ash-warden.png": {
+      "circle": 0,
+      "type": "preview",
+      "size": [
+        1360,
+        930
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "runtime": false
+    },
+    "sources/ash-warden.png": {
+      "circle": 0,
+      "type": "roster-idle",
+      "size": [
+        512,
+        512
+      ],
+      "tileSize": 32,
+      "anchor": [
+        224,
+        472
+      ],
+      "collision": false,
+      "cover": false,
+      "runtime": false,
+      "source": "web/public/art/characters/ash-warden/idle.png"
+    },
+    "world/1/ground.png": {
+      "circle": 1,
+      "type": "tileset",
+      "size": [
+        224,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "floor": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-worn": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-inlaid": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "hazard": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": false,
+          "hazard": true
+        },
+        "hazard-rim": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "signature-floor": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "catwalk": {
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        }
+      }
+    },
+    "world/1/walls.png": {
+      "circle": 1,
+      "type": "tileset",
+      "size": [
+        288,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "wall": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": true,
+          "hazard": false
+        },
+        "edge-n": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-e": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-s": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-w": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-ne": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-se": {
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-sw": {
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-nw": {
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        }
+      }
+    },
+    "world/1/tileset.png": {
+      "circle": 1,
+      "type": "tileset",
+      "size": [
+        512,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "floor": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-worn": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-inlaid": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "hazard": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": false,
+          "hazard": true
+        },
+        "hazard-rim": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "signature-floor": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "catwalk": {
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "wall": {
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": true,
+          "hazard": false
+        },
+        "edge-n": {
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-e": {
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-s": {
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-w": {
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-ne": {
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-se": {
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-sw": {
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-nw": {
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        }
+      }
+    },
+    "world/1/parallax-far.png": {
+      "circle": 1,
+      "type": "parallax",
+      "size": [
+        448,
+        192
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "layer": "far",
+      "scrollFactor": 0.12
+    },
+    "world/1/parallax-mid.png": {
+      "circle": 1,
+      "type": "parallax",
+      "size": [
+        448,
+        192
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "layer": "mid",
+      "scrollFactor": 0.32
+    },
+    "world/1/parallax-near.png": {
+      "circle": 1,
+      "type": "parallax",
+      "size": [
+        448,
+        192
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "layer": "near",
+      "scrollFactor": 0.62
+    },
+    "world/1/prism.png": {
+      "circle": 1,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/1/astrolabe.png": {
+      "circle": 1,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/1/rift-lantern.png": {
+      "circle": 1,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/1/eclipse-standard.png": {
+      "circle": 1,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -4,
+        -4,
+        8,
+        6
+      ]
+    },
+    "world/1/fallen-lens.png": {
+      "circle": 1,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/1/star-reliquary.png": {
+      "circle": 1,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/1/props.png": {
+      "circle": 1,
+      "type": "prop-tileset",
+      "size": [
+        192,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "prism": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "prism.png"
+        },
+        "astrolabe": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "astrolabe.png"
+        },
+        "rift-lantern": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "rift-lantern.png"
+        },
+        "eclipse-standard": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "eclipse-standard.png"
+        },
+        "fallen-lens": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "fallen-lens.png"
+        },
+        "star-reliquary": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "star-reliquary.png"
+        }
+      }
+    },
+    "world/1/cover-wall.png": {
+      "circle": 1,
+      "type": "cover-wall",
+      "size": [
+        64,
+        50
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        43.5
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -29,
+        -8,
+        58,
+        10
+      ]
+    },
+    "world/1/cover-pillar.png": {
+      "circle": 1,
+      "type": "cover-pillar",
+      "size": [
+        36,
+        56
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        50.0
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -13,
+        -6,
+        26,
+        9
+      ]
+    },
+    "world/1/hide-zone.png": {
+      "circle": 1,
+      "type": "hide",
+      "size": [
+        64,
+        47
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        40.5
+      ],
+      "collision": false,
+      "cover": false,
+      "hideZone": [
+        -22,
+        -15,
+        44,
+        19
+      ],
+      "label": "Rift shadows"
+    },
+    "world/1/hidden-overlay.png": {
+      "circle": 1,
+      "type": "hidden",
+      "size": [
+        64,
+        47
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        40.5
+      ],
+      "collision": false,
+      "cover": false,
+      "state": "hidden",
+      "role": "actor-overlay"
+    },
+    "world/1/centerpiece.png": {
+      "circle": 1,
+      "type": "lair-prop",
+      "size": [
+        128,
+        115
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64.0,
+        108.5
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -43,
+        -13,
+        86,
+        13
+      ],
+      "label": "The Broken Orrery"
+    },
+    "world/1/gate.png": {
+      "circle": 1,
+      "type": "lair-prop",
+      "size": [
+        128,
+        112
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64.0,
+        105.5
+      ],
+      "collision": false,
+      "cover": false,
+      "footprints": [
+        [
+          -57,
+          -8,
+          18,
+          10
+        ],
+        [
+          39,
+          -8,
+          18,
+          10
+        ]
+      ],
+      "role": "entry-gate"
+    },
+    "world/1/vantage.png": {
+      "circle": 1,
+      "type": "prop",
+      "size": [
+        64,
+        56
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        48.0
+      ],
+      "collision": true,
+      "cover": true,
+      "role": "sync-point",
+      "footprint": [
+        -20,
+        -6,
+        40,
+        8
+      ]
+    },
+    "world/1/intel-scroll.png": {
+      "circle": 1,
+      "type": "prop",
+      "size": [
+        64,
+        56
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        48.0
+      ],
+      "collision": false,
+      "cover": false,
+      "role": "intel"
+    },
+    "world/1/void-tear.png": {
+      "circle": 1,
+      "type": "prop",
+      "size": [
+        64,
+        56
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        48.0
+      ],
+      "collision": false,
+      "cover": false,
+      "role": "paired-teleporter"
+    },
+    "world/1/light-overlay.png": {
+      "circle": 1,
+      "type": "lighting",
+      "size": [
+        128,
+        128
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64,
+        64
+      ],
+      "collision": false,
+      "cover": false,
+      "blend": "screen"
+    },
+    "world/1/shadow-overlay.png": {
+      "circle": 1,
+      "type": "lighting",
+      "size": [
+        128,
+        128
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64,
+        64
+      ],
+      "collision": false,
+      "cover": false,
+      "blend": "source-over"
+    },
+    "world/1/arena.png": {
+      "circle": 1,
+      "type": "lair-background",
+      "size": [
+        448,
+        288
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "label": "The Broken Orrery"
+    },
+    "previews/void-wraith-lair.png": {
+      "circle": 1,
+      "type": "preview",
+      "size": [
+        896,
+        576
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "runtime": false
+    },
+    "previews/void-wraith.png": {
+      "circle": 1,
+      "type": "preview",
+      "size": [
+        1360,
+        930
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "runtime": false
+    },
+    "sources/void-wraith.png": {
+      "circle": 1,
+      "type": "roster-idle",
+      "size": [
+        512,
+        512
+      ],
+      "tileSize": 32,
+      "anchor": [
+        224,
+        472
+      ],
+      "collision": false,
+      "cover": false,
+      "runtime": false,
+      "source": "web/public/art/characters/void-wraith/idle.png"
+    },
+    "world/2/ground.png": {
+      "circle": 2,
+      "type": "tileset",
+      "size": [
+        224,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "floor": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-worn": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-inlaid": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "hazard": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": false,
+          "hazard": true
+        },
+        "hazard-rim": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "signature-floor": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false,
+          "surface": "bone"
+        },
+        "catwalk": {
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false,
+          "elevation": 1
+        }
+      }
+    },
+    "world/2/walls.png": {
+      "circle": 2,
+      "type": "tileset",
+      "size": [
+        288,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "wall": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": true,
+          "hazard": false
+        },
+        "edge-n": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-e": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-s": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-w": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-ne": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-se": {
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-sw": {
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-nw": {
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        }
+      }
+    },
+    "world/2/tileset.png": {
+      "circle": 2,
+      "type": "tileset",
+      "size": [
+        512,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "floor": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-worn": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "floor-inlaid": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "hazard": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": false,
+          "hazard": true
+        },
+        "hazard-rim": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "signature-floor": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false,
+          "surface": "bone"
+        },
+        "catwalk": {
+          "rect": [
+            192,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false,
+          "elevation": 1
+        },
+        "wall": {
+          "rect": [
+            224,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": true,
+          "cover": true,
+          "hazard": false
+        },
+        "edge-n": {
+          "rect": [
+            256,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-e": {
+          "rect": [
+            288,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-s": {
+          "rect": [
+            320,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-w": {
+          "rect": [
+            352,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-ne": {
+          "rect": [
+            384,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-se": {
+          "rect": [
+            416,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-sw": {
+          "rect": [
+            448,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        },
+        "edge-nw": {
+          "rect": [
+            480,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            0,
+            0
+          ],
+          "collision": false,
+          "cover": false,
+          "hazard": false
+        }
+      }
+    },
+    "world/2/parallax-far.png": {
+      "circle": 2,
+      "type": "parallax",
+      "size": [
+        448,
+        192
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "layer": "far",
+      "scrollFactor": 0.12
+    },
+    "world/2/parallax-mid.png": {
+      "circle": 2,
+      "type": "parallax",
+      "size": [
+        448,
+        192
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "layer": "mid",
+      "scrollFactor": 0.32
+    },
+    "world/2/parallax-near.png": {
+      "circle": 2,
+      "type": "parallax",
+      "size": [
+        448,
+        192
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "layer": "near",
+      "scrollFactor": 0.62
+    },
+    "world/2/ossuary-casket.png": {
+      "circle": 2,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/2/vertebra-stack.png": {
+      "circle": 2,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/2/votive-brazier.png": {
+      "circle": 2,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/2/royal-standard.png": {
+      "circle": 2,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -4,
+        -4,
+        8,
+        6
+      ]
+    },
+    "world/2/fallen-jaw.png": {
+      "circle": 2,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/2/relic-urn.png": {
+      "circle": 2,
+      "type": "prop",
+      "size": [
+        36,
+        44
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        37.5
+      ],
+      "collision": false,
+      "cover": false
+    },
+    "world/2/props.png": {
+      "circle": 2,
+      "type": "prop-tileset",
+      "size": [
+        192,
+        32
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "frames": {
+        "ossuary-casket": {
+          "rect": [
+            0,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "ossuary-casket.png"
+        },
+        "vertebra-stack": {
+          "rect": [
+            32,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "vertebra-stack.png"
+        },
+        "votive-brazier": {
+          "rect": [
+            64,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "votive-brazier.png"
+        },
+        "royal-standard": {
+          "rect": [
+            96,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "royal-standard.png"
+        },
+        "fallen-jaw": {
+          "rect": [
+            128,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "fallen-jaw.png"
+        },
+        "relic-urn": {
+          "rect": [
+            160,
+            0,
+            32,
+            32
+          ],
+          "anchor": [
+            16,
+            27.27
+          ],
+          "asset": "relic-urn.png"
+        }
+      }
+    },
+    "world/2/cover-wall.png": {
+      "circle": 2,
+      "type": "cover-wall",
+      "size": [
+        64,
+        50
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        43.5
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -29,
+        -8,
+        58,
+        10
+      ]
+    },
+    "world/2/cover-pillar.png": {
+      "circle": 2,
+      "type": "cover-pillar",
+      "size": [
+        36,
+        56
+      ],
+      "tileSize": 32,
+      "anchor": [
+        18.0,
+        50.0
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -13,
+        -6,
+        26,
+        9
+      ]
+    },
+    "world/2/hide-zone.png": {
+      "circle": 2,
+      "type": "hide",
+      "size": [
+        64,
+        47
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        40.5
+      ],
+      "collision": false,
+      "cover": false,
+      "hideZone": [
+        -22,
+        -15,
+        44,
+        19
+      ],
+      "label": "Court crowd"
+    },
+    "world/2/hidden-overlay.png": {
+      "circle": 2,
+      "type": "hidden",
+      "size": [
+        64,
+        47
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        40.5
+      ],
+      "collision": false,
+      "cover": false,
+      "state": "hidden",
+      "role": "actor-overlay"
+    },
+    "world/2/centerpiece.png": {
+      "circle": 2,
+      "type": "lair-prop",
+      "size": [
+        128,
+        115
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64.0,
+        108.5
+      ],
+      "collision": true,
+      "cover": true,
+      "footprint": [
+        -43,
+        -13,
+        86,
+        13
+      ],
+      "label": "The Ivory Dais"
+    },
+    "world/2/gate.png": {
+      "circle": 2,
+      "type": "lair-prop",
+      "size": [
+        128,
+        112
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64.0,
+        105.5
+      ],
+      "collision": false,
+      "cover": false,
+      "footprints": [
+        [
+          -57,
+          -8,
+          18,
+          10
+        ],
+        [
+          39,
+          -8,
+          18,
+          10
+        ]
+      ],
+      "role": "entry-gate"
+    },
+    "world/2/vantage.png": {
+      "circle": 2,
+      "type": "prop",
+      "size": [
+        64,
+        56
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        48.0
+      ],
+      "collision": true,
+      "cover": true,
+      "role": "sync-point",
+      "footprint": [
+        -20,
+        -6,
+        40,
+        8
+      ]
+    },
+    "world/2/intel-scroll.png": {
+      "circle": 2,
+      "type": "prop",
+      "size": [
+        64,
+        56
+      ],
+      "tileSize": 32,
+      "anchor": [
+        32.0,
+        48.0
+      ],
+      "collision": false,
+      "cover": false,
+      "role": "intel"
+    },
+    "world/2/light-overlay.png": {
+      "circle": 2,
+      "type": "lighting",
+      "size": [
+        128,
+        128
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64,
+        64
+      ],
+      "collision": false,
+      "cover": false,
+      "blend": "screen"
+    },
+    "world/2/shadow-overlay.png": {
+      "circle": 2,
+      "type": "lighting",
+      "size": [
+        128,
+        128
+      ],
+      "tileSize": 32,
+      "anchor": [
+        64,
+        64
+      ],
+      "collision": false,
+      "cover": false,
+      "blend": "source-over"
+    },
+    "world/2/arena.png": {
+      "circle": 2,
+      "type": "lair-background",
+      "size": [
+        448,
+        288
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "label": "The Ivory Dais"
+    },
+    "previews/marrow-king-lair.png": {
+      "circle": 2,
+      "type": "preview",
+      "size": [
+        896,
+        576
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "runtime": false
+    },
+    "previews/marrow-king.png": {
+      "circle": 2,
+      "type": "preview",
+      "size": [
+        1360,
+        930
+      ],
+      "tileSize": 32,
+      "anchor": [
+        0,
+        0
+      ],
+      "collision": false,
+      "cover": false,
+      "runtime": false
+    },
+    "sources/marrow-king.png": {
+      "circle": 2,
+      "type": "roster-idle",
+      "size": [
+        512,
+        512
+      ],
+      "tileSize": 32,
+      "anchor": [
+        224,
+        472
+      ],
+      "collision": false,
+      "cover": false,
+      "runtime": false,
+      "source": "web/public/art/characters/marrow-king/idle.png"
+    }
+  }
+}

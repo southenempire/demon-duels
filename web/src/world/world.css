@@ -23,6 +23,16 @@
 .hunt-gates button strong { font: 700 clamp(23px, 4vw, 42px)/1 var(--display); text-transform: uppercase; }
 .hunt-gates button small { color: #d2b8c0; }
 .hunt-stage { position: relative; height: clamp(410px, 72dvh, 760px); overflow: hidden; isolation: isolate; background: #261719; border: 1px solid #77483d; border-radius: 6px; box-shadow: 0 24px 70px #09040ba3; }
+.hunt.hunt--circle { position: fixed; inset: 0; width: auto; margin: 0; }
+.hunt--circle .hunt-stage { position: absolute; inset: 0; height: auto; border: 0; border-radius: 0; box-shadow: none; }
+.hunt--circle > .hunt-top, .hunt--circle > .hunt-bottom { position: absolute; z-index: 2; inset-inline: 0; padding-inline: clamp(16px, 3vw, 48px); pointer-events: none; }
+.hunt--circle > .hunt-top { top: 0; align-items: start; background: linear-gradient(#100912ea, #10091200); padding-bottom: 24px; }
+.hunt--circle > .hunt-top button { pointer-events: auto; }
+.hunt--circle > .hunt-bottom { bottom: 0; background: linear-gradient(#10091200, #100912e8); }
+.hunt--circle .hunt-hud { top: clamp(86px, 12dvh, 123px); left: clamp(16px, 3vw, 48px); }
+.hunt--circle .hunt-prompt { bottom: 68px; }
+.hunt-reveal { position: absolute; inset-inline: 0; bottom: 17%; display: grid; text-align: center; gap: 10px; color: #ffdbb6; background: linear-gradient(90deg, transparent, #170b17df, transparent); padding: 14px; }
+.hunt-reveal strong { font: 800 clamp(32px, 7vw, 83px)/1 var(--display); text-transform: uppercase; text-shadow: 0 3px 8px #150713; }
 .hunt-stage canvas { display: block; width: 100%; height: 100%; transition: filter .22s; }
 .hunt-stage .hunt-sight-on { filter: saturate(.52) contrast(1.19) brightness(1.12); }
 .hunt-stage.hunt-striking::after { content: ""; position: absolute; inset: 0; z-index: 6; pointer-events: none; background: #ffd1a1; opacity: 0; animation: hunt-impact 510ms ease-out; }
@@ -49,14 +59,14 @@
   .hunt-stage { height: clamp(365px, 69dvh, 650px); }
 }
 @media (pointer: coarse) {
-  .hunt-touch { position: absolute; bottom: 12px; inset-inline: 12px; display: flex; align-items: end; justify-content: space-between; pointer-events: none; }
+  .hunt-touch { position: absolute; bottom: 55px; inset-inline: 12px; display: flex; align-items: end; justify-content: space-between; pointer-events: none; z-index: 3; }
   .hunt-touch > * { pointer-events: auto; }
   .hunt-touch > div:last-child { display: flex; flex-direction: column; align-items: end; gap: 5px; }
   .hunt-touch .button { min-height: 35px; background: #241724df; }
   .hunt-touch .button[aria-pressed=true] { border-color: #ffb592; }
   .hunt-stick { width: 81px; height: 81px; border: 1px solid #d6aaa780; border-radius: 50%; background: #170e19a3; display: grid; place-items: center; touch-action: none; }
   .hunt-stick i { width: 30px; height: 30px; border-radius: 50%; background: #d9b0acaf; translate: var(--stick-x, 0px) var(--stick-y, 0px); pointer-events: none; }
-  .hunt-prompt { bottom: 112px; }
+  .hunt--circle .hunt-prompt { bottom: 153px; }
   .hunt-controls { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {

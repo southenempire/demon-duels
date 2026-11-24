@@ -4,6 +4,7 @@ import { levels, TILE } from './levels.js';
 import { acceptedWin, activeKey, campaignKey, gradeScore, readJSON, readWins, worldKey } from './progress.js';
 import { createPresence, worldEvent } from './presence.js';
 import { createRenderer } from './render.js';
+import { loadWorldArt } from './environment.js';
 import { sprites } from './sprites.js';
 import { advance, interaction, newRun, throwEmber } from './simulation.js';
 import { gradeFor, distance } from './stealth.js';
@@ -34,6 +35,7 @@ export function mountWorld(el, { wallet, chain }) {
   const listen = (target, event, fn) => target.addEventListener(event, fn, { signal });
   const presence = createPresence(levels, signal);
   const asset = import.meta.env.BASE_URL + 'art/';
+  const art = loadWorldArt(asset);
   const player = String(wallet);
   const flavor = { intel: {}, bestGrade: {}, vantage: {}, checkpoint: null, ...readJSON(localStorage, worldKey(player)) };
   const save = () => localStorage.setItem(worldKey(player), JSON.stringify(flavor));
@@ -101,7 +103,7 @@ export function mountWorld(el, { wallet, chain }) {
 
   function pit(notice = '') {
     if (scene === 'circle') presence.leave();
-    scene = 'pit'; kind = null;
+    scene = 'pit'; kind = null; el.classList.remove('hunt--circle');
     const progress = wins().length;
     const saved = localStorage.getItem(activeKey);
     el.innerHTML = '<div class="hunt-pit"><div class="hunt-top"><span class="hunt-kicker">DEMON DUELS / HUNTER’S REFUGE</span>' +
@@ -123,22 +125,26 @@ export function mountWorld(el, { wallet, chain }) {
     const level = levels[kind];
     const checkpoint = level.checkpoints[flavor.checkpoint?.circle === kind ? flavor.checkpoint.index : 0] ?? level.start;
     run = newRun(level, flavor.intel[kind], flavor.vantage[kind], checkpoint);
+    run.lookoutUntil = cutscene && !matchMedia('(prefers-reduced-motion: reduce)').matches ? performance.now() + 2400 : 0;
     flavor.checkpoint = { circle: kind, index: level.checkpoints.indexOf(checkpoint) };
     save();
+    el.classList.add('hunt--circle');
     el.innerHTML = '<div class="hunt-top"><div><span class="hunt-kicker">CIRCLE ' + rom[kind] + ' / UNDERWORLD HUNT</span><h1>' +
       level.name + '</h1></div>' + button('The Pit', 'pit') + '</div><div class="hunt-stage" data-hunt-stage><canvas aria-label="Scrollable stealth level"></canvas>' +
+      '<div class="hunt-reveal" data-hunt-reveal hidden><span class="hunt-kicker">GUARDIAN SIGHTED</span><strong>' + demons[kind].name + '</strong></div>' +
       '<div class="hunt-hud"><span data-hunt-watch>UNAWARE</span><progress aria-label="Highest watcher detection" data-hunt-meter max="100" value="0"></progress><small data-hunt-grade>GHOST</small></div>' +
       '<div class="hunt-prompt" data-hunt-prompt hidden>' + button('', 'interact', 'primary') +
       button('Practice strike', 'practice') + '</div><div class="hunt-touch"><div class="hunt-stick" data-hunt-stick aria-label="Movement joystick"><i></i></div>' +
       '<div>' + button('Sneak', 'sneak') + button('Sight', 'sight') + button('Sprint', 'sprint') + '</div></div>' +
       '<div class="hunt-pause" data-hunt-pause hidden><h2>Hunt paused</h2>' + button('Resume', 'pause', 'primary') + '</div></div>' +
       '<div class="hunt-bottom"><span class="hunt-notice" data-hunt-notice role="status"></span><span class="hunt-controls">WASD / ARROWS · SHIFT SPRINT · C SNEAK · Q SIGHT · F EMBER · ESC PAUSE</span></div>';
-    renderer = createRenderer(el.querySelector('canvas'), asset);
+    renderer = createRenderer(el.querySelector('canvas'), asset, art, kind);
     objective = null;
     message(notice || (kind === 0 ? 'Stay in shadow or ash grass. Douse braziers with E; the gold diamond marks your quarry.' :
       kind === 1 ? 'The Wraith listens instead of looking. Sneak near it; E enters a purple void tear.' : 'Follow the gold diamond to your quarry.'));
     if (cutscene) worldEvent('cutscene', { id: 'circle-' + kind + '-enter' });
     audio(level.ambience);
+    if (run.lookoutUntil) audio('boss-reveal', run.boss);
   }
 
   function handleInteraction(isPractice) {
@@ -189,18 +195,24 @@ export function mountWorld(el, { wallet, chain }) {
     if (scene !== 'circle' || !run) return;
     const level = levels[kind];
     const peers = presence.inCircle(kind);
+    if (run.lookoutUntil && (now >= run.lookoutUntil || down.size || stick.x || stick.y)) {
+      if (now < run.lookoutUntil) renderer.snap();
+      run.lookoutUntil = 0;
+    }
+    query('reveal').hidden = !run.lookoutUntil;
     if (!paused && !striking && now >= pauseBoss) {
       const dx = Number(down.has('d') || down.has('arrowright')) - Number(down.has('a') || down.has('arrowleft')) + stick.x;
       const dy = Number(down.has('s') || down.has('arrowdown')) - Number(down.has('w') || down.has('arrowup')) + stick.y;
       const previouslyHidden = run.hunter.hidden;
-      const result = advance(level, run, { dx, dy, sneak: sneaking, sprint: sprinting || down.has('shift'), sight: touchSight || down.has('q') }, dt, now);
+      const sprint = sprinting || down.has('shift');
+      const result = advance(level, run, { dx, dy, sneak: sneaking, sprint, sight: touchSight || down.has('q') }, dt, now);
       if (result.caught) {
         const { intel, synced, checkpoint } = run;
         run = newRun(level, intel, synced, checkpoint);
         run.marked = true; run.boss.alert = true; run.boss.meter = 100;
         renderer.snap(); audio('detect-alert');
         message('Marked. You wake at the checkpoint. The guardian is now alerted.');
-      } else if (run.hunter.moving && now - lastStep > (sneaking ? 480 : 330)) {
+      } else if (run.hunter.moving && now - lastStep > (sneaking ? 510 : sprint ? 230 : 340)) {
         lastStep = now; audio('step-' + result.surface, run.hunter);
       }
       if (!previouslyHidden && run.hunter.hidden) audio('hide', run.hunter);

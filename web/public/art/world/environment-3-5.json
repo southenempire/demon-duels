@@ -1,0 +1,4547 @@
+{
+  "version": 1,
+  "tileSize": 32,
+  "circles": [
+    {
+      "id": 3,
+      "displayCircle": 4,
+      "kind": 3,
+      "name": "Drowned Mire",
+      "demon": "Mire Phantom",
+      "lair": "The Drowned Reliquary",
+      "tileSize": 32,
+      "tileset": "world/3/tileset.png",
+      "palette": {
+        "dark": "#0b100d",
+        "low": "#202820",
+        "mid": "#414b30",
+        "stone": "#69634a",
+        "rim": "#a09864",
+        "light": "#d4ee28",
+        "core": "#f2ffad",
+        "air": "#586930"
+      },
+      "preview": "previews/circle-04-mire-phantom.png"
+    },
+    {
+      "id": 4,
+      "displayCircle": 5,
+      "kind": 4,
+      "name": "Rime Spire",
+      "demon": "Frost Herald",
+      "lair": "The Rime Cathedral",
+      "tileSize": 32,
+      "tileset": "world/4/tileset.png",
+      "palette": {
+        "dark": "#080f1c",
+        "low": "#192a47",
+        "mid": "#304d75",
+        "stone": "#55789a",
+        "rim": "#92b8d2",
+        "light": "#42b7ff",
+        "core": "#d8faff",
+        "air": "#415b99"
+      },
+      "preview": "previews/circle-05-frost-herald.png"
+    },
+    {
+      "id": 5,
+      "displayCircle": 6,
+      "kind": 5,
+      "name": "Gloam Throne",
+      "demon": "Gloam Shade",
+      "lair": "The Eclipse Court",
+      "tileSize": 32,
+      "tileset": "world/5/tileset.png",
+      "palette": {
+        "dark": "#090c17",
+        "low": "#171c30",
+        "mid": "#31354a",
+        "stone": "#50596d",
+        "rim": "#879aae",
+        "light": "#00deef",
+        "core": "#bdfaff",
+        "air": "#326575"
+      },
+      "preview": "previews/circle-06-gloam-shade.png"
+    }
+  ],
+  "assets": [
+    {
+      "id": "tileset",
+      "file": "world/3/tileset.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "tile",
+      "size": [
+        256,
+        224
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": {
+        "columns": 8,
+        "rows": 7,
+        "tileSize": 32,
+        "cells": [
+          {
+            "id": "silt",
+            "index": 0,
+            "column": 0,
+            "row": 0,
+            "rect": [
+              0,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 1
+          },
+          {
+            "id": "silt-alt",
+            "index": 1,
+            "column": 1,
+            "row": 0,
+            "rect": [
+              32,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway",
+            "index": 2,
+            "column": 2,
+            "row": 0,
+            "rect": [
+              64,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-inlay",
+            "index": 3,
+            "column": 3,
+            "row": 0,
+            "rect": [
+              96,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 1
+          },
+          {
+            "id": "water",
+            "index": 4,
+            "column": 4,
+            "row": 0,
+            "rect": [
+              128,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-alt",
+            "index": 5,
+            "column": 5,
+            "row": 0,
+            "rect": [
+              160,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "wall",
+            "index": 6,
+            "column": 6,
+            "row": 0,
+            "rect": [
+              192,
+              0,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-inscribed",
+            "index": 7,
+            "column": 7,
+            "row": 0,
+            "rect": [
+              224,
+              0,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "causeway-join-00",
+            "index": 8,
+            "column": 0,
+            "row": 1,
+            "rect": [
+              0,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 0,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-01",
+            "index": 9,
+            "column": 1,
+            "row": 1,
+            "rect": [
+              32,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 1,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-02",
+            "index": 10,
+            "column": 2,
+            "row": 1,
+            "rect": [
+              64,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 2,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-03",
+            "index": 11,
+            "column": 3,
+            "row": 1,
+            "rect": [
+              96,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 3,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-04",
+            "index": 12,
+            "column": 4,
+            "row": 1,
+            "rect": [
+              128,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 4,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-05",
+            "index": 13,
+            "column": 5,
+            "row": 1,
+            "rect": [
+              160,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 5,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-06",
+            "index": 14,
+            "column": 6,
+            "row": 1,
+            "rect": [
+              192,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 6,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-07",
+            "index": 15,
+            "column": 7,
+            "row": 1,
+            "rect": [
+              224,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 7,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-08",
+            "index": 16,
+            "column": 0,
+            "row": 2,
+            "rect": [
+              0,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 8,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-09",
+            "index": 17,
+            "column": 1,
+            "row": 2,
+            "rect": [
+              32,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 9,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-10",
+            "index": 18,
+            "column": 2,
+            "row": 2,
+            "rect": [
+              64,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 10,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-11",
+            "index": 19,
+            "column": 3,
+            "row": 2,
+            "rect": [
+              96,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 11,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-12",
+            "index": 20,
+            "column": 4,
+            "row": 2,
+            "rect": [
+              128,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 12,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-13",
+            "index": 21,
+            "column": 5,
+            "row": 2,
+            "rect": [
+              160,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 13,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-14",
+            "index": 22,
+            "column": 6,
+            "row": 2,
+            "rect": [
+              192,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 14,
+            "lightLevel": 1
+          },
+          {
+            "id": "causeway-join-15",
+            "index": 23,
+            "column": 7,
+            "row": 2,
+            "rect": [
+              224,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 15,
+            "lightLevel": 1
+          },
+          {
+            "id": "water-edge-00",
+            "index": 24,
+            "column": 0,
+            "row": 3,
+            "rect": [
+              0,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 0,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-01",
+            "index": 25,
+            "column": 1,
+            "row": 3,
+            "rect": [
+              32,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 1,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-02",
+            "index": 26,
+            "column": 2,
+            "row": 3,
+            "rect": [
+              64,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 2,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-03",
+            "index": 27,
+            "column": 3,
+            "row": 3,
+            "rect": [
+              96,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 3,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-04",
+            "index": 28,
+            "column": 4,
+            "row": 3,
+            "rect": [
+              128,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 4,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-05",
+            "index": 29,
+            "column": 5,
+            "row": 3,
+            "rect": [
+              160,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 5,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-06",
+            "index": 30,
+            "column": 6,
+            "row": 3,
+            "rect": [
+              192,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 6,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-07",
+            "index": 31,
+            "column": 7,
+            "row": 3,
+            "rect": [
+              224,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 7,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-08",
+            "index": 32,
+            "column": 0,
+            "row": 4,
+            "rect": [
+              0,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 8,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-09",
+            "index": 33,
+            "column": 1,
+            "row": 4,
+            "rect": [
+              32,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 9,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-10",
+            "index": 34,
+            "column": 2,
+            "row": 4,
+            "rect": [
+              64,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 10,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-11",
+            "index": 35,
+            "column": 3,
+            "row": 4,
+            "rect": [
+              96,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 11,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-12",
+            "index": 36,
+            "column": 4,
+            "row": 4,
+            "rect": [
+              128,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 12,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-13",
+            "index": 37,
+            "column": 5,
+            "row": 4,
+            "rect": [
+              160,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 13,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-14",
+            "index": 38,
+            "column": 6,
+            "row": 4,
+            "rect": [
+              192,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 14,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "water-edge-15",
+            "index": 39,
+            "column": 7,
+            "row": 4,
+            "rect": [
+              224,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "neighbors": 15,
+            "surface": "water",
+            "lightLevel": 0
+          },
+          {
+            "id": "witchlight",
+            "index": 40,
+            "column": 0,
+            "row": 5,
+            "rect": [
+              0,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 2
+          },
+          {
+            "id": "root-arch",
+            "index": 41,
+            "column": 1,
+            "row": 5,
+            "rect": [
+              32,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "spore-cluster",
+            "index": 42,
+            "column": 2,
+            "row": 5,
+            "rect": [
+              64,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "buried-chain",
+            "index": 43,
+            "column": 3,
+            "row": 5,
+            "rect": [
+              96,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "sawgrass",
+            "index": 44,
+            "column": 4,
+            "row": 5,
+            "rect": [
+              128,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "hollow-stump",
+            "index": 45,
+            "column": 5,
+            "row": 5,
+            "rect": [
+              160,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "light-overlay",
+            "index": 46,
+            "column": 6,
+            "row": 5,
+            "rect": [
+              192,
+              160,
+              32,
+              32
+            ],
+            "layer": "overlay",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "shadow-overlay",
+            "index": 47,
+            "column": 7,
+            "row": 5,
+            "rect": [
+              224,
+              160,
+              32,
+              32
+            ],
+            "layer": "overlay",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "fog-overlay",
+            "index": 48,
+            "column": 0,
+            "row": 6,
+            "rect": [
+              0,
+              192,
+              32,
+              32
+            ],
+            "layer": "overlay",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "wall-edge-n",
+            "index": 49,
+            "column": 1,
+            "row": 6,
+            "rect": [
+              32,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-edge-e",
+            "index": 50,
+            "column": 2,
+            "row": 6,
+            "rect": [
+              64,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-edge-s",
+            "index": 51,
+            "column": 3,
+            "row": 6,
+            "rect": [
+              96,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-edge-w",
+            "index": 52,
+            "column": 4,
+            "row": 6,
+            "rect": [
+              128,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          }
+        ]
+      },
+      "collision": false,
+      "hide": false,
+      "blocksSight": false
+    },
+    {
+      "id": "bg-far",
+      "file": "world/3/bg-far.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "bg",
+      "size": [
+        768,
+        416
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "drawOrder": 0,
+      "scrollFactor": 0.2
+    },
+    {
+      "id": "bg-mid",
+      "file": "world/3/bg-mid.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "bg",
+      "size": [
+        768,
+        416
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "drawOrder": 1,
+      "scrollFactor": 0.44
+    },
+    {
+      "id": "bg-near",
+      "file": "world/3/bg-near.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "bg",
+      "size": [
+        768,
+        416
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "drawOrder": 2,
+      "scrollFactor": 0.7
+    },
+    {
+      "id": "overlay-light",
+      "file": "world/3/overlay-light.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "overlay",
+      "size": [
+        160,
+        160
+      ],
+      "anchor": [
+        80,
+        80
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false
+    },
+    {
+      "id": "overlay-shadow",
+      "file": "world/3/overlay-shadow.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "overlay",
+      "size": [
+        160,
+        160
+      ],
+      "anchor": [
+        80,
+        80
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false
+    },
+    {
+      "id": "overlay-fog",
+      "file": "world/3/overlay-fog.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "overlay",
+      "size": [
+        160,
+        160
+      ],
+      "anchor": [
+        80,
+        80
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false
+    },
+    {
+      "id": "witchlight",
+      "file": "world/3/witchlight.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "prop",
+      "size": [
+        50,
+        59
+      ],
+      "anchor": [
+        25.0,
+        51.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "lightLevel": 2
+    },
+    {
+      "id": "root-arch",
+      "file": "world/3/root-arch.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "prop",
+      "size": [
+        72,
+        67
+      ],
+      "anchor": [
+        36.0,
+        59.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "spore-cluster",
+      "file": "world/3/spore-cluster.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "prop",
+      "size": [
+        53,
+        49
+      ],
+      "anchor": [
+        26.5,
+        41.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "lightLevel": null
+    },
+    {
+      "id": "buried-chain",
+      "file": "world/3/buried-chain.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "prop",
+      "size": [
+        58,
+        38
+      ],
+      "anchor": [
+        29.0,
+        30.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "lightLevel": null
+    },
+    {
+      "id": "sawgrass",
+      "file": "world/3/sawgrass.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "cover",
+      "size": [
+        80,
+        75
+      ],
+      "anchor": [
+        40.0,
+        67.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "hollow-stump",
+      "file": "world/3/hollow-stump.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "cover",
+      "size": [
+        75,
+        68
+      ],
+      "anchor": [
+        37.5,
+        60.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "venom-reliquary",
+      "file": "world/3/venom-reliquary.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "lair",
+      "size": [
+        130,
+        133
+      ],
+      "anchor": [
+        65.0,
+        125.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "oath-pillars",
+      "file": "world/3/oath-pillars.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "lair",
+      "size": [
+        74,
+        108
+      ],
+      "anchor": [
+        37.0,
+        100.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "lair-backdrop",
+      "file": "world/3/lair-backdrop.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "lair",
+      "size": [
+        768,
+        480
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "bossAnchor": [
+        384,
+        367
+      ]
+    },
+    {
+      "id": "lair-composed",
+      "file": "world/3/lair-composed.png",
+      "circle": 3,
+      "displayCircle": 4,
+      "demonKind": 3,
+      "category": "lair",
+      "size": [
+        768,
+        480
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "bossAnchor": [
+        384,
+        367
+      ]
+    },
+    {
+      "id": "tileset",
+      "file": "world/4/tileset.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "tile",
+      "size": [
+        256,
+        224
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": {
+        "columns": 8,
+        "rows": 7,
+        "tileSize": 32,
+        "cells": [
+          {
+            "id": "snow",
+            "index": 0,
+            "column": 0,
+            "row": 0,
+            "rect": [
+              0,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "surface": "snow",
+            "lightLevel": 1
+          },
+          {
+            "id": "snow-alt",
+            "index": 1,
+            "column": 1,
+            "row": 0,
+            "rect": [
+              32,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "surface": "snow",
+            "lightLevel": 1
+          },
+          {
+            "id": "stone",
+            "index": 2,
+            "column": 2,
+            "row": 0,
+            "rect": [
+              64,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-inlay",
+            "index": 3,
+            "column": 3,
+            "row": 0,
+            "rect": [
+              96,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 1
+          },
+          {
+            "id": "ice",
+            "index": 4,
+            "column": 4,
+            "row": 0,
+            "rect": [
+              128,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-alt",
+            "index": 5,
+            "column": 5,
+            "row": 0,
+            "rect": [
+              160,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "wall",
+            "index": 6,
+            "column": 6,
+            "row": 0,
+            "rect": [
+              192,
+              0,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-inscribed",
+            "index": 7,
+            "column": 7,
+            "row": 0,
+            "rect": [
+              224,
+              0,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "stone-join-00",
+            "index": 8,
+            "column": 0,
+            "row": 1,
+            "rect": [
+              0,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 0,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-01",
+            "index": 9,
+            "column": 1,
+            "row": 1,
+            "rect": [
+              32,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 1,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-02",
+            "index": 10,
+            "column": 2,
+            "row": 1,
+            "rect": [
+              64,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 2,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-03",
+            "index": 11,
+            "column": 3,
+            "row": 1,
+            "rect": [
+              96,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 3,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-04",
+            "index": 12,
+            "column": 4,
+            "row": 1,
+            "rect": [
+              128,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 4,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-05",
+            "index": 13,
+            "column": 5,
+            "row": 1,
+            "rect": [
+              160,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 5,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-06",
+            "index": 14,
+            "column": 6,
+            "row": 1,
+            "rect": [
+              192,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 6,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-07",
+            "index": 15,
+            "column": 7,
+            "row": 1,
+            "rect": [
+              224,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 7,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-08",
+            "index": 16,
+            "column": 0,
+            "row": 2,
+            "rect": [
+              0,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 8,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-09",
+            "index": 17,
+            "column": 1,
+            "row": 2,
+            "rect": [
+              32,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 9,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-10",
+            "index": 18,
+            "column": 2,
+            "row": 2,
+            "rect": [
+              64,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 10,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-11",
+            "index": 19,
+            "column": 3,
+            "row": 2,
+            "rect": [
+              96,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 11,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-12",
+            "index": 20,
+            "column": 4,
+            "row": 2,
+            "rect": [
+              128,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 12,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-13",
+            "index": 21,
+            "column": 5,
+            "row": 2,
+            "rect": [
+              160,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 13,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-14",
+            "index": 22,
+            "column": 6,
+            "row": 2,
+            "rect": [
+              192,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 14,
+            "lightLevel": 1
+          },
+          {
+            "id": "stone-join-15",
+            "index": 23,
+            "column": 7,
+            "row": 2,
+            "rect": [
+              224,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 15,
+            "lightLevel": 1
+          },
+          {
+            "id": "ice-edge-00",
+            "index": 24,
+            "column": 0,
+            "row": 3,
+            "rect": [
+              0,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 0,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-01",
+            "index": 25,
+            "column": 1,
+            "row": 3,
+            "rect": [
+              32,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 1,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-02",
+            "index": 26,
+            "column": 2,
+            "row": 3,
+            "rect": [
+              64,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 2,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-03",
+            "index": 27,
+            "column": 3,
+            "row": 3,
+            "rect": [
+              96,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 3,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-04",
+            "index": 28,
+            "column": 4,
+            "row": 3,
+            "rect": [
+              128,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 4,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-05",
+            "index": 29,
+            "column": 5,
+            "row": 3,
+            "rect": [
+              160,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 5,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-06",
+            "index": 30,
+            "column": 6,
+            "row": 3,
+            "rect": [
+              192,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 6,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-07",
+            "index": 31,
+            "column": 7,
+            "row": 3,
+            "rect": [
+              224,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 7,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-08",
+            "index": 32,
+            "column": 0,
+            "row": 4,
+            "rect": [
+              0,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 8,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-09",
+            "index": 33,
+            "column": 1,
+            "row": 4,
+            "rect": [
+              32,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 9,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-10",
+            "index": 34,
+            "column": 2,
+            "row": 4,
+            "rect": [
+              64,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 10,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-11",
+            "index": 35,
+            "column": 3,
+            "row": 4,
+            "rect": [
+              96,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 11,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-12",
+            "index": 36,
+            "column": 4,
+            "row": 4,
+            "rect": [
+              128,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 12,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-13",
+            "index": 37,
+            "column": 5,
+            "row": 4,
+            "rect": [
+              160,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 13,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-14",
+            "index": 38,
+            "column": 6,
+            "row": 4,
+            "rect": [
+              192,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 14,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "ice-edge-15",
+            "index": 39,
+            "column": 7,
+            "row": 4,
+            "rect": [
+              224,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 15,
+            "surface": "ice",
+            "lightLevel": 0
+          },
+          {
+            "id": "rime-brazier",
+            "index": 40,
+            "column": 0,
+            "row": 5,
+            "rect": [
+              0,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 2
+          },
+          {
+            "id": "shard-fan",
+            "index": 41,
+            "column": 1,
+            "row": 5,
+            "rect": [
+              32,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "broken-banner",
+            "index": 42,
+            "column": 2,
+            "row": 5,
+            "rect": [
+              64,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "frozen-chains",
+            "index": 43,
+            "column": 3,
+            "row": 5,
+            "rect": [
+              96,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "ice-pillar",
+            "index": 44,
+            "column": 4,
+            "row": 5,
+            "rect": [
+              128,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "ice-cave",
+            "index": 45,
+            "column": 5,
+            "row": 5,
+            "rect": [
+              160,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false
+          },
+          {
+            "id": "light-overlay",
+            "index": 46,
+            "column": 6,
+            "row": 5,
+            "rect": [
+              192,
+              160,
+              32,
+              32
+            ],
+            "layer": "overlay",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "shadow-overlay",
+            "index": 47,
+            "column": 7,
+            "row": 5,
+            "rect": [
+              224,
+              160,
+              32,
+              32
+            ],
+            "layer": "overlay",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "wall-edge-n",
+            "index": 48,
+            "column": 0,
+            "row": 6,
+            "rect": [
+              0,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-edge-e",
+            "index": 49,
+            "column": 1,
+            "row": 6,
+            "rect": [
+              32,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-edge-s",
+            "index": 50,
+            "column": 2,
+            "row": 6,
+            "rect": [
+              64,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-edge-w",
+            "index": 51,
+            "column": 3,
+            "row": 6,
+            "rect": [
+              96,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "snow-footsteps",
+            "index": 52,
+            "column": 4,
+            "row": 6,
+            "rect": [
+              128,
+              192,
+              32,
+              32
+            ],
+            "layer": "overlay",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          }
+        ]
+      },
+      "collision": false,
+      "hide": false,
+      "blocksSight": false
+    },
+    {
+      "id": "bg-far",
+      "file": "world/4/bg-far.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "bg",
+      "size": [
+        768,
+        416
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "drawOrder": 0,
+      "scrollFactor": 0.2
+    },
+    {
+      "id": "bg-mid",
+      "file": "world/4/bg-mid.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "bg",
+      "size": [
+        768,
+        416
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "drawOrder": 1,
+      "scrollFactor": 0.44
+    },
+    {
+      "id": "bg-near",
+      "file": "world/4/bg-near.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "bg",
+      "size": [
+        768,
+        416
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "drawOrder": 2,
+      "scrollFactor": 0.7
+    },
+    {
+      "id": "overlay-light",
+      "file": "world/4/overlay-light.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "overlay",
+      "size": [
+        160,
+        160
+      ],
+      "anchor": [
+        80,
+        80
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false
+    },
+    {
+      "id": "overlay-shadow",
+      "file": "world/4/overlay-shadow.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "overlay",
+      "size": [
+        160,
+        160
+      ],
+      "anchor": [
+        80,
+        80
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false
+    },
+    {
+      "id": "rime-brazier",
+      "file": "world/4/rime-brazier.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "prop",
+      "size": [
+        50,
+        59
+      ],
+      "anchor": [
+        25.0,
+        51.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "lightLevel": 2
+    },
+    {
+      "id": "shard-fan",
+      "file": "world/4/shard-fan.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "prop",
+      "size": [
+        72,
+        67
+      ],
+      "anchor": [
+        36.0,
+        59.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "broken-banner",
+      "file": "world/4/broken-banner.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "prop",
+      "size": [
+        53,
+        49
+      ],
+      "anchor": [
+        26.5,
+        41.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "lightLevel": null
+    },
+    {
+      "id": "frozen-chains",
+      "file": "world/4/frozen-chains.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "prop",
+      "size": [
+        58,
+        38
+      ],
+      "anchor": [
+        29.0,
+        30.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "lightLevel": null
+    },
+    {
+      "id": "ice-pillar",
+      "file": "world/4/ice-pillar.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "cover",
+      "size": [
+        80,
+        75
+      ],
+      "anchor": [
+        40.0,
+        67.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "ice-cave",
+      "file": "world/4/ice-cave.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "cover",
+      "size": [
+        75,
+        68
+      ],
+      "anchor": [
+        37.5,
+        60.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": true,
+      "blocksSight": false,
+      "lightLevel": null
+    },
+    {
+      "id": "heralds-throne",
+      "file": "world/4/heralds-throne.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "lair",
+      "size": [
+        130,
+        133
+      ],
+      "anchor": [
+        65.0,
+        125.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "rime-buttress",
+      "file": "world/4/rime-buttress.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "lair",
+      "size": [
+        74,
+        108
+      ],
+      "anchor": [
+        37.0,
+        100.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "lair-backdrop",
+      "file": "world/4/lair-backdrop.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "lair",
+      "size": [
+        768,
+        480
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "bossAnchor": [
+        384,
+        367
+      ]
+    },
+    {
+      "id": "lair-composed",
+      "file": "world/4/lair-composed.png",
+      "circle": 4,
+      "displayCircle": 5,
+      "demonKind": 4,
+      "category": "lair",
+      "size": [
+        768,
+        480
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "bossAnchor": [
+        384,
+        367
+      ]
+    },
+    {
+      "id": "tileset",
+      "file": "world/5/tileset.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "tile",
+      "size": [
+        256,
+        224
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": {
+        "columns": 8,
+        "rows": 7,
+        "tileSize": 32,
+        "cells": [
+          {
+            "id": "dark-obsidian",
+            "index": 0,
+            "column": 0,
+            "row": 0,
+            "rect": [
+              0,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 0
+          },
+          {
+            "id": "dark-obsidian-alt",
+            "index": 1,
+            "column": 1,
+            "row": 0,
+            "rect": [
+              32,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 0
+          },
+          {
+            "id": "lit-hall",
+            "index": 2,
+            "column": 2,
+            "row": 0,
+            "rect": [
+              64,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-inlay",
+            "index": 3,
+            "column": 3,
+            "row": 0,
+            "rect": [
+              96,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 2
+          },
+          {
+            "id": "void-drop",
+            "index": 4,
+            "column": 4,
+            "row": 0,
+            "rect": [
+              128,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-drop-alt",
+            "index": 5,
+            "column": 5,
+            "row": 0,
+            "rect": [
+              160,
+              0,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 0
+          },
+          {
+            "id": "wall",
+            "index": 6,
+            "column": 6,
+            "row": 0,
+            "rect": [
+              192,
+              0,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-inscribed",
+            "index": 7,
+            "column": 7,
+            "row": 0,
+            "rect": [
+              224,
+              0,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "lit-hall-join-00",
+            "index": 8,
+            "column": 0,
+            "row": 1,
+            "rect": [
+              0,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 0,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-01",
+            "index": 9,
+            "column": 1,
+            "row": 1,
+            "rect": [
+              32,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 1,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-02",
+            "index": 10,
+            "column": 2,
+            "row": 1,
+            "rect": [
+              64,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 2,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-03",
+            "index": 11,
+            "column": 3,
+            "row": 1,
+            "rect": [
+              96,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 3,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-04",
+            "index": 12,
+            "column": 4,
+            "row": 1,
+            "rect": [
+              128,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 4,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-05",
+            "index": 13,
+            "column": 5,
+            "row": 1,
+            "rect": [
+              160,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 5,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-06",
+            "index": 14,
+            "column": 6,
+            "row": 1,
+            "rect": [
+              192,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 6,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-07",
+            "index": 15,
+            "column": 7,
+            "row": 1,
+            "rect": [
+              224,
+              32,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 7,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-08",
+            "index": 16,
+            "column": 0,
+            "row": 2,
+            "rect": [
+              0,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 8,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-09",
+            "index": 17,
+            "column": 1,
+            "row": 2,
+            "rect": [
+              32,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 9,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-10",
+            "index": 18,
+            "column": 2,
+            "row": 2,
+            "rect": [
+              64,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 10,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-11",
+            "index": 19,
+            "column": 3,
+            "row": 2,
+            "rect": [
+              96,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 11,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-12",
+            "index": 20,
+            "column": 4,
+            "row": 2,
+            "rect": [
+              128,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 12,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-13",
+            "index": 21,
+            "column": 5,
+            "row": 2,
+            "rect": [
+              160,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 13,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-14",
+            "index": 22,
+            "column": 6,
+            "row": 2,
+            "rect": [
+              192,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 14,
+            "lightLevel": 2
+          },
+          {
+            "id": "lit-hall-join-15",
+            "index": 23,
+            "column": 7,
+            "row": 2,
+            "rect": [
+              224,
+              64,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 15,
+            "lightLevel": 2
+          },
+          {
+            "id": "void-edge-00",
+            "index": 24,
+            "column": 0,
+            "row": 3,
+            "rect": [
+              0,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 0,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-01",
+            "index": 25,
+            "column": 1,
+            "row": 3,
+            "rect": [
+              32,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 1,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-02",
+            "index": 26,
+            "column": 2,
+            "row": 3,
+            "rect": [
+              64,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 2,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-03",
+            "index": 27,
+            "column": 3,
+            "row": 3,
+            "rect": [
+              96,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 3,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-04",
+            "index": 28,
+            "column": 4,
+            "row": 3,
+            "rect": [
+              128,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 4,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-05",
+            "index": 29,
+            "column": 5,
+            "row": 3,
+            "rect": [
+              160,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 5,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-06",
+            "index": 30,
+            "column": 6,
+            "row": 3,
+            "rect": [
+              192,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 6,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-07",
+            "index": 31,
+            "column": 7,
+            "row": 3,
+            "rect": [
+              224,
+              96,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 7,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-08",
+            "index": 32,
+            "column": 0,
+            "row": 4,
+            "rect": [
+              0,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 8,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-09",
+            "index": 33,
+            "column": 1,
+            "row": 4,
+            "rect": [
+              32,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 9,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-10",
+            "index": 34,
+            "column": 2,
+            "row": 4,
+            "rect": [
+              64,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 10,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-11",
+            "index": 35,
+            "column": 3,
+            "row": 4,
+            "rect": [
+              96,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 11,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-12",
+            "index": 36,
+            "column": 4,
+            "row": 4,
+            "rect": [
+              128,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 12,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-13",
+            "index": 37,
+            "column": 5,
+            "row": 4,
+            "rect": [
+              160,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 13,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-14",
+            "index": 38,
+            "column": 6,
+            "row": 4,
+            "rect": [
+              192,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 14,
+            "lightLevel": 0
+          },
+          {
+            "id": "void-edge-15",
+            "index": 39,
+            "column": 7,
+            "row": 4,
+            "rect": [
+              224,
+              128,
+              32,
+              32
+            ],
+            "layer": "ground",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": false,
+            "neighbors": 15,
+            "lightLevel": 0
+          },
+          {
+            "id": "soul-lantern",
+            "index": 40,
+            "column": 0,
+            "row": 5,
+            "rect": [
+              0,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false,
+            "lightLevel": 2
+          },
+          {
+            "id": "fallen-orrery",
+            "index": 41,
+            "column": 1,
+            "row": 5,
+            "rect": [
+              32,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "veil-ribbon",
+            "index": 42,
+            "column": 2,
+            "row": 5,
+            "rect": [
+              64,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "star-rubble",
+            "index": 43,
+            "column": 3,
+            "row": 5,
+            "rect": [
+              96,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "lit-refuge",
+            "index": 44,
+            "column": 4,
+            "row": 5,
+            "rect": [
+              128,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": true,
+            "blocksSight": false,
+            "lightLevel": 2
+          },
+          {
+            "id": "shroud-screen",
+            "index": 45,
+            "column": 5,
+            "row": 5,
+            "rect": [
+              160,
+              160,
+              32,
+              32
+            ],
+            "layer": "props",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "light-overlay",
+            "index": 46,
+            "column": 6,
+            "row": 5,
+            "rect": [
+              192,
+              160,
+              32,
+              32
+            ],
+            "layer": "overlay",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "shadow-overlay",
+            "index": 47,
+            "column": 7,
+            "row": 5,
+            "rect": [
+              224,
+              160,
+              32,
+              32
+            ],
+            "layer": "overlay",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": false,
+            "hide": false,
+            "blocksSight": false
+          },
+          {
+            "id": "wall-edge-n",
+            "index": 48,
+            "column": 0,
+            "row": 6,
+            "rect": [
+              0,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-edge-e",
+            "index": 49,
+            "column": 1,
+            "row": 6,
+            "rect": [
+              32,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-edge-s",
+            "index": 50,
+            "column": 2,
+            "row": 6,
+            "rect": [
+              64,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          },
+          {
+            "id": "wall-edge-w",
+            "index": 51,
+            "column": 3,
+            "row": 6,
+            "rect": [
+              96,
+              192,
+              32,
+              32
+            ],
+            "layer": "walls",
+            "anchor": [
+              0,
+              0
+            ],
+            "collision": true,
+            "hide": false,
+            "blocksSight": true
+          }
+        ]
+      },
+      "collision": false,
+      "hide": false,
+      "blocksSight": false
+    },
+    {
+      "id": "bg-far",
+      "file": "world/5/bg-far.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "bg",
+      "size": [
+        768,
+        416
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "drawOrder": 0,
+      "scrollFactor": 0.2
+    },
+    {
+      "id": "bg-mid",
+      "file": "world/5/bg-mid.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "bg",
+      "size": [
+        768,
+        416
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "drawOrder": 1,
+      "scrollFactor": 0.44
+    },
+    {
+      "id": "bg-near",
+      "file": "world/5/bg-near.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "bg",
+      "size": [
+        768,
+        416
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "drawOrder": 2,
+      "scrollFactor": 0.7
+    },
+    {
+      "id": "overlay-light",
+      "file": "world/5/overlay-light.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "overlay",
+      "size": [
+        160,
+        160
+      ],
+      "anchor": [
+        80,
+        80
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false
+    },
+    {
+      "id": "overlay-shadow",
+      "file": "world/5/overlay-shadow.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "overlay",
+      "size": [
+        160,
+        160
+      ],
+      "anchor": [
+        80,
+        80
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false
+    },
+    {
+      "id": "soul-lantern",
+      "file": "world/5/soul-lantern.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "prop",
+      "size": [
+        50,
+        59
+      ],
+      "anchor": [
+        25.0,
+        51.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "lightLevel": 2
+    },
+    {
+      "id": "fallen-orrery",
+      "file": "world/5/fallen-orrery.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "prop",
+      "size": [
+        72,
+        67
+      ],
+      "anchor": [
+        36.0,
+        59.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "veil-ribbon",
+      "file": "world/5/veil-ribbon.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "prop",
+      "size": [
+        53,
+        49
+      ],
+      "anchor": [
+        26.5,
+        41.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "lightLevel": null
+    },
+    {
+      "id": "star-rubble",
+      "file": "world/5/star-rubble.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "prop",
+      "size": [
+        58,
+        38
+      ],
+      "anchor": [
+        29.0,
+        30.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "lightLevel": null
+    },
+    {
+      "id": "lit-refuge",
+      "file": "world/5/lit-refuge.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "cover",
+      "size": [
+        80,
+        75
+      ],
+      "anchor": [
+        40.0,
+        67.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": true,
+      "blocksSight": false,
+      "lightLevel": 2
+    },
+    {
+      "id": "shroud-screen",
+      "file": "world/5/shroud-screen.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "cover",
+      "size": [
+        75,
+        68
+      ],
+      "anchor": [
+        37.5,
+        60.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "eclipse-gate",
+      "file": "world/5/eclipse-gate.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "lair",
+      "size": [
+        130,
+        133
+      ],
+      "anchor": [
+        65.0,
+        125.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "veil-obelisk",
+      "file": "world/5/veil-obelisk.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "lair",
+      "size": [
+        74,
+        108
+      ],
+      "anchor": [
+        37.0,
+        100.5
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": true,
+      "lightLevel": null
+    },
+    {
+      "id": "lair-backdrop",
+      "file": "world/5/lair-backdrop.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "lair",
+      "size": [
+        768,
+        480
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "bossAnchor": [
+        384,
+        367
+      ]
+    },
+    {
+      "id": "lair-composed",
+      "file": "world/5/lair-composed.png",
+      "circle": 5,
+      "displayCircle": 6,
+      "demonKind": 5,
+      "category": "lair",
+      "size": [
+        768,
+        480
+      ],
+      "anchor": [
+        0,
+        0
+      ],
+      "grid": null,
+      "collision": false,
+      "hide": false,
+      "blocksSight": false,
+      "bossAnchor": [
+        384,
+        367
+      ]
+    }
+  ]
+}
