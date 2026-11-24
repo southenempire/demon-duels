@@ -589,10 +589,9 @@ export function mountCircle(descriptor = ASH_GATE, { getCampaign, hasSeal, hasAs
       wardenRig.model?.update(patrolYaw !== null ? 'Walk' : wardenSees || boss.suspicion > 0 ? 'Alert' : 'Idle', dt, undefined, glance);
     }
     let suspicion = boss.suspicion, clearTrail = true;
-    const investigation = hooks.investigateTargets?.(sceneTime) ?? [];
     for (const guard of guards) {
-      guard.update(sceneTime, dt, investigation);
       const { state } = guard;
+      guard.update(sceneTime, dt, rules.investigateTargets(sceneTime, state));
       const adjusted = sight(state, pos);
       const marked = outcome !== 'won' && !attack && sees(adjusted, x, z, walls, hidden);
       state.suspicion = T.MathUtils.clamp(state.suspicion + dt * (marked ? (sneak ? .68 : running ? 1.95 : 1.32) : -1.05), 0, 1);

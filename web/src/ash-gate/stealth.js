@@ -111,6 +111,7 @@ export function circleRules(hooks = {}) {
     canStrikeBoss: (pos, state, fallback) => hooks.canStrikeBoss ? hooks.canStrikeBoss(pos, state) : fallback(),
     canTraverse: (pos) => hooks.canTraverse ? hooks.canTraverse(pos) : true,
     interactionAt: (pos) => hooks.interactionAt?.(pos) ?? null,
+    investigateTargets: (time, guard) => hooks.investigateTargets?.(time, guard) ?? [],
     tractionAt: (pos) => Math.max(0, Math.min(1, hooks.tractionAt?.(pos) ?? 1)),
   };
 }

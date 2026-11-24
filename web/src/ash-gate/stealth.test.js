@@ -77,6 +77,19 @@ test('ice preserves momentum on release while ordinary terrain stops immediately
   assert.equal(circleRules({ tractionAt: () => -2 }).tractionAt({}), 0);
 });
 
+test('investigation hooks can filter by guard position and still accept time-only callbacks', () => {
+  const target = { pos: { x: 0, z: -1 }, until: 5 };
+  const rules = circleRules({
+    investigateTargets: (time, { x, z }) =>
+      time < target.until && Math.hypot(target.pos.x - x, target.pos.z - z) < 2 ? [target] : [],
+  });
+  assert.deepEqual(rules.investigateTargets(1, guard), [target]);
+  assert.deepEqual(rules.investigateTargets(1, { ...guard, x: 6 }), []);
+  assert.deepEqual(rules.investigateTargets(5, guard), []);
+  assert.deepEqual(circleRules({ investigateTargets: (time) => time === 1 ? [target] : [] }).investigateTargets(1, guard), [target]);
+  assert.deepEqual(circleRules().investigateTargets(1, guard), []);
+});
+
 test('the same bound chain duel must settle before the map credits its result', () => {
   const returned = { mode: 'chain', opponentKind: 0, duel: 'warden', result: { winner: 0 } };
   const settled = { mode: 'chain', opponentKind: 0, duel: 'warden', bossBound: true, won: true };
